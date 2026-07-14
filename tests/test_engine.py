@@ -12,7 +12,7 @@ from fletchtime_engine import (
 
 def simple_indoor_engine() -> MatchEngine:
     cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
-                        green_time=90, orange_time=30, rotate_turn=True)
+                        green_time=90, orange_time=30, turn_mode="ab_only")
     return MatchEngine(IndoorMode(cfg))
 
 
@@ -59,7 +59,7 @@ class TestMatchEngineTicking(unittest.TestCase):
 
     def test_reaching_the_end_of_sequence_finishes(self) -> None:
         cfg = IndoorConfig(series=1, ends_per_series=1, prep_time=1,
-                            green_time=1, orange_time=1, rotate_turn=False)
+                            green_time=1, orange_time=1, turn_mode="ab_only")
         engine = MatchEngine(IndoorMode(cfg))
         state = engine.tick(3)  # exactly consumes the only end
         self.assertTrue(state.finished)
@@ -77,18 +77,39 @@ class TestMatchEngineManualControl(unittest.TestCase):
         self.assertEqual(state.phase, Phase.GREEN)
         self.assertEqual(state.time_left, 90)
 
-    def test_next_through_full_end_changes_turn(self) -> None:
+    def test_next_through_full_end_reaches_pause_previewing_next_end(self) -> None:
         engine = simple_indoor_engine()
         for _ in range(3):  # RED -> GREEN -> ORANGE -> PAUSE (preview end 2)
             state = engine.next()
         self.assertEqual(state.phase, Phase.PAUSE)
         self.assertEqual(state.end_number, 2)
-        self.assertEqual(state.current_turn, "C-D")  # already previewing end 2's turn
 
         state = engine.next()  # DOS starts end 2
         self.assertEqual(state.end_number, 2)
-        self.assertEqual(state.current_turn, "C-D")
         self.assertEqual(state.phase, Phase.RED)
+
+    def test_ab_then_cd_relay_within_the_same_end_via_next(self) -> None:
+        """A-B et C-D tirent la même volée : le numéro ne doit pas changer
+        entre les deux relais, seul le tireur actif change."""
+        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
+                            green_time=90, orange_time=30, turn_mode="ab_then_cd")
+        engine = MatchEngine(IndoorMode(cfg))
+
+        state = engine.current_state
+        self.assertEqual(state.current_turn, "A-B")
+        self.assertEqual(state.end_number, 1)
+
+        for _ in range(3):  # RED->GREEN->ORANGE of A-B's relay
+            state = engine.next()
+        self.assertEqual(state.phase, Phase.RED)  # C-D's own prep, same end
+        self.assertEqual(state.current_turn, "C-D")
+        self.assertEqual(state.end_number, 1)  # unchanged -- still volée 1
+
+        for _ in range(3):  # RED->GREEN->ORANGE of C-D's relay
+            state = engine.next()
+        self.assertEqual(state.phase, Phase.PAUSE)  # now end 1 is truly over
+        self.assertEqual(state.end_number, 2)  # preview of end 2
+        self.assertEqual(state.current_turn, "A-B")  # end 2 restarts with A-B
 
 
 class TestMatchEngineEmergency(unittest.TestCase):

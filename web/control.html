@@ -57,7 +57,14 @@
   </section>
 
   <section>
-    <button class="start" onclick="send({action:'start_indoor'})">▶ Démarrer Indoor</button>
+    <label>Mode Indoor :
+      <select id="turn-mode">
+        <option value="ab_then_cd">A-B puis C-D</option>
+        <option value="ab_only">A-B seulement</option>
+        <option value="cd_only">C-D seulement</option>
+      </select>
+    </label><br>
+    <button class="start" onclick="startIndoor()">▶ Démarrer Indoor</button>
     <button class="start" onclick="send({action:'start_flint'})">▶ Démarrer Flint</button>
   </section>
 
@@ -129,6 +136,12 @@
           ? JSON.stringify(data.state, null, 2)
           : "Aucun match en cours -- démarre un mode ci-dessus.";
         stateBox.textContent = messageLine + "\n\n" + stateLine;
+
+        // Le mode A-B/C-D est fixé au démarrage et ne doit pas changer en
+        // cours de match : on verrouille le sélecteur tant qu'un match
+        // tourne (state non nul et pas encore terminé).
+        const matchIsRunning = data.state && !data.state.finished;
+        document.getElementById("turn-mode").disabled = matchIsRunning;
       }
     };
   }
@@ -136,6 +149,9 @@
 
   function send(obj) {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+  }
+  function startIndoor() {
+    send({action: "start_indoor", turn_mode: document.getElementById("turn-mode").value});
   }
   function sendMessage() {
     const val = document.getElementById("msg").value;

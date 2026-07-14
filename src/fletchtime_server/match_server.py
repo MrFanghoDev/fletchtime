@@ -62,7 +62,11 @@ class MatchServer:
 
         async with self._lock:
             if action == "start_indoor":
-                self.engine = MatchEngine(IndoorMode(IndoorConfig()))
+                turn_mode = data.get("turn_mode", "ab_then_cd")
+                try:
+                    self.engine = MatchEngine(IndoorMode(IndoorConfig(turn_mode=turn_mode)))
+                except ValueError:
+                    pass  # invalid turn_mode from a malformed command -- ignore
             elif action == "start_flint":
                 self.engine = MatchEngine(FlintMode(FlintConfig()))
             elif action == "message":

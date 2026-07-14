@@ -105,6 +105,18 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         self.assertEqual(len(self.display.sent), count_before)  # nothing new after unregister
 
+    async def test_start_indoor_accepts_turn_mode(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "start_indoor", "turn_mode": "cd_only"})
+        )
+        self.assertEqual(self.display.last_state()["current_turn"], "C-D")
+
+    async def test_start_indoor_invalid_turn_mode_is_ignored_not_fatal(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "start_indoor", "turn_mode": "bogus"})
+        )
+        self.assertIsNone(self.display.last_state())  # no engine created, no crash
+
     async def test_stop_command_finishes_the_match(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         await self.server.handle_command(json.dumps({"action": "stop"}))
