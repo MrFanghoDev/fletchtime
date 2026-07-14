@@ -89,12 +89,14 @@ class MatchEngine:
         return self.current_state
 
     def goto(self, unit_number: int, end_number: int, arrow_in_end: int = 0) -> MatchState:
-        """Jump directly to a specific volée (and, for a walk-up end,
-        optionally a specific arrow). Lets the DOS restart a single volée
-        without replaying the whole match. Lands on the actual shooting
-        step (RED/GREEN/ORANGE), never on the PAUSE step that merely
-        *previews* that end while the previous one is still being
-        collected. Raises ``ValueError`` if no step matches."""
+        """Jump to a specific volée (and, for a walk-up end, optionally a
+        specific arrow). Lands on the PAUSE step immediately preceding it
+        when one exists -- more practical for the DOS: the screen already
+        previews the target end/distance, and the countdown only actually
+        starts once ``next()`` is pressed. Falls back to the shooting step
+        itself when there is no preceding pause (e.g. the very first end
+        of the match, or an individual walk-up arrow after the first).
+        Raises ``ValueError`` if no step matches."""
         for index, step in enumerate(self._steps):
             if step.phase == Phase.PAUSE:
                 continue
@@ -102,8 +104,13 @@ class MatchEngine:
                 continue
             if arrow_in_end and step.arrow_in_end != arrow_in_end:
                 continue
-            self._index = index
-            self._time_left = step.duration
+
+            target_index = index
+            if index > 0 and self._steps[index - 1].phase == Phase.PAUSE:
+                target_index = index - 1
+
+            self._index = target_index
+            self._time_left = self._steps[target_index].duration
             self._finished = False
             self._paused = False
             self._emergency = False

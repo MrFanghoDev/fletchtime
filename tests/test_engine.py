@@ -244,20 +244,36 @@ class TestMatchEngineStopRestartGoto(unittest.TestCase):
         self.assertFalse(state.finished)
         self.assertEqual(state.phase, Phase.RED)
 
-    def test_goto_jumps_directly_to_a_given_end(self) -> None:
+    def test_goto_lands_on_the_pause_preview_before_the_target_end(self) -> None:
         cfg = FlintConfig(units=1)
         engine = MatchEngine(FlintMode(cfg))
         state = engine.goto(unit_number=1, end_number=3)
 
-        self.assertEqual(state.phase, Phase.RED)
+        self.assertEqual(state.phase, Phase.PAUSE)
         self.assertEqual(state.end_number, 3)
         self.assertEqual(state.distance_label, "15 yards")
+
+        # DOS presses next() when ready -- that's what actually starts it
+        state = engine.next()
+        self.assertEqual(state.phase, Phase.RED)
+        self.assertEqual(state.end_number, 3)
+
+    def test_goto_the_very_first_end_has_no_preview_pause_to_land_on(self) -> None:
+        cfg = FlintConfig(units=1)
+        engine = MatchEngine(FlintMode(cfg))
+        state = engine.goto(unit_number=1, end_number=1)
+        self.assertEqual(state.phase, Phase.RED)  # nothing precedes end 1
 
     def test_goto_can_target_a_specific_walkup_arrow(self) -> None:
         cfg = FlintConfig(units=1)
         engine = MatchEngine(FlintMode(cfg))
-        state = engine.goto(unit_number=1, end_number=7, arrow_in_end=3)
+        # arrow 1 has a preview pause (announcing the whole walk-up end)
+        state = engine.goto(unit_number=1, end_number=7, arrow_in_end=1)
+        self.assertEqual(state.phase, Phase.PAUSE)
+        self.assertEqual(state.arrow_in_end, 1)
 
+        # arrows 2-4 don't (continuous walk-up, no retrieval in between)
+        state = engine.goto(unit_number=1, end_number=7, arrow_in_end=3)
         self.assertEqual(state.phase, Phase.RED)
         self.assertEqual(state.arrow_in_end, 3)
         self.assertEqual(state.distance_label, "20 yards")
