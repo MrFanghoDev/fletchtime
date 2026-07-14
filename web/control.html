@@ -58,6 +58,19 @@
   const stateBox = document.getElementById("state");
   let ws;
 
+  // Empêche l'écran du poste de contrôle de s'éteindre pendant le concours.
+  async function requestWakeLock() {
+    try {
+      if ("wakeLock" in navigator) {
+        await navigator.wakeLock.request("screen");
+      }
+    } catch (e) { /* refusé (batterie faible, etc.) -- pas bloquant */ }
+  }
+  requestWakeLock();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") requestWakeLock();
+  });
+
   function connect() {
     ws = new WebSocket("ws://" + location.hostname + ":8765");
 
