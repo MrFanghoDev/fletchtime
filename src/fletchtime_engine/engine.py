@@ -1,6 +1,7 @@
 """Plays back the ordered list of :class:`Step` produced by a
 :class:`ShootingMode`, exposing the controls a DOS (Director Of Shooting)
-needs: regular ticking, manual advance, emergency stop/resume, pause.
+needs: regular ticking, manual advance, stop, restart, jump to a specific
+end, emergency stop/resume, temporary pause.
 
 This is intentionally the only stateful class in the engine package -- modes
 themselves stay pure/stateless so they are trivial to unit test in
@@ -23,7 +24,7 @@ class MatchEngine:
             raise ValueError("A shooting mode must produce at least one step")
 
         self._index = 0
-        self._time_left: float = self._steps[0].duration
+        self._time_left: Optional[float] = self._steps[0].duration
         self._finished = False
         self._paused = False
         self._message: Optional[str] = None
@@ -42,24 +43,78 @@ class MatchEngine:
         Safe to call with a ``dt`` larger than the remaining time on the
         current step: the engine will cascade through as many steps as
         needed (e.g. after a lag spike), matching the "catch up to real
-        time" behaviour described in the ArcheryClock manual.
+        time" behaviour described in the ArcheryClock manual. The cascade
+        stops as soon as it lands on an indefinite (PAUSE) step: those
+        never count down on their own, only :meth:`next` moves past them.
         """
-        if self._emergency or self._paused or self._finished:
+        if self._emergency or self._paused or self._finished or self._time_left is None:
             return self.current_state
 
         self._time_left -= dt
-        while self._time_left <= 0 and not self._finished:
+        while self._time_left is not None and self._time_left <= 0 and not self._finished:
             overflow = -self._time_left
             self._advance_step()
-            if not self._finished:
-                self._time_left -= overflow
+            if self._finished or self._time_left is None:
+                break
+            self._time_left -= overflow
         return self.current_state
 
     def next(self) -> MatchState:
-        """Manual advance, as if the DOS pressed the "next" button."""
+        """Manual advance, as if the DOS pressed the "next" button. This is
+        how a PAUSE step (end of a volée, arrows being retrieved) is left:
+        pressing next starts the following volée's preparation time."""
         if not self._emergency:
             self._advance_step()
         return self.current_state
+
+    def stop(self) -> MatchState:
+        """Hard stop: end the current match right now, regardless of where
+        it is in the sequence. Distinct from :meth:`emergency` (which can
+        be resumed) -- this is a deliberate abandon/cancel by the DOS."""
+        self._finished = True
+        self._time_left = 0.0
+        return self.current_state
+
+    def restart(self) -> MatchState:
+        """Restart the whole match from its very first step, keeping the
+        same mode/config."""
+        self._index = 0
+        self._time_left = self._steps[0].duration
+        self._finished = False
+        self._paused = False
+        self._emergency = False
+        self._emergency_saved_time = None
+        self._pending_events = []
+        self._emit_current_step_event()
+        return self.current_state
+
+    def goto(self, unit_number: int, end_number: int, arrow_in_end: int = 0) -> MatchState:
+        """Jump directly to a specific volée (and, for a walk-up end,
+        optionally a specific arrow). Lets the DOS restart a single volée
+        without replaying the whole match. Lands on the actual shooting
+        step (RED/GREEN/ORANGE), never on the PAUSE step that merely
+        *previews* that end while the previous one is still being
+        collected. Raises ``ValueError`` if no step matches."""
+        for index, step in enumerate(self._steps):
+            if step.phase == Phase.PAUSE:
+                continue
+            if step.unit_number != unit_number or step.end_number != end_number:
+                continue
+            if arrow_in_end and step.arrow_in_end != arrow_in_end:
+                continue
+            self._index = index
+            self._time_left = step.duration
+            self._finished = False
+            self._paused = False
+            self._emergency = False
+            self._emergency_saved_time = None
+            self._pending_events = []
+            self._emit_current_step_event()
+            return self.current_state
+        raise ValueError(
+            f"No step found for unit={unit_number} end={end_number} "
+            f"arrow={arrow_in_end or '-'}"
+        )
 
     def emergency(self) -> MatchState:
         """Freeze the clock immediately. Position/time-left are remembered
@@ -130,7 +185,7 @@ class MatchEngine:
 
         return MatchState(
             phase=phase,
-            time_left=round(max(time_left, 0.0), 1),
+            time_left=round(max(time_left, 0.0), 1) if time_left is not None else 0.0,
             current_turn=step.current_turn,
             end_number=step.end_number,
             total_ends=step.total_ends,

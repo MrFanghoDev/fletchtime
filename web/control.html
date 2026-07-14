@@ -41,6 +41,19 @@
   </section>
 
   <section>
+    <button class="danger" onclick="send({action:'stop'})">⏹ Arrêt du match</button>
+    <button class="neutral" onclick="send({action:'restart'})">↻ Recommencer depuis le début</button>
+  </section>
+
+  <section>
+    <label>Aller à : unité <input type="number" id="goto-unit" value="1" min="1" style="width:3.5em;">
+      volée <input type="number" id="goto-end" value="1" min="1" style="width:3.5em;">
+      flèche (walk-up) <input type="number" id="goto-arrow" value="0" min="0" style="width:3.5em;">
+    </label>
+    <button class="neutral" onclick="sendGoto()">Aller à cette volée</button>
+  </section>
+
+  <section>
     <button class="danger" onclick="send({action:'emergency'})">🚨 Urgence</button>
     <button class="neutral" onclick="send({action:'resume'})">✅ Reprise après urgence</button>
   </section>
@@ -98,6 +111,14 @@
   function sendMessage() {
     const val = document.getElementById("msg").value;
     send({action: "message", value: val});
+  }
+  function sendGoto() {
+    send({
+      action: "goto",
+      unit: parseInt(document.getElementById("goto-unit").value || "1", 10),
+      end: parseInt(document.getElementById("goto-end").value || "1", 10),
+      arrow: parseInt(document.getElementById("goto-arrow").value || "0", 10),
+    });
   }
 </script>
 </body>

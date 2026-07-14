@@ -18,10 +18,16 @@ from .models import Phase
 
 @dataclass(frozen=True)
 class Step:
-    """One timed segment of a match sequence."""
+    """One timed segment of a match sequence.
+
+    ``duration`` is normally a number of seconds. It can also be ``None``,
+    meaning "wait here indefinitely until the DOS presses next" -- used for
+    the PAUSE step inserted between volées, where archers retrieve arrows
+    at their own pace.
+    """
 
     phase: Phase
-    duration: float  # seconds
+    duration: Optional[float]
 
     current_turn: str = ""
     end_number: int = 0
@@ -38,5 +44,5 @@ class Step:
     sound_event: Optional[str] = None
 
     def __post_init__(self) -> None:
-        if self.duration < 0:
-            raise ValueError(f"Step duration must be >= 0, got {self.duration}")
+        if self.duration is not None and self.duration < 0:
+            raise ValueError(f"Step duration must be >= 0 or None, got {self.duration}")

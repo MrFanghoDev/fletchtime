@@ -31,7 +31,9 @@ class TestFlintMode(unittest.TestCase):
         # 6 standard ends + 1 walk-up end, numbered 1..7
         self.assertEqual(end_numbers, list(range(1, 8)))
 
-        walkup_steps = [s for s in unit1_steps if s.end_number == 7]
+        walkup_steps = [
+            s for s in unit1_steps if s.end_number == 7 and s.phase != Phase.PAUSE
+        ]
         # 4 arrows x (RED prep + GREEN shoot) = 8 steps
         self.assertEqual(len(walkup_steps), 8)
 
@@ -58,7 +60,10 @@ class TestFlintMode(unittest.TestCase):
         suivante'."""
         mode = FlintMode()
         steps = mode.build_sequence()
-        walkup_steps = [s for s in steps if s.unit_number == 1 and s.end_number == 7]
+        walkup_steps = [
+            s for s in steps
+            if s.unit_number == 1 and s.end_number == 7 and s.phase != Phase.PAUSE
+        ]
 
         phases_in_order = [s.phase for s in walkup_steps]
         self.assertEqual(
@@ -78,6 +83,51 @@ class TestFlintMode(unittest.TestCase):
     def test_mismatched_walkup_distances_raises(self) -> None:
         with self.assertRaises(ValueError):
             FlintConfig(walkup_arrows=4, walkup_distances=["a", "b"])
+
+    def test_pause_inserted_between_standard_ends(self) -> None:
+        cfg = FlintConfig(units=1)
+        steps = FlintMode(cfg).build_sequence()
+
+        pause_before_end2 = next(
+            s for s in steps if s.phase == Phase.PAUSE and s.end_number == 2
+        )
+        self.assertIsNone(pause_before_end2.duration)
+        self.assertEqual(pause_before_end2.distance_label, "10 yards")  # end 2's distance
+
+    def test_pause_inserted_before_walkup_end(self) -> None:
+        cfg = FlintConfig(units=1)
+        steps = FlintMode(cfg).build_sequence()
+
+        pause_before_walkup = next(
+            s for s in steps if s.phase == Phase.PAUSE and s.end_number == 7
+        )
+        self.assertEqual(pause_before_walkup.arrow_in_end, 1)  # previews arrow 1
+
+    def test_no_pause_within_the_walkup_arrows(self) -> None:
+        cfg = FlintConfig(units=1)
+        steps = FlintMode(cfg).build_sequence()
+
+        walkup_steps = [s for s in steps if s.end_number == 7]
+        # the very first item may be the preview PAUSE (tagged end_number=7
+        # because it announces the upcoming walk-up); everything *after*
+        # that, i.e. the 4 arrows themselves, must never contain a pause.
+        if walkup_steps[0].phase == Phase.PAUSE:
+            walkup_steps = walkup_steps[1:]
+        self.assertNotIn(Phase.PAUSE, [s.phase for s in walkup_steps])
+
+    def test_pause_inserted_between_units(self) -> None:
+        cfg = FlintConfig(units=2)
+        steps = FlintMode(cfg).build_sequence()
+
+        pause_before_unit2 = next(
+            s for s in steps if s.phase == Phase.PAUSE and s.unit_number == 2
+        )
+        self.assertEqual(pause_before_unit2.end_number, 1)
+
+    def test_no_pause_after_the_very_last_end(self) -> None:
+        cfg = FlintConfig(units=2)
+        steps = FlintMode(cfg).build_sequence()
+        self.assertEqual(steps[-1].phase, Phase.GREEN)  # last walk-up arrow, not a pause
 
 
 if __name__ == "__main__":

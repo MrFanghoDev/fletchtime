@@ -75,7 +75,7 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         events = self.server.engine.pop_pending_events()
         await self.server.broadcast_state()
 
-        self.assertEqual(self.display.last_state()["time_left"], 9.8)
+        self.assertEqual(self.display.last_state()["time_left"], 14.8)
         self.assertEqual(events, [])  # no phase transition yet at 0.2s into a 10s step
 
     async def test_unregister_stops_further_broadcasts(self) -> None:
@@ -83,6 +83,37 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         await self.server.unregister(self.display)
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         self.assertEqual(len(self.display.sent), count_before)  # nothing new after unregister
+
+    async def test_stop_command_finishes_the_match(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({"action": "stop"}))
+        self.assertTrue(self.display.last_state()["finished"])
+
+    async def test_restart_command_goes_back_to_the_first_step(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({"action": "next"}))
+        await self.server.handle_command(json.dumps({"action": "restart"}))
+        state = self.display.last_state()
+        self.assertEqual(state["phase"], "red")
+        self.assertEqual(state["end_number"], 1)
+
+    async def test_goto_command_jumps_to_requested_end(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_flint"}))
+        await self.server.handle_command(
+            json.dumps({"action": "goto", "unit": 1, "end": 4})
+        )
+        state = self.display.last_state()
+        self.assertEqual(state["end_number"], 4)
+        self.assertEqual(state["distance_label"], "20 yards")
+
+    async def test_goto_command_with_bad_target_is_ignored_not_fatal(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        before = self.display.last_state()
+        await self.server.handle_command(
+            json.dumps({"action": "goto", "unit": 1, "end": 999})
+        )
+        after = self.display.last_state()
+        self.assertEqual(before, after)  # unchanged, no crash
 
 
 if __name__ == "__main__":

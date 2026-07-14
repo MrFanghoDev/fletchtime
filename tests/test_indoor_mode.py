@@ -10,11 +10,29 @@ class TestIndoorMode(unittest.TestCase):
         steps = mode.build_sequence()
 
         total_ends = 2 * 6
-        # each end = RED + GREEN + ORANGE by default
-        self.assertEqual(len(steps), total_ends * 3)
+        # each end = RED + GREEN + ORANGE, plus a PAUSE step after every end
+        # except the very last one (nothing to wait for once it's over).
+        self.assertEqual(len(steps), total_ends * 3 + (total_ends - 1))
 
         end_numbers = sorted({s.end_number for s in steps})
         self.assertEqual(end_numbers, list(range(1, total_ends + 1)))
+
+    def test_pause_inserted_between_ends_but_not_after_the_last(self) -> None:
+        mode = IndoorMode(IndoorConfig(series=1, ends_per_series=3))
+        steps = mode.build_sequence()
+
+        pause_steps = [s for s in steps if s.phase == Phase.PAUSE]
+        self.assertEqual(len(pause_steps), 2)  # between end1->2 and end2->3, not after end3
+        self.assertEqual(steps[-1].phase, Phase.ORANGE)  # sequence ends on shooting, not pause
+
+    def test_pause_step_previews_the_next_end(self) -> None:
+        mode = IndoorMode(IndoorConfig(series=1, ends_per_series=2, rotate_turn=True))
+        steps = mode.build_sequence()
+
+        pause_step = next(s for s in steps if s.phase == Phase.PAUSE)
+        self.assertEqual(pause_step.end_number, 2)
+        self.assertEqual(pause_step.current_turn, "C-D")  # end 2's turn, previewed
+        self.assertIsNone(pause_step.duration)
 
     def test_turn_rotates_ab_cd_each_end(self) -> None:
         mode = IndoorMode(IndoorConfig(series=1, ends_per_series=4, rotate_turn=True))

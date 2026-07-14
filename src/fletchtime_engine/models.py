@@ -19,6 +19,9 @@ class Phase(str, Enum):
     RED       -- preparation time (archers approach / take position).
     GREEN     -- main shooting time.
     ORANGE    -- warning period near the end of shooting time.
+    PAUSE     -- end of a volée: archers retrieve arrows, no countdown.
+                 The engine waits here indefinitely until the DOS manually
+                 starts the next volée (``MatchEngine.next()``).
     EMERGENCY -- danger signal, clock frozen, must be explicitly resumed.
     FINISHED  -- sequence exhausted, nothing left to shoot.
     """
@@ -27,6 +30,7 @@ class Phase(str, Enum):
     RED = "red"
     GREEN = "green"
     ORANGE = "orange"
+    PAUSE = "pause"
     EMERGENCY = "emergency"
     FINISHED = "finished"
 

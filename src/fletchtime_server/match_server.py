@@ -62,18 +62,31 @@ class MatchServer:
             elif action == "start_flint":
                 self.engine = MatchEngine(FlintMode(FlintConfig()))
             elif self.engine is not None:
-                if action == "next":
-                    self.engine.next()
-                elif action == "emergency":
-                    self.engine.emergency()
-                elif action == "resume":
-                    self.engine.resume()
-                elif action == "pause":
-                    self.engine.pause()
-                elif action == "play":
-                    self.engine.play()
-                elif action == "message":
-                    self.engine.set_message(data.get("value") or None)
+                try:
+                    if action == "next":
+                        self.engine.next()
+                    elif action == "stop":
+                        self.engine.stop()
+                    elif action == "restart":
+                        self.engine.restart()
+                    elif action == "goto":
+                        self.engine.goto(
+                            unit_number=int(data.get("unit", 1)),
+                            end_number=int(data.get("end", 1)),
+                            arrow_in_end=int(data.get("arrow", 0)),
+                        )
+                    elif action == "emergency":
+                        self.engine.emergency()
+                    elif action == "resume":
+                        self.engine.resume()
+                    elif action == "pause":
+                        self.engine.pause()
+                    elif action == "play":
+                        self.engine.play()
+                    elif action == "message":
+                        self.engine.set_message(data.get("value") or None)
+                except ValueError:
+                    pass  # e.g. goto target that doesn't exist -- ignore silently
 
         await self.broadcast_state()
 

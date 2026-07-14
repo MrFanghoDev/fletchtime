@@ -22,6 +22,7 @@
   .phase-red { background:#7f1d1d; }
   .phase-green { background:#14532d; }
   .phase-orange { background:#78350f; }
+  .phase-pause { background:#374151; }
   .phase-emergency { background:#dc2626; animation: blink 0.6s steps(1) infinite; }
   .phase-finished { background:#1e293b; }
   @keyframes blink { 50% { background:#000; } }
@@ -113,10 +114,13 @@
       return;
     }
     root.className = "phase-" + state.phase;
-    timeEl.textContent = state.finished ? "FIN" : Math.ceil(state.time_left);
-    turnEl.textContent = state.current_turn
-      ? state.current_turn
-      : (state.arrow_in_end ? ("Flèche " + state.arrow_in_end + "/" + state.total_arrows_in_end) : "");
+    timeEl.textContent = state.finished ? "FIN" : (state.phase === "pause" ? "⏸" : Math.ceil(state.time_left));
+    turnEl.textContent = state.phase === "pause"
+      ? "Récupération des flèches -- prochaine volée : "
+        + (state.current_turn || (state.arrow_in_end ? ("flèche " + state.arrow_in_end) : ""))
+      : (state.current_turn
+          ? state.current_turn
+          : (state.arrow_in_end ? ("Flèche " + state.arrow_in_end + "/" + state.total_arrows_in_end) : ""));
     distEl.textContent = state.distance_label
       ? (state.distance_label + (state.end_number ? " — volée " + state.end_number + "/" + state.total_ends : ""))
       : "";

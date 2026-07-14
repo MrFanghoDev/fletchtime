@@ -39,13 +39,23 @@ class TestMatchEngineTicking(unittest.TestCase):
 
     def test_tick_cascades_through_multiple_steps_after_lag(self) -> None:
         """A single large dt (e.g. after the process was suspended) should
-        still land on the correct step, not just clamp to 0."""
+        still land on the correct step -- but never skip past a PAUSE step:
+        the end of a volée always requires a manual next(), no matter how
+        large the elapsed time was."""
         engine = simple_indoor_engine()
-        # RED(10) + GREEN(90) + ORANGE(30) = 130s for end 1, then RED(10) of end 2
+        # RED(10) + GREEN(90) + ORANGE(30) = 130s for end 1, then PAUSE
+        # (indefinite) before end 2 -- a huge dt must stop there, not
+        # auto-start end 2.
         state = engine.tick(135)
-        self.assertEqual(state.end_number, 2)
+        self.assertEqual(state.phase, Phase.PAUSE)
+        self.assertEqual(state.end_number, 2)  # preview of the upcoming end
+        self.assertEqual(state.time_left, 0.0)
+
+        # only a manual next() actually starts end 2
+        state = engine.next()
         self.assertEqual(state.phase, Phase.RED)
-        self.assertEqual(state.time_left, 5)  # 10 - (135-130)
+        self.assertEqual(state.end_number, 2)
+        self.assertEqual(state.time_left, 10)
 
     def test_reaching_the_end_of_sequence_finishes(self) -> None:
         cfg = IndoorConfig(series=1, ends_per_series=1, prep_time=1,
@@ -69,8 +79,13 @@ class TestMatchEngineManualControl(unittest.TestCase):
 
     def test_next_through_full_end_changes_turn(self) -> None:
         engine = simple_indoor_engine()
-        for _ in range(3):  # RED -> GREEN -> ORANGE -> (next end) RED
+        for _ in range(3):  # RED -> GREEN -> ORANGE -> PAUSE (preview end 2)
             state = engine.next()
+        self.assertEqual(state.phase, Phase.PAUSE)
+        self.assertEqual(state.end_number, 2)
+        self.assertEqual(state.current_turn, "C-D")  # already previewing end 2's turn
+
+        state = engine.next()  # DOS starts end 2
         self.assertEqual(state.end_number, 2)
         self.assertEqual(state.current_turn, "C-D")
         self.assertEqual(state.phase, Phase.RED)
@@ -153,10 +168,10 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
     def test_cascading_tick_emits_all_crossed_events_in_order(self) -> None:
         engine = simple_indoor_engine()
         engine.pop_pending_events()
-        engine.tick(135)  # RED->GREEN->ORANGE->(end2)RED
+        engine.tick(135)  # RED->GREEN->ORANGE->PAUSE (stops there, no event)
         self.assertEqual(
             engine.pop_pending_events(),
-            ["shoot_start", "warning_orange", "prep_start"],
+            ["shoot_start", "warning_orange"],
         )
 
 
@@ -165,8 +180,9 @@ class TestMatchEngineWithFlintMode(unittest.TestCase):
         cfg = FlintConfig(units=1)
         engine = MatchEngine(FlintMode(cfg))
 
-        # play through all 6 standard ends (RED+GREEN+ORANGE each) via next()
-        for _ in range(6 * 3):
+        # each standard end is RED+GREEN+ORANGE+PAUSE (4 steps); play through
+        # all 6 via next(), landing exactly on the walk-up end's first arrow
+        for _ in range(6 * 4):
             engine.next()
 
         state = engine.current_state
@@ -177,7 +193,7 @@ class TestMatchEngineWithFlintMode(unittest.TestCase):
     def test_walkup_arrows_play_back_to_back_without_looping(self) -> None:
         cfg = FlintConfig(units=1)
         engine = MatchEngine(FlintMode(cfg))
-        for _ in range(6 * 3):  # skip to the walk-up end
+        for _ in range(6 * 4):  # skip to the walk-up end (see test above)
             engine.next()
 
         seen_arrows = []
@@ -189,6 +205,74 @@ class TestMatchEngineWithFlintMode(unittest.TestCase):
 
         self.assertEqual(seen_arrows, [1, 2, 3, 4])
         self.assertTrue(engine.current_state.finished)
+
+
+class TestMatchEngineStopRestartGoto(unittest.TestCase):
+    def test_stop_ends_the_match_immediately(self) -> None:
+        engine = simple_indoor_engine()
+        engine.tick(3)
+        state = engine.stop()
+        self.assertTrue(state.finished)
+        self.assertEqual(state.phase, Phase.FINISHED)
+
+        # further ticks/next must not resurrect the match
+        self.assertTrue(engine.tick(5).finished)
+        self.assertTrue(engine.next().finished)
+
+    def test_restart_goes_back_to_the_very_first_step(self) -> None:
+        engine = simple_indoor_engine()
+        for _ in range(5):  # move well into the match
+            engine.next()
+        state = engine.restart()
+
+        self.assertEqual(state.phase, Phase.RED)
+        self.assertEqual(state.end_number, 1)
+        self.assertEqual(state.current_turn, "A-B")
+        self.assertEqual(state.time_left, 10)
+
+    def test_restart_re_emits_the_first_step_event(self) -> None:
+        engine = simple_indoor_engine()
+        engine.next()
+        engine.pop_pending_events()
+        engine.restart()
+        self.assertEqual(engine.pop_pending_events(), ["prep_start"])
+
+    def test_restart_clears_emergency_and_finished_state(self) -> None:
+        engine = simple_indoor_engine()
+        engine.stop()
+        state = engine.restart()
+        self.assertFalse(state.finished)
+        self.assertEqual(state.phase, Phase.RED)
+
+    def test_goto_jumps_directly_to_a_given_end(self) -> None:
+        cfg = FlintConfig(units=1)
+        engine = MatchEngine(FlintMode(cfg))
+        state = engine.goto(unit_number=1, end_number=3)
+
+        self.assertEqual(state.phase, Phase.RED)
+        self.assertEqual(state.end_number, 3)
+        self.assertEqual(state.distance_label, "15 yards")
+
+    def test_goto_can_target_a_specific_walkup_arrow(self) -> None:
+        cfg = FlintConfig(units=1)
+        engine = MatchEngine(FlintMode(cfg))
+        state = engine.goto(unit_number=1, end_number=7, arrow_in_end=3)
+
+        self.assertEqual(state.phase, Phase.RED)
+        self.assertEqual(state.arrow_in_end, 3)
+        self.assertEqual(state.distance_label, "20 yards")
+
+    def test_goto_unknown_target_raises(self) -> None:
+        engine = simple_indoor_engine()
+        with self.assertRaises(ValueError):
+            engine.goto(unit_number=1, end_number=99)
+
+    def test_goto_clears_finished_and_emergency_state(self) -> None:
+        engine = simple_indoor_engine()
+        engine.stop()
+        state = engine.goto(unit_number=1, end_number=1)
+        self.assertFalse(state.finished)
+        self.assertEqual(state.phase, Phase.RED)
 
 
 if __name__ == "__main__":

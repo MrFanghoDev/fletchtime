@@ -20,7 +20,7 @@ class IndoorConfig:
     ends_per_series: int = 6
     arrows_per_end: int = 5
 
-    prep_time: float = 10.0     # red: preparation / approach line
+    prep_time: float = 15.0     # red: préparation / mise en place
     green_time: float = 90.0    # main shooting time
     orange_time: float = 30.0   # warning period (total shoot time = green+orange)
 
@@ -50,16 +50,19 @@ class IndoorMode(ShootingMode):
         total_ends = cfg.series * cfg.ends_per_series
         turn_cycle = ["A-B", "C-D"] if cfg.rotate_turn else [""]
 
-        steps: List[Step] = []
-        for end_index in range(1, total_ends + 1):
+        def common_for(end_index: int) -> dict:
             turn = turn_cycle[(end_index - 1) % len(turn_cycle)]
-            common = dict(
+            return dict(
                 current_turn=turn,
                 end_number=end_index,
                 total_ends=total_ends,
                 distance_label=cfg.distance_label,
                 target_image=cfg.target_image,
             )
+
+        steps: List[Step] = []
+        for end_index in range(1, total_ends + 1):
+            common = common_for(end_index)
             if cfg.prep_time > 0:
                 steps.append(Step(phase=Phase.RED, duration=cfg.prep_time,
                                    sound_event="prep_start", **common))
@@ -68,4 +71,12 @@ class IndoorMode(ShootingMode):
             if cfg.orange_time > 0:
                 steps.append(Step(phase=Phase.ORANGE, duration=cfg.orange_time,
                                    sound_event="warning_orange", **common))
+
+            has_next_end = end_index < total_ends
+            if has_next_end:
+                # Fin de volée : récupération des flèches, pas de décompte.
+                # Le DOS déclenche la volée suivante manuellement (next()).
+                # Les métadonnées annoncent déjà la volée à venir.
+                steps.append(Step(phase=Phase.PAUSE, duration=None,
+                                   **common_for(end_index + 1)))
         return steps
