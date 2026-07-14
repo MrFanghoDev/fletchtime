@@ -23,11 +23,38 @@
   }
   input[type=text] { padding:0.6rem; width:55%; border-radius:6px; border:1px solid #555;
     background:#000; color:white; }
+
+  /* Miniature en direct de display.html : on affiche la vraie page dans un
+     cadre plus petit que sa taille réelle, puis on la réduit visuellement
+     avec un transform. L'iframe garde son propre viewport (960x540) donc
+     tout ce qui est en vw/vh dans display.html se calcule normalement --
+     seul le rendu final est mis à l'échelle, pas la mise en page. */
+  .preview-wrapper {
+    width: 280px; height: 157px;
+    overflow: hidden; border-radius: 10px; border: 2px solid #444;
+    position: relative; margin-bottom: 0.5rem;
+  }
+  .preview-frame {
+    width: 960px; height: 540px; border: none;
+    transform: scale(0.2917); /* 280/960 */
+    transform-origin: top left;
+    pointer-events: none; /* c'est un aperçu, pas une seconde télécommande */
+  }
 </style>
 </head>
 <body>
   <h1>Fletchtime — Poste de contrôle</h1>
   <div id="status">Connexion en cours...</div>
+
+  <section>
+    <h2 style="font-size:1rem; margin:0 0 0.5rem;">Aperçu de l'affichage</h2>
+    <div class="preview-wrapper">
+      <iframe src="display.html?lane=apercu" class="preview-frame" title="Aperçu écran"></iframe>
+    </div>
+    <button class="neutral" onclick="window.open('display.html?lane=1', '_blank')">
+      Ouvrir en plein écran
+    </button>
+  </section>
 
   <section>
     <button class="start" onclick="send({action:'start_indoor'})">▶ Démarrer Indoor</button>
