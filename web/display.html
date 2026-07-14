@@ -41,12 +41,26 @@
   const lane = params.get("lane") || "?";
   document.getElementById("lane").textContent = "Pas de tir " + lane;
 
-  const ws = new WebSocket("ws://" + location.hostname + ":8765");
   const root = document.getElementById("root");
   const timeEl = document.getElementById("time");
   const turnEl = document.getElementById("turn");
   const distEl = document.getElementById("dist");
   const msgEl = document.getElementById("message");
+
+  // Empêche l'écran de la tablette de s'éteindre pendant l'affichage.
+  // Sans ça, Android met le navigateur en veille réseau dès l'extinction
+  // de l'écran et la connexion WebSocket finit par timeout côté serveur.
+  async function requestWakeLock() {
+    try {
+      if ("wakeLock" in navigator) {
+        await navigator.wakeLock.request("screen");
+      }
+    } catch (e) { /* refusé (batterie faible, etc.) -- pas bloquant */ }
+  }
+  requestWakeLock();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") requestWakeLock();
+  });
 
   // Bips générés à la volée (Web Audio) -- provisoire : le vrai système de
   // packs de sons interchangeables est prévu à l'étape 5 de la roadmap.
@@ -66,14 +80,28 @@
     } catch (e) { /* certains navigateurs bloquent l'audio avant interaction utilisateur */ }
   }
 
-  ws.onmessage = (evt) => {
-    const data = JSON.parse(evt.data);
-    if (data.type === "state") {
-      render(data.state);
-    } else if (data.type === "events") {
-      data.events.forEach(ev => beep(SOUND_FREQ[ev] || 500, ev === "shoot_start" ? 0.5 : 0.2));
-    }
-  };
+  // Reconnexion automatique : si le WiFi coupe un instant ou que l'écran
+  // s'est éteint malgré le wake lock, on retente régulièrement plutôt que
+  // de rester bloqué sur un état figé.
+  function connect() {
+    const ws = new WebSocket("ws://" + location.hostname + ":8765");
+
+    ws.onmessage = (evt) => {
+      const data = JSON.parse(evt.data);
+      if (data.type === "state") {
+        render(data.state);
+      } else if (data.type === "events") {
+        data.events.forEach(ev => beep(SOUND_FREQ[ev] || 500, ev === "shoot_start" ? 0.5 : 0.2));
+      }
+    };
+
+    ws.onclose = () => {
+      root.classList.add("phase-wait");
+      setTimeout(connect, 2000);
+    };
+    ws.onerror = () => ws.close();
+  }
+  connect();
 
   function render(state) {
     if (!state) {

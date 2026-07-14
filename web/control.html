@@ -54,25 +54,33 @@
   <div id="state">En attente de connexion...</div>
 
 <script>
-  const ws = new WebSocket("ws://" + location.hostname + ":8765");
   const statusEl = document.getElementById("status");
   const stateBox = document.getElementById("state");
+  let ws;
 
-  ws.onopen = () => statusEl.textContent = "Connecté au serveur.";
-  ws.onclose = () => statusEl.textContent = "⚠ Déconnecté du serveur.";
-  ws.onerror = () => statusEl.textContent = "⚠ Erreur de connexion.";
+  function connect() {
+    ws = new WebSocket("ws://" + location.hostname + ":8765");
 
-  ws.onmessage = (evt) => {
-    const data = JSON.parse(evt.data);
-    if (data.type === "state") {
-      stateBox.textContent = data.state
-        ? JSON.stringify(data.state, null, 2)
-        : "Aucun match en cours -- démarre un mode ci-dessus.";
-    }
-  };
+    ws.onopen = () => statusEl.textContent = "Connecté au serveur.";
+    ws.onclose = () => {
+      statusEl.textContent = "⚠ Déconnecté -- nouvelle tentative dans 2s...";
+      setTimeout(connect, 2000);
+    };
+    ws.onerror = () => ws.close();
+
+    ws.onmessage = (evt) => {
+      const data = JSON.parse(evt.data);
+      if (data.type === "state") {
+        stateBox.textContent = data.state
+          ? JSON.stringify(data.state, null, 2)
+          : "Aucun match en cours -- démarre un mode ci-dessus.";
+      }
+    };
+  }
+  connect();
 
   function send(obj) {
-    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
   }
   function sendMessage() {
     const val = document.getElementById("msg").value;

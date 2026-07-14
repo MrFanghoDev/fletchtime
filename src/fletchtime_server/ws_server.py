@@ -25,12 +25,21 @@ async def run_ws_server(port: int) -> None:
         try:
             async for message in websocket:
                 await server_state.handle_command(message)
+        except websockets.exceptions.ConnectionClosed:
+            # Expected when a phone/tablet screen locks or the browser tab
+            # is backgrounded: Android suspends network activity, the
+            # client stops answering keepalive pings, and the connection
+            # times out. Not an error condition worth a traceback.
+            pass
         finally:
             await server_state.unregister(websocket)
 
     tick_task = asyncio.create_task(server_state.tick_loop())
     try:
-        async with websockets.serve(handler, "0.0.0.0", port):
+        async with websockets.serve(
+            handler, "0.0.0.0", port,
+            ping_interval=20, ping_timeout=20,
+        ):
             await asyncio.Future()  # run forever
     finally:
         tick_task.cancel()
