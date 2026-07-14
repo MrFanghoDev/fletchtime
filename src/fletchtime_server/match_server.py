@@ -37,6 +37,10 @@ class MatchServer:
         self.engine: Optional[MatchEngine] = None
         self.clients: Set = set()
         self._lock = asyncio.Lock()
+        # Kept independent of the engine on purpose: a message ("Retard de
+        # 15 minutes...") must be showable even before a match has started,
+        # between matches, or after one has finished.
+        self._message: Optional[str] = None
 
     # -- connection lifecycle ---------------------------------------------
 
@@ -61,6 +65,8 @@ class MatchServer:
                 self.engine = MatchEngine(IndoorMode(IndoorConfig()))
             elif action == "start_flint":
                 self.engine = MatchEngine(FlintMode(FlintConfig()))
+            elif action == "message":
+                self._message = data.get("value") or None
             elif self.engine is not None:
                 try:
                     if action == "next":
@@ -83,8 +89,6 @@ class MatchServer:
                         self.engine.pause()
                     elif action == "play":
                         self.engine.play()
-                    elif action == "message":
-                        self.engine.set_message(data.get("value") or None)
                 except ValueError:
                     pass  # e.g. goto target that doesn't exist -- ignore silently
 
@@ -117,9 +121,8 @@ class MatchServer:
             self.clients.discard(websocket)
 
     def _current_state_payload(self) -> dict:
-        if self.engine is None:
-            return {"type": "state", "state": None}
-        return {"type": "state", "state": _state_to_dict(self.engine.current_state)}
+        state_dict = _state_to_dict(self.engine.current_state) if self.engine is not None else None
+        return {"type": "state", "state": state_dict, "message": self._message}
 
     async def _broadcast(self, payload: dict) -> None:
         if not self.clients:

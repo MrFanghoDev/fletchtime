@@ -127,7 +127,7 @@ class TestMatchEngineEmergency(unittest.TestCase):
         self.assertEqual(state.time_left, 10)
 
 
-class TestMatchEnginePauseAndMessage(unittest.TestCase):
+class TestMatchEnginePause(unittest.TestCase):
     def test_pause_stops_ticking_and_play_resumes_it(self) -> None:
         engine = simple_indoor_engine()
         engine.pause()
@@ -137,16 +137,6 @@ class TestMatchEnginePauseAndMessage(unittest.TestCase):
         engine.play()
         state = engine.tick(5)
         self.assertEqual(state.time_left, 5)
-
-    def test_message_is_attached_to_every_state_until_cleared(self) -> None:
-        engine = simple_indoor_engine()
-        engine.set_message("Retard de 10 minutes, prochaine manche à 14h10")
-        state = engine.tick(1)
-        self.assertEqual(state.message, "Retard de 10 minutes, prochaine manche à 14h10")
-
-        engine.set_message(None)
-        state = engine.tick(1)
-        self.assertIsNone(state.message)
 
 
 class TestMatchEngineSoundEvents(unittest.TestCase):

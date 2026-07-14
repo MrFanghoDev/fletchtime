@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class Phase(str, Enum):
@@ -57,5 +56,4 @@ class MatchState:
     distance_label: str = ""
     target_image: str = ""
 
-    message: Optional[str] = None
     finished: bool = False

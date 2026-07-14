@@ -97,9 +97,11 @@
     ws.onmessage = (evt) => {
       const data = JSON.parse(evt.data);
       if (data.type === "state") {
-        stateBox.textContent = data.state
+        const messageLine = "Message affiché : " + (data.message ? JSON.stringify(data.message) : "(aucun)");
+        const stateLine = data.state
           ? JSON.stringify(data.state, null, 2)
           : "Aucun match en cours -- démarre un mode ci-dessus.";
+        stateBox.textContent = messageLine + "\n\n" + stateLine;
       }
     };
   }

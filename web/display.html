@@ -90,7 +90,7 @@
     ws.onmessage = (evt) => {
       const data = JSON.parse(evt.data);
       if (data.type === "state") {
-        render(data.state);
+        render(data);
       } else if (data.type === "events") {
         data.events.forEach(ev => beep(SOUND_FREQ[ev] || 500, ev === "shoot_start" ? 0.5 : 0.2));
       }
@@ -104,29 +104,29 @@
   }
   connect();
 
-  function render(state) {
+  function render(payload) {
+    const state = payload.state;
     if (!state) {
       root.className = "phase-wait";
       timeEl.textContent = "--";
       turnEl.textContent = "";
       distEl.textContent = "En attente du départ";
-      msgEl.style.display = "none";
-      return;
+    } else {
+      root.className = "phase-" + state.phase;
+      timeEl.textContent = state.finished ? "FIN" : (state.phase === "pause" ? "⏸" : Math.ceil(state.time_left));
+      turnEl.textContent = state.phase === "pause"
+        ? "Récupération des flèches -- prochaine volée : "
+          + (state.current_turn || (state.arrow_in_end ? ("flèche " + state.arrow_in_end) : ""))
+        : (state.current_turn
+            ? state.current_turn
+            : (state.arrow_in_end ? ("Flèche " + state.arrow_in_end + "/" + state.total_arrows_in_end) : ""));
+      distEl.textContent = state.distance_label
+        ? (state.distance_label + (state.end_number ? " — volée " + state.end_number + "/" + state.total_ends : ""))
+        : "";
     }
-    root.className = "phase-" + state.phase;
-    timeEl.textContent = state.finished ? "FIN" : (state.phase === "pause" ? "⏸" : Math.ceil(state.time_left));
-    turnEl.textContent = state.phase === "pause"
-      ? "Récupération des flèches -- prochaine volée : "
-        + (state.current_turn || (state.arrow_in_end ? ("flèche " + state.arrow_in_end) : ""))
-      : (state.current_turn
-          ? state.current_turn
-          : (state.arrow_in_end ? ("Flèche " + state.arrow_in_end + "/" + state.total_arrows_in_end) : ""));
-    distEl.textContent = state.distance_label
-      ? (state.distance_label + (state.end_number ? " — volée " + state.end_number + "/" + state.total_ends : ""))
-      : "";
 
-    if (state.message) {
-      msgEl.textContent = state.message;
+    if (payload.message) {
+      msgEl.textContent = payload.message;
       msgEl.style.display = "block";
     } else {
       msgEl.style.display = "none";

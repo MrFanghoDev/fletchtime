@@ -21,6 +21,9 @@ class FakeWebSocket:
     def last_state(self) -> dict:
         return json.loads(self.sent[-1])["state"]
 
+    def last_message(self):
+        return json.loads(self.sent[-1])["message"]
+
 
 class TestMatchServer(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -60,10 +63,28 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         await self.server.handle_command(
             json.dumps({"action": "message", "value": "Retard 10 min"})
         )
-        self.assertEqual(self.display.last_state()["message"], "Retard 10 min")
+        self.assertEqual(self.display.last_message(), "Retard 10 min")
 
         await self.server.handle_command(json.dumps({"action": "message", "value": None}))
-        self.assertIsNone(self.display.last_state()["message"])
+        self.assertIsNone(self.display.last_message())
+
+    async def test_message_works_even_before_any_match_is_started(self) -> None:
+        """Regression test: a message like 'retard de 15 minutes' must be
+        showable while state is still None (no engine running yet) --
+        this used to be silently dropped."""
+        await self.server.handle_command(
+            json.dumps({"action": "message", "value": "Début retardé de 15 min"})
+        )
+        self.assertIsNone(self.display.last_state())
+        self.assertEqual(self.display.last_message(), "Début retardé de 15 min")
+
+    async def test_message_persists_across_stop_and_restart(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(
+            json.dumps({"action": "message", "value": "Pause déjeuner"})
+        )
+        await self.server.handle_command(json.dumps({"action": "stop"}))
+        self.assertEqual(self.display.last_message(), "Pause déjeuner")
 
     async def test_tick_updates_time_left_and_emits_events(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))

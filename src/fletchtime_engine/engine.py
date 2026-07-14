@@ -27,7 +27,6 @@ class MatchEngine:
         self._time_left: Optional[float] = self._steps[0].duration
         self._finished = False
         self._paused = False
-        self._message: Optional[str] = None
 
         self._emergency = False
         self._emergency_saved_time: Optional[float] = None
@@ -152,9 +151,6 @@ class MatchEngine:
         self._paused = False
         return self.current_state
 
-    def set_message(self, message: Optional[str]) -> None:
-        self._message = message
-
     def pop_pending_events(self) -> List[str]:
         """Return and clear sound events accumulated since the last call.
 
@@ -184,7 +180,7 @@ class MatchEngine:
     @property
     def current_state(self) -> MatchState:
         if self._finished:
-            return MatchState(phase=Phase.FINISHED, finished=True, message=self._message)
+            return MatchState(phase=Phase.FINISHED, finished=True)
 
         step = self._steps[self._index]
         phase = Phase.EMERGENCY if self._emergency else step.phase
@@ -201,6 +197,5 @@ class MatchEngine:
             total_arrows_in_end=step.total_arrows_in_end,
             distance_label=step.distance_label,
             target_image=step.target_image,
-            message=self._message,
             finished=False,
         )
