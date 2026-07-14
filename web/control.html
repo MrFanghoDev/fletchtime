@@ -15,6 +15,14 @@
   .next { background:#16a34a; }
   .danger { background:#dc2626; }
   .neutral { background:#4b5563; }
+  .quick-messages { margin-top: 0.75rem; }
+  .quick-messages-group { margin-bottom: 0.5rem; }
+  .quick-messages-label {
+    display: block; font-size: 0.75rem; opacity: 0.6; margin-bottom: 0.2rem;
+  }
+  button.quick {
+    background:#374151; font-size: 0.85rem; padding: 0.4rem 0.7rem;
+  }
   button:disabled, select:disabled, input:disabled {
     opacity: 0.4; cursor: not-allowed;
   }
@@ -122,6 +130,45 @@
     <input type="text" id="msg" placeholder="Message à afficher sur les écrans...">
     <button class="neutral" onclick="sendMessage()">Envoyer</button>
     <button class="neutral" onclick="send({action:'message', value:null})">Effacer</button>
+
+    <div class="quick-messages">
+      <div class="quick-messages-group">
+        <span class="quick-messages-label">Retards / démarrage</span>
+        <button class="quick" onclick="fillMsg('Retard de 5 minutes')">Retard 5 min</button>
+        <button class="quick" onclick="fillMsg('Retard de 10 minutes')">Retard 10 min</button>
+        <button class="quick" onclick="fillMsg('Retard de 15 minutes')">Retard 15 min</button>
+        <button class="quick" onclick="fillMsg('Le concours va bientôt commencer, merci de rejoindre votre pas de tir')">Rejoindre pas de tir</button>
+      </div>
+      <div class="quick-messages-group">
+        <span class="quick-messages-label">Pauses</span>
+        <button class="quick" onclick="fillMsg('Pause de 15 minutes')">Pause 15 min</button>
+        <button class="quick" onclick="fillMsg('Pause déjeuner, reprise à l\'heure annoncée')">Pause déjeuner</button>
+        <button class="quick" onclick="fillMsg('Reprise imminente, merci de vous préparer')">Reprise imminente</button>
+      </div>
+      <div class="quick-messages-group">
+        <span class="quick-messages-label">Sécurité / incident</span>
+        <button class="quick" onclick="fillMsg('Arrêt de tir — incident sur le pas de tir')">Arrêt de tir</button>
+        <button class="quick" onclick="fillMsg('Ligne de tir dégagée, reprise dans quelques instants')">Ligne dégagée</button>
+        <button class="quick" onclick="fillMsg('Merci de ne pas tirer, contrôle en cours')">Contrôle en cours</button>
+      </div>
+      <div class="quick-messages-group">
+        <span class="quick-messages-label">Logistique / scores</span>
+        <button class="quick" onclick="fillMsg('Merci de rapporter vos feuilles de marque')">Rapporter feuilles</button>
+        <button class="quick" onclick="fillMsg('Ramassage des feuilles de score en cours')">Ramassage scores</button>
+        <button class="quick" onclick="fillMsg('Contrôle de matériel en cours')">Contrôle matériel</button>
+      </div>
+      <div class="quick-messages-group">
+        <span class="quick-messages-label">Météo</span>
+        <button class="quick" onclick="fillMsg('Alerte météo, vérifiez votre matériel')">Alerte météo</button>
+        <button class="quick" onclick="fillMsg('Reprise après interruption météo')">Reprise météo</button>
+      </div>
+      <div class="quick-messages-group">
+        <span class="quick-messages-label">Fin de concours</span>
+        <button class="quick" onclick="fillMsg('Fin de la compétition, merci de votre participation')">Fin compétition</button>
+        <button class="quick" onclick="fillMsg('Résultats affichés sous peu')">Résultats à venir</button>
+        <button class="quick" onclick="fillMsg('Remise des prix dans quelques minutes')">Remise des prix</button>
+      </div>
+    </div>
   </section>
 
   <div id="state">En attente de connexion...</div>
@@ -212,6 +259,11 @@
   function sendMessage() {
     const val = document.getElementById("msg").value;
     send({action: "message", value: val});
+  }
+  function fillMsg(text) {
+    const input = document.getElementById("msg");
+    input.value = text;
+    input.focus();
   }
   function sendGoto() {
     send({
