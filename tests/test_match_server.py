@@ -111,6 +111,16 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(self.display.last_state()["current_turn"], "C-D")
 
+    async def test_start_indoor_alternate_flag_can_be_disabled(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "start_indoor", "turn_mode": "ab_then_cd", "alternate": False,
+        }))
+        # jump straight to end 7 (start of series 2, ends_per_series default = 6)
+        await self.server.handle_command(json.dumps({"action": "goto", "unit": 1, "end": 7}))
+        await self.server.handle_command(json.dumps({"action": "next"}))  # leave the preview pause
+        # with alternation off, series 2 should still start with A-B (no flip)
+        self.assertEqual(self.display.last_state()["current_turn"], "A-B")
+
     async def test_start_indoor_invalid_turn_mode_is_ignored_not_fatal(self) -> None:
         await self.server.handle_command(
             json.dumps({"action": "start_indoor", "turn_mode": "bogus"})

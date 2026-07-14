@@ -4,11 +4,15 @@ concours format ("2 séries de 6 volées de 5 flèches") but every number is
 configurable.
 
 A-B / C-D are *relays within the same volée*, not separate ends: when a
-target is shared, one pair shoots first (A-B), then the other (C-D) --
-the volée number does not change between them, only once *all* configured
-relays for that end have shot does the engine move to the next volée.
-Whether a match uses both relays or just one is a per-match setting
+target is shared, one pair shoots first, then the other -- the volée
+number does not change between them, only once *all* configured relays for
+that end have shot does the engine move to the next volée. Whether a match
+uses both relays (and in which order) or just one is a per-match setting
 (``turn_mode``), fixed before the match starts and never toggled mid-match.
+
+The club's actual competition alternates which relay leads from one series
+to the next (series 1: A-B puis C-D: series 2: C-D puis A-B) -- this is
+``alternate_relay_order_each_series``, on by default.
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ from .base import ShootingMode
 
 TURN_MODES = {
     "ab_then_cd": ["A-B", "C-D"],
+    "cd_then_ab": ["C-D", "A-B"],
     "ab_only": ["A-B"],
     "cd_only": ["C-D"],
 }
@@ -41,10 +46,16 @@ class IndoorConfig:
     target_image: str = "wa_indoor_40cm.png"
 
     # Comment les archers se relaient sur un même blason pendant une volée :
-    # "ab_then_cd" (les deux relais, l'un après l'autre), "ab_only" ou
-    # "cd_only" (un seul relais). Fixé avant le match, ne change jamais en
+    # "ab_then_cd", "cd_then_ab" (les deux relais, dans un ordre ou
+    # l'autre), "ab_only" ou "cd_only" (un seul relais). Ceci fixe l'ordre
+    # de la *première* série ; fixé avant le match, ne change jamais en
     # cours de concours.
     turn_mode: str = "ab_then_cd"
+
+    # Le concours du club alterne l'ordre des relais d'une série à l'autre
+    # (série 1 : A-B puis C-D -- série 2 : C-D puis A-B). Sans effet sur
+    # "ab_only"/"cd_only" (un seul relais, rien à inverser).
+    alternate_relay_order_each_series: bool = True
 
     def __post_init__(self) -> None:
         if self.series < 1 or self.ends_per_series < 1 or self.arrows_per_end < 1:
@@ -66,10 +77,17 @@ class IndoorMode(ShootingMode):
     def __init__(self, config: IndoorConfig | None = None) -> None:
         self.config = config or IndoorConfig()
 
+    def _relays_for_end(self, end_index: int) -> List[str]:
+        cfg = self.config
+        base = TURN_MODES[cfg.turn_mode]
+        series_index = (end_index - 1) // cfg.ends_per_series + 1
+        if cfg.alternate_relay_order_each_series and len(base) == 2 and series_index % 2 == 0:
+            return list(reversed(base))
+        return base
+
     def build_sequence(self) -> List[Step]:
         cfg = self.config
         total_ends = cfg.series * cfg.ends_per_series
-        relays = TURN_MODES[cfg.turn_mode]
 
         def relay_block(end_index: int, turn: str) -> List[Step]:
             common = dict(
@@ -92,10 +110,10 @@ class IndoorMode(ShootingMode):
 
         steps: List[Step] = []
         for end_index in range(1, total_ends + 1):
-            for turn in relays:
+            for turn in self._relays_for_end(end_index):
                 # Le relais suivant (s'il y en a un) commence par son propre
-                # RED de préparation -- pas besoin de PAUSE entre A-B et
-                # C-D, ce n'est pas une récupération de flèches, juste un
+                # RED de préparation -- pas besoin de PAUSE entre les deux
+                # relais, ce n'est pas une récupération de flèches, juste un
                 # changement de tireurs sur la ligne.
                 steps.extend(relay_block(end_index, turn))
 
@@ -104,9 +122,10 @@ class IndoorMode(ShootingMode):
                 # Fin de volée (tous les relais ont tiré) : récupération
                 # des flèches, pas de décompte. Le DOS déclenche la volée
                 # suivante manuellement (next()).
+                next_relays = self._relays_for_end(end_index + 1)
                 steps.append(Step(
                     phase=Phase.PAUSE, duration=None,
-                    current_turn=relays[0], end_number=end_index + 1,
+                    current_turn=next_relays[0], end_number=end_index + 1,
                     total_ends=total_ends,
                     distance_label=cfg.distance_label, target_image=cfg.target_image,
                 ))
