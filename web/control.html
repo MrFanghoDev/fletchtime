@@ -91,13 +91,13 @@
 
   <section>
     <button class="next" onclick="send({action:'next'})">Next ▶</button>
-    <button class="neutral" onclick="send({action:'pause'})">⏸ Pause</button>
-    <button class="neutral" onclick="send({action:'play'})">▶ Reprendre</button>
+    <button class="neutral" id="pause-btn" onclick="send({action:'pause'})" disabled>⏸ Pause</button>
+    <button class="neutral" id="play-btn" onclick="send({action:'play'})" disabled>▶ Reprendre</button>
   </section>
 
   <section>
-    <button class="danger" onclick="send({action:'stop'})">⏹ Arrêt du match</button>
-    <button class="neutral" onclick="send({action:'restart'})">↻ Recommencer depuis le début</button>
+    <button class="danger" id="stop-btn" onclick="send({action:'stop'})" disabled>⏹ Arrêt du match</button>
+    <button class="neutral" id="restart-btn" onclick="send({action:'restart'})" disabled>↻ Recommencer depuis le début</button>
   </section>
 
   <section>
@@ -166,13 +166,21 @@
         // Le mode A-B/C-D est fixé au démarrage et ne doit pas changer en
         // cours de match : on verrouille le sélecteur tant qu'un match
         // tourne (state non nul et pas encore terminé).
-        const matchIsRunning = data.state && !data.state.finished;
+        const hasMatch = !!data.state;
+        const matchIsRunning = hasMatch && !data.state.finished;
         document.getElementById("turn-mode").disabled = matchIsRunning;
         document.getElementById("alternate-relay").disabled = matchIsRunning;
         document.getElementById("flint-turn-mode").disabled = matchIsRunning;
         document.getElementById("flint-alternate-relay").disabled = matchIsRunning;
         document.getElementById("start-indoor-btn").disabled = matchIsRunning;
         document.getElementById("start-flint-btn").disabled = matchIsRunning;
+
+        // Stop/Pause/Reprendre n'ont de sens que pendant un match actif ;
+        // Recommencer reste utile même après la fin (relance depuis le début).
+        document.getElementById("stop-btn").disabled = !matchIsRunning;
+        document.getElementById("pause-btn").disabled = !matchIsRunning;
+        document.getElementById("play-btn").disabled = !matchIsRunning;
+        document.getElementById("restart-btn").disabled = !hasMatch;
       }
     };
   }
