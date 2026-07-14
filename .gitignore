@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Environnements virtuels
+.venv/
+venv/
+
+# Sphinx
+docs/_build/
+
+# Assets propres à un club (packs de sons perso, logo, banderoles) --
+# jamais versionnés dans le dépôt public partagé avec la FFTL, voir
+# docs/architecture.md.
+sounds/packs/_custom/
+web/assets/club/
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+*.swp
