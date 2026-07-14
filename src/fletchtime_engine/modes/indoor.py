@@ -22,14 +22,8 @@ from typing import List
 
 from ..models import Phase
 from ..sequence import Step
+from ..turn_modes import TURN_MODES
 from .base import ShootingMode
-
-TURN_MODES = {
-    "ab_then_cd": ["A-B", "C-D"],
-    "cd_then_ab": ["C-D", "A-B"],
-    "ab_only": ["A-B"],
-    "cd_only": ["C-D"],
-}
 
 
 @dataclass

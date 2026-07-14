@@ -188,7 +188,7 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
 
 class TestMatchEngineWithFlintMode(unittest.TestCase):
     def test_engine_plays_through_a_full_flint_unit(self) -> None:
-        cfg = FlintConfig(units=1)
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
         engine = MatchEngine(FlintMode(cfg))
 
         # each standard end is RED+GREEN+ORANGE+PAUSE (4 steps); play through
@@ -202,7 +202,7 @@ class TestMatchEngineWithFlintMode(unittest.TestCase):
         self.assertEqual(state.phase, Phase.RED)
 
     def test_walkup_arrows_play_back_to_back_without_looping(self) -> None:
-        cfg = FlintConfig(units=1)
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
         engine = MatchEngine(FlintMode(cfg))
         for _ in range(6 * 4):  # skip to the walk-up end (see test above)
             engine.next()
@@ -256,13 +256,13 @@ class TestMatchEngineStopRestartGoto(unittest.TestCase):
         self.assertEqual(state.phase, Phase.RED)
 
     def test_goto_lands_on_the_pause_preview_before_the_target_end(self) -> None:
-        cfg = FlintConfig(units=1)
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
         engine = MatchEngine(FlintMode(cfg))
         state = engine.goto(unit_number=1, end_number=3)
 
         self.assertEqual(state.phase, Phase.PAUSE)
         self.assertEqual(state.end_number, 3)
-        self.assertEqual(state.distance_label, "15 yards")
+        self.assertEqual(state.distance_label, "30 yards")
 
         # DOS presses next() when ready -- that's what actually starts it
         state = engine.next()
@@ -270,13 +270,13 @@ class TestMatchEngineStopRestartGoto(unittest.TestCase):
         self.assertEqual(state.end_number, 3)
 
     def test_goto_the_very_first_end_has_no_preview_pause_to_land_on(self) -> None:
-        cfg = FlintConfig(units=1)
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
         engine = MatchEngine(FlintMode(cfg))
         state = engine.goto(unit_number=1, end_number=1)
         self.assertEqual(state.phase, Phase.RED)  # nothing precedes end 1
 
     def test_goto_can_target_a_specific_walkup_arrow(self) -> None:
-        cfg = FlintConfig(units=1)
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
         engine = MatchEngine(FlintMode(cfg))
         # arrow 1 has a preview pause (announcing the whole walk-up end)
         state = engine.goto(unit_number=1, end_number=7, arrow_in_end=1)

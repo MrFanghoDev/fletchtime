@@ -4,6 +4,15 @@ different distances, 45 seconds per arrow, the whole group advancing
 together between arrows). A "parcours" is ``units`` unités standards
 (2 for the club's competition).
 
+A-B / C-D relays: unlike Indoor (where both relays share a target boss and
+can swap within the same volée), Flint's field-style single-lane course
+means swapping relays mid-volée isn't practical or safe -- there's no room
+for two target faces per distance, and moving people between shooting
+positions repeatedly would be dangerous. So here, a relay shoots an entire
+unité standard (all 7 volées) before the other relay repeats that same
+unité from its own start. Which relays are used, and in which order, is
+fixed before the match starts (``turn_mode``) and never changed mid-match.
+
 See docs/specifications.md for the full rule text this is derived from.
 """
 
@@ -14,6 +23,7 @@ from typing import List
 
 from ..models import Phase
 from ..sequence import Step
+from ..turn_modes import TURN_MODES
 from .base import ShootingMode
 
 
@@ -27,7 +37,7 @@ class FlintConfig:
     standard_green_time: float = 150.0
     standard_orange_time: float = 30.0  # total standard end time = green + orange
     standard_distances: List[str] = field(default_factory=lambda: [
-        "20 pieds", "10 yards", "15 yards", "20 yards", "25 yards", "30 yards",
+        "25 yards", "20 pieds", "30 yards", "15 yards", "20 yards", "10 yards",
     ])
     standard_target_image: str = "field_20cm.png"
 
@@ -38,6 +48,13 @@ class FlintConfig:
         "30 yards", "25 yards", "20 yards", "15 yards",
     ])
     walkup_target_image: str = "field_20cm.png"
+
+    # Comment les archers se relaient sur le parcours : "ab_then_cd",
+    # "cd_then_ab" (les deux relais, un après l'autre -- chacun tirant
+    # l'unité ENTIÈRE avant que l'autre ne la reprenne), "ab_only" ou
+    # "cd_only" (un seul relais). Fixé avant le match, ne change jamais en
+    # cours de concours.
+    turn_mode: str = "ab_then_cd"
 
     def __post_init__(self) -> None:
         if self.units < 1:
@@ -62,6 +79,10 @@ class FlintConfig:
         ):
             if value < 0:
                 raise ValueError(f"{name} must be >= 0, got {value}")
+        if self.turn_mode not in TURN_MODES:
+            raise ValueError(
+                f"turn_mode must be one of {sorted(TURN_MODES)}, got {self.turn_mode!r}"
+            )
 
 
 class FlintMode(ShootingMode):
@@ -72,21 +93,30 @@ class FlintMode(ShootingMode):
         cfg = self.config
         total_ends_per_unit = cfg.standard_ends_per_unit + 1  # +1 for walk-up end
         walkup_end_number = cfg.standard_ends_per_unit + 1
+        relays = TURN_MODES[cfg.turn_mode]
 
         # Build one "block" per end (a block = the steps for that end, with
         # no pause inside it -- the walk-up's 4 arrows stay contiguous).
+        # For each unit, every relay shoots the *entire* unit (volées 1..7)
+        # before the next relay repeats it from volée 1 again.
         end_blocks: List[List[Step]] = []
         for unit in range(1, cfg.units + 1):
-            for end_index in range(1, cfg.standard_ends_per_unit + 1):
-                end_blocks.append(self._standard_end(cfg, unit, end_index, total_ends_per_unit))
-            end_blocks.append(self._walkup_end(cfg, unit, total_ends_per_unit, walkup_end_number))
+            for turn in relays:
+                for end_index in range(1, cfg.standard_ends_per_unit + 1):
+                    end_blocks.append(
+                        self._standard_end(cfg, unit, end_index, total_ends_per_unit, turn)
+                    )
+                end_blocks.append(
+                    self._walkup_end(cfg, unit, total_ends_per_unit, walkup_end_number, turn)
+                )
 
         steps: List[Step] = []
         for i, block in enumerate(end_blocks):
             steps.extend(block)
             if i + 1 < len(end_blocks):
-                # Fin de volée : récupération des flèches, pas de décompte.
-                # Le DOS déclenche la volée suivante manuellement (next()).
+                # Fin de volée (ou fin du passage d'un relais) : récupération
+                # des flèches / changement de relais, pas de décompte. Le
+                # DOS déclenche la suite manuellement (next()).
                 next_step = end_blocks[i + 1][0]
                 steps.append(Step(
                     phase=Phase.PAUSE, duration=None,
@@ -103,9 +133,10 @@ class FlintMode(ShootingMode):
 
     @staticmethod
     def _standard_end(cfg: FlintConfig, unit: int, end_index: int,
-                       total_ends: int) -> List[Step]:
+                       total_ends: int, turn: str) -> List[Step]:
         distance = cfg.standard_distances[end_index - 1]
         common = dict(
+            current_turn=turn,
             end_number=end_index,
             total_ends=total_ends,
             unit_number=unit,
@@ -125,11 +156,12 @@ class FlintMode(ShootingMode):
 
     @staticmethod
     def _walkup_end(cfg: FlintConfig, unit: int, total_ends: int,
-                     end_number: int) -> List[Step]:
+                     end_number: int, turn: str) -> List[Step]:
         steps: List[Step] = []
         for arrow_index in range(1, cfg.walkup_arrows + 1):
             distance = cfg.walkup_distances[arrow_index - 1]
             common = dict(
+                current_turn=turn,
                 end_number=end_number,
                 total_ends=total_ends,
                 unit_number=unit,

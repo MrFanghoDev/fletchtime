@@ -87,21 +87,28 @@ class MatchEngine:
         self._emit_current_step_event()
         return self.current_state
 
-    def goto(self, unit_number: int, end_number: int, arrow_in_end: int = 0) -> MatchState:
+    def goto(self, unit_number: int, end_number: int, arrow_in_end: int = 0,
+             turn: str = "") -> MatchState:
         """Jump to a specific volée (and, for a walk-up end, optionally a
-        specific arrow). Lands on the PAUSE step immediately preceding it
-        when one exists -- more practical for the DOS: the screen already
-        previews the target end/distance, and the countdown only actually
-        starts once ``next()`` is pressed. Falls back to the shooting step
-        itself when there is no preceding pause (e.g. the very first end
-        of the match, or an individual walk-up arrow after the first).
-        Raises ``ValueError`` if no step matches."""
+        specific arrow). ``turn`` disambiguates when the same
+        (unit, end_number) occurs more than once -- e.g. Flint, where each
+        relay repeats the whole unit, so volée 3 exists once per relay.
+        Leave ``turn`` empty to match the first occurrence regardless of
+        relay. Lands on the PAUSE step immediately preceding it when one
+        exists -- more practical for the DOS: the screen already previews
+        the target end/distance, and the countdown only actually starts
+        once ``next()`` is pressed. Falls back to the shooting step itself
+        when there is no preceding pause (e.g. the very first step of the
+        match, or an individual walk-up arrow after the first). Raises
+        ``ValueError`` if no step matches."""
         for index, step in enumerate(self._steps):
             if step.phase == Phase.PAUSE:
                 continue
             if step.unit_number != unit_number or step.end_number != end_number:
                 continue
             if arrow_in_end and step.arrow_in_end != arrow_in_end:
+                continue
+            if turn and step.current_turn != turn:
                 continue
 
             target_index = index
@@ -119,7 +126,7 @@ class MatchEngine:
             return self.current_state
         raise ValueError(
             f"No step found for unit={unit_number} end={end_number} "
-            f"arrow={arrow_in_end or '-'}"
+            f"arrow={arrow_in_end or '-'} turn={turn or '-'}"
         )
 
     def emergency(self) -> MatchState:

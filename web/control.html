@@ -70,7 +70,16 @@
       Alterner l'ordre à chaque série
     </label><br>
     <button class="start" onclick="startIndoor()">▶ Démarrer Indoor</button>
-    <button class="start" onclick="send({action:'start_flint'})">▶ Démarrer Flint</button>
+    <br><br>
+    <label>Mode Flint :
+      <select id="flint-turn-mode">
+        <option value="ab_then_cd">A-B puis C-D (chacun toute l'unité)</option>
+        <option value="cd_then_ab">C-D puis A-B (chacun toute l'unité)</option>
+        <option value="ab_only">A-B seulement</option>
+        <option value="cd_only">C-D seulement</option>
+      </select>
+    </label><br>
+    <button class="start" onclick="startFlint()">▶ Démarrer Flint</button>
   </section>
 
   <section>
@@ -88,6 +97,11 @@
     <label>Aller à : unité <input type="number" id="goto-unit" value="1" min="1" style="width:3.5em;">
       volée <input type="number" id="goto-end" value="1" min="1" style="width:3.5em;">
       flèche (walk-up) <input type="number" id="goto-arrow" value="0" min="0" style="width:3.5em;">
+      relais <select id="goto-turn">
+        <option value="">(peu importe)</option>
+        <option value="A-B">A-B</option>
+        <option value="C-D">C-D</option>
+      </select>
     </label>
     <button class="neutral" onclick="sendGoto()">Aller à cette volée</button>
   </section>
@@ -148,6 +162,7 @@
         const matchIsRunning = data.state && !data.state.finished;
         document.getElementById("turn-mode").disabled = matchIsRunning;
         document.getElementById("alternate-relay").disabled = matchIsRunning;
+        document.getElementById("flint-turn-mode").disabled = matchIsRunning;
       }
     };
   }
@@ -163,6 +178,9 @@
       alternate: document.getElementById("alternate-relay").checked,
     });
   }
+  function startFlint() {
+    send({action: "start_flint", turn_mode: document.getElementById("flint-turn-mode").value});
+  }
   function sendMessage() {
     const val = document.getElementById("msg").value;
     send({action: "message", value: val});
@@ -173,6 +191,7 @@
       unit: parseInt(document.getElementById("goto-unit").value || "1", 10),
       end: parseInt(document.getElementById("goto-end").value || "1", 10),
       arrow: parseInt(document.getElementById("goto-arrow").value || "0", 10),
+      turn: document.getElementById("goto-turn").value,
     });
   }
 </script>

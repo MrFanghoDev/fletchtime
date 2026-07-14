@@ -40,9 +40,15 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         await self.server.handle_command(json.dumps({"action": "start_flint"}))
         state = self.display.last_state()
         self.assertEqual(state["phase"], "red")
-        self.assertEqual(state["distance_label"], "20 pieds")
+        self.assertEqual(state["distance_label"], "25 yards")
         # every registered client gets the same broadcast
         self.assertEqual(self.control.last_state(), state)
+
+    async def test_start_flint_accepts_turn_mode(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "start_flint", "turn_mode": "cd_only"})
+        )
+        self.assertEqual(self.display.last_state()["current_turn"], "C-D")
 
     async def test_next_advances_and_broadcasts(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_flint"}))
@@ -147,7 +153,7 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         )
         state = self.display.last_state()
         self.assertEqual(state["end_number"], 4)
-        self.assertEqual(state["distance_label"], "20 yards")
+        self.assertEqual(state["distance_label"], "15 yards")
 
     async def test_goto_command_with_bad_target_is_ignored_not_fatal(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))

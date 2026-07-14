@@ -72,7 +72,11 @@ class MatchServer:
                 except ValueError:
                     pass  # invalid turn_mode from a malformed command -- ignore
             elif action == "start_flint":
-                self.engine = MatchEngine(FlintMode(FlintConfig()))
+                turn_mode = data.get("turn_mode", "ab_then_cd")
+                try:
+                    self.engine = MatchEngine(FlintMode(FlintConfig(turn_mode=turn_mode)))
+                except ValueError:
+                    pass  # invalid turn_mode from a malformed command -- ignore
             elif action == "message":
                 self._message = data.get("value") or None
             elif self.engine is not None:
@@ -88,6 +92,7 @@ class MatchServer:
                             unit_number=int(data.get("unit", 1)),
                             end_number=int(data.get("end", 1)),
                             arrow_in_end=int(data.get("arrow", 0)),
+                            turn=data.get("turn", ""),
                         )
                     elif action == "emergency":
                         self.engine.emergency()
