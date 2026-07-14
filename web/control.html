@@ -114,8 +114,8 @@
   </section>
 
   <section>
-    <button class="danger" onclick="send({action:'emergency'})">🚨 Urgence</button>
-    <button class="neutral" onclick="send({action:'resume'})">✅ Reprise après urgence</button>
+    <button class="danger" id="emergency-btn" onclick="send({action:'emergency'})" disabled>🚨 Urgence</button>
+    <button class="neutral" id="resume-btn" onclick="send({action:'resume'})" disabled>✅ Reprise après urgence</button>
   </section>
 
   <section>
@@ -181,6 +181,12 @@
         document.getElementById("pause-btn").disabled = !matchIsRunning;
         document.getElementById("play-btn").disabled = !matchIsRunning;
         document.getElementById("restart-btn").disabled = !hasMatch;
+
+        // Urgence : seulement pendant un match actif, pas déjà en urgence.
+        // Reprise : seulement quand on est effectivement en urgence.
+        const inEmergency = hasMatch && data.state.phase === "emergency";
+        document.getElementById("emergency-btn").disabled = !matchIsRunning || inEmergency;
+        document.getElementById("resume-btn").disabled = !inEmergency;
       }
     };
   }

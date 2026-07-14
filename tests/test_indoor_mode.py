@@ -156,7 +156,18 @@ class TestIndoorMode(unittest.TestCase):
         mode = IndoorMode(IndoorConfig(series=1, ends_per_series=2))
         steps = mode.build_sequence()
         pause_step = next(s for s in steps if s.phase == Phase.PAUSE)
-        self.assertEqual(pause_step.distance_label, "18m")  # same distance, but present
+        self.assertEqual(pause_step.distance_label, "20 yards")  # same distance, but present
+
+    def test_default_shoot_time_is_four_minutes_per_ifaa_rule(self) -> None:
+        cfg = IndoorConfig()
+        self.assertEqual(cfg.green_time + cfg.orange_time, 240.0)  # règle IFAA : 4 min/volée
+
+    def test_default_distance_and_arrows_match_ifaa_rule(self) -> None:
+        cfg = IndoorConfig()
+        self.assertEqual(cfg.distance_label, "20 yards")
+        self.assertEqual(cfg.arrows_per_end, 5)
+        self.assertEqual(cfg.ends_per_series, 6)
+        self.assertEqual(cfg.series, 2)
 
 
 if __name__ == "__main__":

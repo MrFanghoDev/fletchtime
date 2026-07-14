@@ -38,10 +38,10 @@ class IndoorConfig:
     arrows_per_end: int = 5
 
     prep_time: float = 15.0     # red: préparation / mise en place
-    green_time: float = 90.0    # main shooting time
-    orange_time: float = 30.0   # warning period (total shoot time = green+orange)
+    green_time: float = 210.0   # main shooting time
+    orange_time: float = 30.0   # warning period -- total shoot time = green+orange = 4 min (règle IFAA)
 
-    distance_label: str = "18m"
+    distance_label: str = "20 yards"
     target_image: str = "wa_indoor_40cm.png"
 
     # Comment les archers se relaient sur un même blason pendant une volée :
