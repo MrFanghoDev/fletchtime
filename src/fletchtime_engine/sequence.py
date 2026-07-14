@@ -1,0 +1,42 @@
+"""A ``Step`` is one timed segment of a competition (e.g. "red light, 10s,
+end 3 of 12, turn A-B, distance 18m"). A shooting mode's job is only to
+produce an ordered list of ``Step``s up front; the engine then plays that
+list back, handling ticking, manual advance and emergency stop.
+
+This keeps modes simple, declarative, and trivial to unit test: you can
+assert on the exact list of steps a config produces without running any
+timer at all.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
+
+from .models import Phase
+
+
+@dataclass(frozen=True)
+class Step:
+    """One timed segment of a match sequence."""
+
+    phase: Phase
+    duration: float  # seconds
+
+    current_turn: str = ""
+    end_number: int = 0
+    total_ends: int = 0
+    unit_number: int = 1
+    arrow_in_end: int = 0
+    total_arrows_in_end: int = 0
+
+    distance_label: str = ""
+    target_image: str = ""
+
+    # identifier consumed by the transport layer to trigger a sound; not a
+    # filename -- see docs/architecture.md "Packs de sons".
+    sound_event: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.duration < 0:
+            raise ValueError(f"Step duration must be >= 0, got {self.duration}")

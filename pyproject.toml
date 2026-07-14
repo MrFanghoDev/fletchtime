@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fletchtime-engine"
+version = "0.1.0"
+description = "Moteur de séquencement pour compétitions d'archerie FFTL (Indoor, Flint)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]

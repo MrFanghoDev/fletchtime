@@ -1,0 +1,38 @@
+# Configuration file for the Sphinx documentation builder.
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+project = "Fletchtime"
+copyright = "2026, [Nom du club]"
+author = "[Nom du club]"
+release = "0.1.0"
+
+# -- General configuration ---------------------------------------------------
+
+extensions = [
+    "myst_parser",
+    "sphinx.ext.autosectionlabel",
+]
+
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
+
+myst_enable_extensions = [
+    "colon_fence",      # blocs ::: pour les admonitions (note, warning, etc.)
+    "deflist",
+    "fieldlist",
+    "attrs_inline",
+    "tasklist",
+]
+
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+language = "fr"
+
+# -- Options for HTML output --------------------------------------------------
+
+html_theme = "furo"  # thème moderne, responsive, lisible sur mobile
+html_static_path = ["_static"]
+html_title = "Fletchtime — Documentation"
