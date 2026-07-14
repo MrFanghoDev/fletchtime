@@ -15,6 +15,9 @@
   .next { background:#16a34a; }
   .danger { background:#dc2626; }
   .neutral { background:#4b5563; }
+  button:disabled, select:disabled, input:disabled {
+    opacity: 0.4; cursor: not-allowed;
+  }
   section { margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid #333; }
   #status { font-size:0.9rem; opacity:0.7; margin-bottom:0.5rem; }
   #state {
@@ -69,7 +72,7 @@
       <input type="checkbox" id="alternate-relay" checked>
       Alterner l'ordre à chaque série
     </label><br>
-    <button class="start" onclick="startIndoor()">▶ Démarrer Indoor</button>
+    <button class="start" id="start-indoor-btn" onclick="startIndoor()">▶ Démarrer Indoor</button>
     <br><br>
     <label>Mode Flint :
       <select id="flint-turn-mode">
@@ -83,7 +86,7 @@
       <input type="checkbox" id="flint-alternate-relay" checked>
       Alterner l'ordre à chaque unité
     </label><br>
-    <button class="start" onclick="startFlint()">▶ Démarrer Flint</button>
+    <button class="start" id="start-flint-btn" onclick="startFlint()">▶ Démarrer Flint</button>
   </section>
 
   <section>
@@ -168,6 +171,8 @@
         document.getElementById("alternate-relay").disabled = matchIsRunning;
         document.getElementById("flint-turn-mode").disabled = matchIsRunning;
         document.getElementById("flint-alternate-relay").disabled = matchIsRunning;
+        document.getElementById("start-indoor-btn").disabled = matchIsRunning;
+        document.getElementById("start-flint-btn").disabled = matchIsRunning;
       }
     };
   }
