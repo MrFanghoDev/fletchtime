@@ -120,9 +120,12 @@
         : (state.current_turn
             ? state.current_turn
             : (state.arrow_in_end ? ("Flèche " + state.arrow_in_end + "/" + state.total_arrows_in_end) : ""));
+
+      const serieLabel = "Série " + state.unit_number;
+      const voleeLabel = state.end_number ? "Volée " + state.end_number + "/" + state.total_ends : "";
       distEl.textContent = state.distance_label
-        ? (state.distance_label + (state.end_number ? " — volée " + state.end_number + "/" + state.total_ends : ""))
-        : "";
+        ? (serieLabel + " — " + voleeLabel + " — " + state.distance_label)
+        : (serieLabel + (voleeLabel ? " — " + voleeLabel : ""));
     }
 
     if (payload.message) {

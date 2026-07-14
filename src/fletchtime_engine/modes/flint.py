@@ -52,9 +52,14 @@ class FlintConfig:
     # Comment les archers se relaient sur le parcours : "ab_then_cd",
     # "cd_then_ab" (les deux relais, un après l'autre -- chacun tirant
     # l'unité ENTIÈRE avant que l'autre ne la reprenne), "ab_only" ou
-    # "cd_only" (un seul relais). Fixé avant le match, ne change jamais en
-    # cours de concours.
+    # "cd_only" (un seul relais). Ceci fixe l'ordre de la *première* unité ;
+    # fixé avant le match, ne change jamais en cours de concours.
     turn_mode: str = "ab_then_cd"
+
+    # Le concours du club alterne l'ordre des relais d'une unité à l'autre
+    # (unité 1 : A-B puis C-D -- unité 2 : C-D puis A-B), exactement comme
+    # pour l'Indoor. Sans effet sur "ab_only"/"cd_only".
+    alternate_relay_order_each_unit: bool = True
 
     def __post_init__(self) -> None:
         if self.units < 1:
@@ -89,19 +94,28 @@ class FlintMode(ShootingMode):
     def __init__(self, config: FlintConfig | None = None) -> None:
         self.config = config or FlintConfig()
 
+    def _relays_for_unit(self, unit: int) -> List[str]:
+        cfg = self.config
+        base = TURN_MODES[cfg.turn_mode]
+        if cfg.alternate_relay_order_each_unit and len(base) == 2 and unit % 2 == 0:
+            return list(reversed(base))
+        return base
+
     def build_sequence(self) -> List[Step]:
         cfg = self.config
         total_ends_per_unit = cfg.standard_ends_per_unit + 1  # +1 for walk-up end
         walkup_end_number = cfg.standard_ends_per_unit + 1
-        relays = TURN_MODES[cfg.turn_mode]
 
         # Build one "block" per end (a block = the steps for that end, with
         # no pause inside it -- the walk-up's 4 arrows stay contiguous).
         # For each unit, every relay shoots the *entire* unit (volées 1..7)
-        # before the next relay repeats it from volée 1 again.
+        # before the next relay repeats it from volée 1 again. Which relay
+        # goes first can alternate from one unit to the next (see
+        # ``alternate_relay_order_each_unit``), e.g. the club's real
+        # competition: unité 1 = A-B puis C-D, unité 2 = C-D puis A-B.
         end_blocks: List[List[Step]] = []
         for unit in range(1, cfg.units + 1):
-            for turn in relays:
+            for turn in self._relays_for_unit(unit):
                 for end_index in range(1, cfg.standard_ends_per_unit + 1):
                     end_blocks.append(
                         self._standard_end(cfg, unit, end_index, total_ends_per_unit, turn)

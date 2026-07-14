@@ -73,8 +73,12 @@ class MatchServer:
                     pass  # invalid turn_mode from a malformed command -- ignore
             elif action == "start_flint":
                 turn_mode = data.get("turn_mode", "ab_then_cd")
+                alternate = data.get("alternate", True)
                 try:
-                    self.engine = MatchEngine(FlintMode(FlintConfig(turn_mode=turn_mode)))
+                    self.engine = MatchEngine(FlintMode(FlintConfig(
+                        turn_mode=turn_mode,
+                        alternate_relay_order_each_unit=bool(alternate),
+                    )))
                 except ValueError:
                     pass  # invalid turn_mode from a malformed command -- ignore
             elif action == "message":

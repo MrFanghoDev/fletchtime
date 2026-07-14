@@ -78,6 +78,10 @@
         <option value="ab_only">A-B seulement</option>
         <option value="cd_only">C-D seulement</option>
       </select>
+    </label>
+    <label style="margin-left:1rem;">
+      <input type="checkbox" id="flint-alternate-relay" checked>
+      Alterner l'ordre à chaque unité
     </label><br>
     <button class="start" onclick="startFlint()">▶ Démarrer Flint</button>
   </section>
@@ -163,6 +167,7 @@
         document.getElementById("turn-mode").disabled = matchIsRunning;
         document.getElementById("alternate-relay").disabled = matchIsRunning;
         document.getElementById("flint-turn-mode").disabled = matchIsRunning;
+        document.getElementById("flint-alternate-relay").disabled = matchIsRunning;
       }
     };
   }
@@ -179,7 +184,11 @@
     });
   }
   function startFlint() {
-    send({action: "start_flint", turn_mode: document.getElementById("flint-turn-mode").value});
+    send({
+      action: "start_flint",
+      turn_mode: document.getElementById("flint-turn-mode").value,
+      alternate: document.getElementById("flint-alternate-relay").checked,
+    });
   }
   function sendMessage() {
     const val = document.getElementById("msg").value;

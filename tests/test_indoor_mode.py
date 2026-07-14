@@ -10,22 +10,31 @@ class TestIndoorMode(unittest.TestCase):
         mode = IndoorMode()
         steps = mode.build_sequence()
 
-        total_ends = 2 * 6
-        self.assertEqual(len(steps), total_ends * 6 + (total_ends - 1))
+        # each end = 2 relais x (RED+GREEN+ORANGE) = 6 steps, plus une PAUSE
+        # après chaque volée sauf la toute dernière du match (2 séries x 6
+        # volées = 12 global ends, 11 pauses).
+        self.assertEqual(len(steps), 12 * 6 + 11)
 
-        end_numbers = sorted({s.end_number for s in steps})
-        self.assertEqual(end_numbers, list(range(1, total_ends + 1)))
+        series_numbers = sorted({s.unit_number for s in steps})
+        self.assertEqual(series_numbers, [1, 2])
 
-        shooting_steps = [s for s in steps if s.phase != Phase.PAUSE]
-        end1_turns = [s.current_turn for s in shooting_steps if s.end_number == 1]
-        self.assertEqual(end1_turns, ["A-B", "A-B", "A-B", "C-D", "C-D", "C-D"])
+        # end_number/total_ends sont par SÉRIE (1..6), pas un compteur global
+        end_numbers_in_series1 = sorted({s.end_number for s in steps if s.unit_number == 1})
+        self.assertEqual(end_numbers_in_series1, [1, 2, 3, 4, 5, 6])
+        self.assertTrue(all(s.total_ends == 6 for s in steps))
 
-        end7_turns = [s.current_turn for s in shooting_steps if s.end_number == 7]
-        self.assertEqual(end7_turns, ["C-D", "C-D", "C-D", "A-B", "A-B", "A-B"])
+    def test_series_and_volee_are_distinct_fields(self) -> None:
+        """unit_number = série, end_number = volée DANS cette série -- pas
+        un numéro global qui grimperait jusqu'à 12."""
+        mode = IndoorMode(IndoorConfig(series=2, ends_per_series=6))
+        steps = mode.build_sequence()
+
+        series2_first_end = next(s for s in steps if s.unit_number == 2)
+        self.assertEqual(series2_first_end.end_number, 1)  # pas 7
 
     def test_ab_then_cd_share_the_same_end_number(self) -> None:
-        """Le point central du premier correctif : A-B puis C-D tirent la
-        même volée, le numéro ne doit pas changer entre les deux relais."""
+        """A-B et C-D tirent la même volée : le numéro ne doit pas changer
+        entre les deux relais."""
         mode = IndoorMode(IndoorConfig(series=1, ends_per_series=1))
         steps = mode.build_sequence()
 
@@ -54,19 +63,19 @@ class TestIndoorMode(unittest.TestCase):
         steps = IndoorMode(cfg).build_sequence()
 
         shooting_steps = [s for s in steps if s.phase != Phase.PAUSE]
-        end1_turns = [s.current_turn for s in shooting_steps if s.end_number == 1]
-        end2_turns = [s.current_turn for s in shooting_steps if s.end_number == 2]
-        self.assertEqual(end1_turns, ["A-B", "A-B", "A-B", "C-D", "C-D", "C-D"])
-        self.assertEqual(end2_turns, ["C-D", "C-D", "C-D", "A-B", "A-B", "A-B"])
+        series1_turns = [s.current_turn for s in shooting_steps if s.unit_number == 1]
+        series2_turns = [s.current_turn for s in shooting_steps if s.unit_number == 2]
+        self.assertEqual(series1_turns, ["A-B", "A-B", "A-B", "C-D", "C-D", "C-D"])
+        self.assertEqual(series2_turns, ["C-D", "C-D", "C-D", "A-B", "A-B", "A-B"])
 
     def test_alternation_disabled_keeps_the_same_order_every_series(self) -> None:
         cfg = IndoorConfig(series=2, ends_per_series=1, alternate_relay_order_each_series=False)
         steps = IndoorMode(cfg).build_sequence()
 
         shooting_steps = [s for s in steps if s.phase != Phase.PAUSE]
-        end1_turns = [s.current_turn for s in shooting_steps if s.end_number == 1]
-        end2_turns = [s.current_turn for s in shooting_steps if s.end_number == 2]
-        self.assertEqual(end1_turns, end2_turns)  # no flip -- same order both times
+        series1_turns = [s.current_turn for s in shooting_steps if s.unit_number == 1]
+        series2_turns = [s.current_turn for s in shooting_steps if s.unit_number == 2]
+        self.assertEqual(series1_turns, series2_turns)  # no flip -- same order both times
 
     def test_cd_then_ab_as_the_base_order(self) -> None:
         cfg = IndoorConfig(series=1, ends_per_series=1, turn_mode="cd_then_ab")
@@ -130,6 +139,7 @@ class TestIndoorMode(unittest.TestCase):
 
         pause_step = next(s for s in steps if s.phase == Phase.PAUSE)
         self.assertEqual(pause_step.end_number, 2)
+        self.assertEqual(pause_step.unit_number, 1)
         self.assertEqual(pause_step.current_turn, "A-B")  # end 2 starts with A-B again
         self.assertIsNone(pause_step.duration)
 
@@ -138,8 +148,15 @@ class TestIndoorMode(unittest.TestCase):
         steps = IndoorMode(cfg).build_sequence()
 
         pause_step = next(s for s in steps if s.phase == Phase.PAUSE)
-        self.assertEqual(pause_step.end_number, 2)
-        self.assertEqual(pause_step.current_turn, "C-D")  # end 2 (series 2) starts with C-D
+        self.assertEqual(pause_step.unit_number, 2)  # series 2
+        self.assertEqual(pause_step.end_number, 1)   # first volée of that series
+        self.assertEqual(pause_step.current_turn, "C-D")  # series 2 starts with C-D
+
+    def test_pause_shows_the_distance_of_the_upcoming_volee(self) -> None:
+        mode = IndoorMode(IndoorConfig(series=1, ends_per_series=2))
+        steps = mode.build_sequence()
+        pause_step = next(s for s in steps if s.phase == Phase.PAUSE)
+        self.assertEqual(pause_step.distance_label, "18m")  # same distance, but present
 
 
 if __name__ == "__main__":

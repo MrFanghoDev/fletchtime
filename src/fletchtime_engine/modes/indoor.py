@@ -11,8 +11,13 @@ uses both relays (and in which order) or just one is a per-match setting
 (``turn_mode``), fixed before the match starts and never toggled mid-match.
 
 The club's actual competition alternates which relay leads from one series
-to the next (series 1: A-B puis C-D: series 2: C-D puis A-B) -- this is
+to the next (série 1 : A-B puis C-D -- série 2 : C-D puis A-B) -- this is
 ``alternate_relay_order_each_series``, on by default.
+
+Séries et volées are tracked as separate numbers on every step, matching
+FlintMode's model: ``unit_number`` is the série (1, 2, ...) and
+``end_number``/``total_ends`` are the volée *within that série* (e.g. 1-6),
+not a running total across the whole match.
 """
 
 from __future__ import annotations
@@ -71,23 +76,30 @@ class IndoorMode(ShootingMode):
     def __init__(self, config: IndoorConfig | None = None) -> None:
         self.config = config or IndoorConfig()
 
-    def _relays_for_end(self, end_index: int) -> List[str]:
+    def _series_index(self, global_end_index: int) -> int:
+        return (global_end_index - 1) // self.config.ends_per_series + 1
+
+    def _end_in_series(self, global_end_index: int) -> int:
+        return (global_end_index - 1) % self.config.ends_per_series + 1
+
+    def _relays_for(self, global_end_index: int) -> List[str]:
         cfg = self.config
         base = TURN_MODES[cfg.turn_mode]
-        series_index = (end_index - 1) // cfg.ends_per_series + 1
+        series_index = self._series_index(global_end_index)
         if cfg.alternate_relay_order_each_series and len(base) == 2 and series_index % 2 == 0:
             return list(reversed(base))
         return base
 
     def build_sequence(self) -> List[Step]:
         cfg = self.config
-        total_ends = cfg.series * cfg.ends_per_series
+        total_global_ends = cfg.series * cfg.ends_per_series
 
-        def relay_block(end_index: int, turn: str) -> List[Step]:
+        def relay_block(global_end_index: int, turn: str) -> List[Step]:
             common = dict(
                 current_turn=turn,
-                end_number=end_index,
-                total_ends=total_ends,
+                end_number=self._end_in_series(global_end_index),
+                total_ends=cfg.ends_per_series,
+                unit_number=self._series_index(global_end_index),
                 distance_label=cfg.distance_label,
                 target_image=cfg.target_image,
             )
@@ -103,24 +115,28 @@ class IndoorMode(ShootingMode):
             return block
 
         steps: List[Step] = []
-        for end_index in range(1, total_ends + 1):
-            for turn in self._relays_for_end(end_index):
+        for global_end_index in range(1, total_global_ends + 1):
+            for turn in self._relays_for(global_end_index):
                 # Le relais suivant (s'il y en a un) commence par son propre
                 # RED de préparation -- pas besoin de PAUSE entre les deux
                 # relais, ce n'est pas une récupération de flèches, juste un
                 # changement de tireurs sur la ligne.
-                steps.extend(relay_block(end_index, turn))
+                steps.extend(relay_block(global_end_index, turn))
 
-            has_next_end = end_index < total_ends
+            has_next_end = global_end_index < total_global_ends
             if has_next_end:
                 # Fin de volée (tous les relais ont tiré) : récupération
                 # des flèches, pas de décompte. Le DOS déclenche la volée
-                # suivante manuellement (next()).
-                next_relays = self._relays_for_end(end_index + 1)
+                # suivante manuellement (next()). La distance affichée
+                # pendant le ramassage est déjà celle de la volée suivante.
+                next_index = global_end_index + 1
+                next_relays = self._relays_for(next_index)
                 steps.append(Step(
                     phase=Phase.PAUSE, duration=None,
-                    current_turn=next_relays[0], end_number=end_index + 1,
-                    total_ends=total_ends,
+                    current_turn=next_relays[0],
+                    end_number=self._end_in_series(next_index),
+                    total_ends=cfg.ends_per_series,
+                    unit_number=self._series_index(next_index),
                     distance_label=cfg.distance_label, target_image=cfg.target_image,
                 ))
         return steps

@@ -141,6 +141,61 @@ class TestFlintMode(unittest.TestCase):
         steps = FlintMode(cfg).build_sequence()
         self.assertEqual(steps[-1].phase, Phase.GREEN)  # last walk-up arrow, not a pause
 
+    def test_alternate_relay_order_flips_on_the_second_unit(self) -> None:
+        """Séquence réelle du club : unité 1 = A-B puis C-D, unité 2 =
+        C-D puis A-B (alternance activée par défaut)."""
+        cfg = FlintConfig(units=2, turn_mode="ab_then_cd")
+        steps = FlintMode(cfg).build_sequence()
+        shooting_steps = [s for s in steps if s.phase != Phase.PAUSE]
+
+        unit1_turns_in_order = [s.current_turn for s in shooting_steps if s.unit_number == 1]
+        unit2_turns_in_order = [s.current_turn for s in shooting_steps if s.unit_number == 2]
+
+        half1 = len(unit1_turns_in_order) // 2
+        half2 = len(unit2_turns_in_order) // 2
+        self.assertTrue(all(t == "A-B" for t in unit1_turns_in_order[:half1]))
+        self.assertTrue(all(t == "C-D" for t in unit1_turns_in_order[half1:]))
+        self.assertTrue(all(t == "C-D" for t in unit2_turns_in_order[:half2]))
+        self.assertTrue(all(t == "A-B" for t in unit2_turns_in_order[half2:]))
+
+    def test_alternation_disabled_keeps_the_same_order_every_unit(self) -> None:
+        cfg = FlintConfig(units=2, turn_mode="ab_then_cd",
+                           alternate_relay_order_each_unit=False)
+        steps = FlintMode(cfg).build_sequence()
+        shooting_steps = [s for s in steps if s.phase != Phase.PAUSE]
+
+        unit1_turns = [s.current_turn for s in shooting_steps if s.unit_number == 1]
+        unit2_turns = [s.current_turn for s in shooting_steps if s.unit_number == 2]
+        self.assertEqual(unit1_turns, unit2_turns)  # no flip
+
+    def test_alternation_has_no_effect_on_single_relay_modes(self) -> None:
+        cfg = FlintConfig(units=2, turn_mode="ab_only", alternate_relay_order_each_unit=True)
+        steps = FlintMode(cfg).build_sequence()
+        self.assertTrue(all(s.current_turn == "A-B" for s in steps))
+
+    def test_pause_between_units_shows_the_flipped_relay_and_first_distance(self) -> None:
+        cfg = FlintConfig(units=2, turn_mode="ab_then_cd")
+        steps = FlintMode(cfg).build_sequence()
+
+        pause_before_unit2 = next(
+            s for s in steps if s.phase == Phase.PAUSE and s.unit_number == 2
+        )
+        self.assertEqual(pause_before_unit2.current_turn, "C-D")  # unit 2 starts with C-D
+        self.assertEqual(pause_before_unit2.end_number, 1)
+        self.assertEqual(pause_before_unit2.distance_label, "25 yards")  # end 1's distance
+
+    def test_pause_between_relays_shows_the_upcoming_distance(self) -> None:
+        """La distance affichée pendant le ramassage des flèches est déjà
+        celle de la prochaine volée -- y compris au changement de relais."""
+        cfg = FlintConfig(units=1, turn_mode="ab_then_cd")
+        steps = FlintMode(cfg).build_sequence()
+
+        pause_before_cd = next(
+            s for s in steps if s.phase == Phase.PAUSE and s.current_turn == "C-D"
+            and s.end_number == 1
+        )
+        self.assertEqual(pause_before_cd.distance_label, "25 yards")
+
 
 if __name__ == "__main__":
     unittest.main()
