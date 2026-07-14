@@ -204,7 +204,12 @@
     ws.onmessage = (evt) => {
       const data = JSON.parse(evt.data);
       if (data.type === "state") {
-        const messageLine = "Message affiché : " + (data.message ? JSON.stringify(data.message) : "(aucun)");
+        const safeToShow = !data.state || data.state.finished
+          || data.state.phase === "pause" || data.state.phase === "emergency";
+        const messageStatus = !data.message
+          ? "(aucun)"
+          : JSON.stringify(data.message) + (safeToShow ? " -- affiché à l'écran" : " -- en attente (tir en cours, pas encore affiché)");
+        const messageLine = "Message : " + messageStatus;
         const stateLine = data.state
           ? JSON.stringify(data.state, null, 2)
           : "Aucun match en cours -- démarre un mode ci-dessus.";

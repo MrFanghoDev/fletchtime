@@ -128,7 +128,13 @@
         : (serieLabel + (voleeLabel ? " — " + voleeLabel : ""));
     }
 
-    if (payload.message) {
+    // Le message ne doit jamais déconcentrer les archers en plein tir :
+    // affiché seulement hors-concours, en pause (ramassage des flèches)
+    // ou en urgence -- jamais pendant rouge/vert/orange.
+    const safeToShowMessage = !state || state.finished
+      || state.phase === "pause" || state.phase === "emergency";
+
+    if (payload.message && safeToShowMessage) {
       msgEl.textContent = payload.message;
       msgEl.style.display = "block";
     } else {
