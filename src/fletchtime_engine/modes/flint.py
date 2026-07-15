@@ -33,8 +33,8 @@ class FlintConfig:
 
     standard_ends_per_unit: int = 6
     arrows_per_standard_end: int = 4
-    standard_prep_time: float = 15.0
-    standard_shoot_time: float = 210.0          # temps de tir total, continu
+    standard_prep_time: float = 10.0
+    standard_shoot_time: float = 180.0          # temps de tir total, continu (3 min)
     standard_orange_warning_time: float = 20.0  # passage à l'orange sans reset du décompte
     standard_distances: List[str] = field(default_factory=lambda: [
         "25 yards", "20 pieds", "30 yards", "15 yards", "20 yards", "10 yards",
@@ -43,7 +43,7 @@ class FlintConfig:
 
     walkup_arrows: int = 4
     walkup_time_per_arrow: float = 45.0
-    walkup_prep_time: float = 5.0
+    walkup_prep_time: float = 10.0
     walkup_distances: List[str] = field(default_factory=lambda: [
         "30 yards", "25 yards", "20 yards", "15 yards",
     ])

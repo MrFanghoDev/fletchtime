@@ -142,7 +142,7 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         events = self.server.engine.pop_pending_events()
         await self.server.broadcast_state()
 
-        self.assertEqual(self.display.last_state()["time_left"], 14.8)
+        self.assertEqual(self.display.last_state()["time_left"], 9.8)
         self.assertEqual(events, [])  # no phase transition yet at 0.2s into a 10s step
 
     async def test_unregister_stops_further_broadcasts(self) -> None:

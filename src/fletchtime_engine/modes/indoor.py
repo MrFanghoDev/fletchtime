@@ -37,7 +37,7 @@ class IndoorConfig:
     ends_per_series: int = 6
     arrows_per_end: int = 5
 
-    prep_time: float = 15.0            # red: préparation / mise en place
+    prep_time: float = 10.0            # red: préparation / mise en place
     shoot_time: float = 240.0          # temps de tir total, continu (règle IFAA : 4 min)
     orange_warning_time: float = 30.0  # passage à l'orange quand il reste ce temps (sans reset)
 

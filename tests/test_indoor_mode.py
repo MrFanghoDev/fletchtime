@@ -178,6 +178,10 @@ class TestIndoorMode(unittest.TestCase):
         self.assertEqual(cfg.shoot_time, 240.0)  # règle IFAA : 4 min/volée
         self.assertEqual(cfg.orange_warning_time, 30.0)
 
+    def test_default_prep_time_matches_the_corrected_club_value(self) -> None:
+        cfg = IndoorConfig()
+        self.assertEqual(cfg.prep_time, 10.0)
+
     def test_default_distance_and_arrows_match_ifaa_rule(self) -> None:
         cfg = IndoorConfig()
         self.assertEqual(cfg.distance_label, "20 yards")
