@@ -39,7 +39,10 @@ class FlintConfig:
     standard_distances: List[str] = field(default_factory=lambda: [
         "25 yards", "20 pieds", "30 yards", "15 yards", "20 yards", "10 yards",
     ])
-    standard_target_image: str = "field_20cm.png"
+    # Les volées impaires (1, 3, 5) tirent sur le blason 35cm à 1 spot ; les
+    # volées paires (2, 4, 6) sur le blason 20cm à 4 spots.
+    standard_target_image_1spot: str = "assets/targets/flint_35cm_1spot.jpg"
+    standard_target_image_4spot: str = "assets/targets/flint_20cm_4spot.jpg"
 
     walkup_arrows: int = 4
     walkup_time_per_arrow: float = 45.0
@@ -47,7 +50,8 @@ class FlintConfig:
     walkup_distances: List[str] = field(default_factory=lambda: [
         "30 yards", "25 yards", "20 yards", "15 yards",
     ])
-    walkup_target_image: str = "field_20cm.png"
+    # La volée 7 (walk-up) suit le même schéma que les volées impaires : 1 spot.
+    walkup_target_image: str = "assets/targets/flint_35cm_1spot.jpg"
 
     # Comment les archers se relaient sur le parcours : "ab_then_cd",
     # "cd_then_ab" (les deux relais, un après l'autre -- chacun tirant
@@ -154,13 +158,17 @@ class FlintMode(ShootingMode):
     def _standard_end(cfg: FlintConfig, unit: int, end_index: int,
                        total_ends: int, turn: str) -> List[Step]:
         distance = cfg.standard_distances[end_index - 1]
+        target_image = (
+            cfg.standard_target_image_1spot if end_index % 2 == 1
+            else cfg.standard_target_image_4spot
+        )
         common = dict(
             current_turn=turn,
             end_number=end_index,
             total_ends=total_ends,
             unit_number=unit,
             distance_label=distance,
-            target_image=cfg.standard_target_image,
+            target_image=target_image,
         )
         steps: List[Step] = []
         if cfg.standard_prep_time > 0:

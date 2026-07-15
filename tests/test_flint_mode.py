@@ -38,6 +38,30 @@ class TestFlintMode(unittest.TestCase):
         self.assertTrue(all(s.distance_label == "25 yards" for s in end1))
         self.assertTrue(all(s.arrow_in_end == 0 for s in end1))  # not a walk-up
 
+    def test_standard_target_image_alternates_by_end_parity(self) -> None:
+        """Volées 1,3,5 -> blason 1 spot ; volées 2,4,6 -> blason 4 spots."""
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
+        steps = FlintMode(cfg).build_sequence()
+        shooting_steps = [s for s in steps if s.phase != Phase.PAUSE]
+
+        by_end = {}
+        for s in shooting_steps:
+            if s.end_number <= 6:
+                by_end.setdefault(s.end_number, s.target_image)
+
+        self.assertEqual(by_end[1], cfg.standard_target_image_1spot)
+        self.assertEqual(by_end[2], cfg.standard_target_image_4spot)
+        self.assertEqual(by_end[3], cfg.standard_target_image_1spot)
+        self.assertEqual(by_end[4], cfg.standard_target_image_4spot)
+        self.assertEqual(by_end[5], cfg.standard_target_image_1spot)
+        self.assertEqual(by_end[6], cfg.standard_target_image_4spot)
+
+    def test_walkup_end_uses_the_1spot_target(self) -> None:
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
+        steps = FlintMode(cfg).build_sequence()
+        walkup_steps = [s for s in steps if s.end_number == 7 and s.phase == Phase.GREEN]
+        self.assertTrue(all(s.target_image == cfg.walkup_target_image for s in walkup_steps))
+
     def test_standard_shoot_time_is_continuous_180s_with_20s_orange(self) -> None:
         cfg = FlintConfig()
         self.assertEqual(cfg.standard_shoot_time, 180.0)
