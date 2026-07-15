@@ -47,6 +47,7 @@ class FlintConfig:
     walkup_arrows: int = 4
     walkup_time_per_arrow: float = 45.0
     walkup_prep_time: float = 10.0
+    walkup_orange_warning_time: float = 10.0  # passage à l'orange sans reset du décompte
     walkup_distances: List[str] = field(default_factory=lambda: [
         "30 yards", "25 yards", "20 yards", "15 yards",
     ])
@@ -85,6 +86,7 @@ class FlintConfig:
             ("standard_orange_warning_time", self.standard_orange_warning_time),
             ("walkup_time_per_arrow", self.walkup_time_per_arrow),
             ("walkup_prep_time", self.walkup_prep_time),
+            ("walkup_orange_warning_time", self.walkup_orange_warning_time),
         ):
             if value < 0:
                 raise ValueError(f"{name} must be >= 0, got {value}")
@@ -92,6 +94,11 @@ class FlintConfig:
             raise ValueError(
                 "standard_orange_warning_time must be <= standard_shoot_time, got "
                 f"{self.standard_orange_warning_time} > {self.standard_shoot_time}"
+            )
+        if self.walkup_orange_warning_time > self.walkup_time_per_arrow:
+            raise ValueError(
+                "walkup_orange_warning_time must be <= walkup_time_per_arrow, got "
+                f"{self.walkup_orange_warning_time} > {self.walkup_time_per_arrow}"
             )
         if self.turn_mode not in TURN_MODES:
             raise ValueError(
@@ -203,6 +210,12 @@ class FlintMode(ShootingMode):
             if cfg.walkup_prep_time > 0:
                 steps.append(Step(phase=Phase.RED, duration=cfg.walkup_prep_time,
                                    sound_event="prep_start", **common))
-            steps.append(Step(phase=Phase.GREEN, duration=cfg.walkup_time_per_arrow,
-                               sound_event="shoot_start", **common))
+            steps.append(Step(
+                phase=Phase.GREEN, duration=cfg.walkup_time_per_arrow,
+                sound_event="shoot_start",
+                orange_threshold=(cfg.walkup_orange_warning_time
+                                   if cfg.walkup_orange_warning_time > 0 else None),
+                orange_sound_event="warning_orange",
+                **common,
+            ))
         return steps

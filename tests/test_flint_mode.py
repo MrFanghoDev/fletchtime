@@ -56,6 +56,16 @@ class TestFlintMode(unittest.TestCase):
         self.assertEqual(by_end[5], cfg.standard_target_image_1spot)
         self.assertEqual(by_end[6], cfg.standard_target_image_4spot)
 
+    def test_walkup_arrows_switch_to_orange_in_the_last_10_seconds(self) -> None:
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
+        steps = FlintMode(cfg).build_sequence()
+        walkup_green_steps = [
+            s for s in steps if s.end_number == 7 and s.phase == Phase.GREEN
+        ]
+        self.assertEqual(len(walkup_green_steps), 4)
+        self.assertTrue(all(s.orange_threshold == 10.0 for s in walkup_green_steps))
+        self.assertTrue(all(s.orange_sound_event == "warning_orange" for s in walkup_green_steps))
+
     def test_walkup_end_uses_the_1spot_target(self) -> None:
         cfg = FlintConfig(units=1, turn_mode="ab_only")
         steps = FlintMode(cfg).build_sequence()

@@ -214,6 +214,22 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
 
 
 class TestMatchEngineWithFlintMode(unittest.TestCase):
+    def test_walkup_arrow_switches_to_orange_with_10s_left(self) -> None:
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
+        engine = MatchEngine(FlintMode(cfg))
+        for _ in range(6 * 3):  # skip to the walk-up end's first arrow
+            engine.next()
+        engine.next()  # leave the arrow's RED prep, enter GREEN(45, orange@10)
+
+        state = engine.tick(34)  # 45 - 34 = 11s left, still green
+        self.assertEqual(state.phase, Phase.GREEN)
+        self.assertEqual(state.time_left, 11)
+
+        state = engine.tick(1)  # 11 - 1 = 10s left, crosses the threshold
+        self.assertEqual(state.phase, Phase.ORANGE)
+        self.assertEqual(state.time_left, 10)
+        self.assertEqual(state.arrow_in_end, 1)  # same arrow throughout
+
     def test_engine_plays_through_a_full_flint_unit(self) -> None:
         cfg = FlintConfig(units=1, turn_mode="ab_only")
         engine = MatchEngine(FlintMode(cfg))
