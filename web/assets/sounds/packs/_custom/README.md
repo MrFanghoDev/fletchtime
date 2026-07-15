@@ -19,6 +19,8 @@ C'est juste un aide-mémoire pour la convention de nommage.
    - `emergency_start` — déclenchement de l'urgence
    - `emergency_end` — reprise après urgence
    - `end_of_volee` — fin de volée (récupération des flèches)
+   - `pause_start` — mise en pause manuelle par le DOS
+   - `pause_end` — reprise après une pause manuelle
    - `end_of_match` — fin de match (arrêt ou fin naturelle)
 
 3. Ton dossier apparaît alors automatiquement dans `config.html` → section

@@ -165,11 +165,15 @@ class MatchEngine:
         return self.current_state
 
     def pause(self) -> MatchState:
-        self._paused = True
+        if not self._paused:
+            self._paused = True
+            self._pending_events.append("pause_start")
         return self.current_state
 
     def play(self) -> MatchState:
-        self._paused = False
+        if self._paused:
+            self._paused = False
+            self._pending_events.append("pause_end")
         return self.current_state
 
     def pop_pending_events(self) -> List[str]:

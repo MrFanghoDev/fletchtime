@@ -212,6 +212,25 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
         engine.tick(5)  # still under threshold, must not re-fire
         self.assertEqual(engine.pop_pending_events(), [])
 
+    def test_pause_and_play_fire_distinct_sounds(self) -> None:
+        engine = simple_indoor_engine()
+        engine.pop_pending_events()
+
+        engine.pause()
+        self.assertEqual(engine.pop_pending_events(), ["pause_start"])
+
+        engine.play()
+        self.assertEqual(engine.pop_pending_events(), ["pause_end"])
+
+    def test_pause_sound_only_fires_once_even_if_called_again(self) -> None:
+        engine = simple_indoor_engine()
+        engine.pop_pending_events()
+        engine.pause()
+        engine.pop_pending_events()
+
+        engine.pause()  # déjà en pause, no-op
+        self.assertEqual(engine.pop_pending_events(), [])
+
     def test_emergency_and_resume_fire_distinct_sounds(self) -> None:
         engine = simple_indoor_engine()
         engine.pop_pending_events()

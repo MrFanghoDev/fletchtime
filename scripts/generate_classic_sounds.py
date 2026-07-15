@@ -88,6 +88,10 @@ SOUNDS = {
     # Fin d'urgence : un seul glissando montant, rassurant ("tout va bien").
     "emergency_end": lambda: _sweep(500, 740, 0.3),
     "end_of_volee": lambda: _tone(500, 0.3),
+    # Pause manuelle du DOS (différente de la fin de volée) : un glissando
+    # descendant pour la mise en pause, montant pour la reprise.
+    "pause_start": lambda: _sweep(600, 400, 0.25),
+    "pause_end": lambda: _sweep(400, 600, 0.25),
     # Fin de concours : petite fanfare à deux notes montantes.
     "end_of_match": lambda: _sequence(_tone(700, 0.25), _silence(0.03), _tone(1000, 0.4)),
 }
