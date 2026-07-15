@@ -202,6 +202,11 @@
   };
   const AUDIO_EXTENSIONS = ["wav", "mp3", "ogg"];
   let currentSoundPack = "classic";
+  // Mémorise, par événement, quelle extension a fonctionné (ou `null` si
+  // aucune -- repli définitif sur le bip) : évite de refaire toute la
+  // chaîne d'essais à chaque déclenchement (important pour countdown_tick,
+  // qui se déclenche plusieurs fois de suite en rafale).
+  let resolvedSoundExtension = {};
 
   function beep(freq, duration) {
     try {
@@ -218,18 +223,40 @@
     } catch (e) { /* certains navigateurs bloquent l'audio avant interaction utilisateur */ }
   }
 
-  function playEventSound(eventName, extIndex = 0) {
-    if (extIndex >= AUDIO_EXTENSIONS.length) {
-      // aucun fichier du pack pour cet événement -- repli sur le bip
+  function playResolvedSound(eventName, ext) {
+    if (ext === null) {
       const fallback = SOUND_EVENTS[eventName] || { freq: 500, duration: 0.2 };
       beep(fallback.freq, fallback.duration);
       return;
     }
-    const url = "assets/sounds/packs/" + currentSoundPack + "/" + eventName
-      + "." + AUDIO_EXTENSIONS[extIndex];
-    const audio = new Audio(url);
-    audio.addEventListener("error", () => playEventSound(eventName, extIndex + 1), { once: true });
-    audio.play().catch(() => { /* lecture bloquée par le navigateur -- rien de plus à tenter */ });
+    const url = "assets/sounds/packs/" + currentSoundPack + "/" + eventName + "." + ext;
+    new Audio(url).play().catch(() => { /* lecture bloquée par le navigateur */ });
+  }
+
+  function probeExtension(eventName, extIndex) {
+    if (extIndex >= AUDIO_EXTENSIONS.length) {
+      resolvedSoundExtension[eventName] = null;
+      playResolvedSound(eventName, null);
+      return;
+    }
+    const ext = AUDIO_EXTENSIONS[extIndex];
+    const url = "assets/sounds/packs/" + currentSoundPack + "/" + eventName + "." + ext;
+    const probe = new Audio(url);
+    probe.addEventListener("canplaythrough", () => {
+      if (!(eventName in resolvedSoundExtension)) resolvedSoundExtension[eventName] = ext;
+    }, { once: true });
+    probe.addEventListener("error", () => probeExtension(eventName, extIndex + 1), { once: true });
+    // Cette première tentative sert aussi de lecture réelle -- pas besoin
+    // de rejouer une deuxième fois une fois résolue.
+    probe.play().catch(() => { /* lecture bloquée par le navigateur */ });
+  }
+
+  function playEventSound(eventName) {
+    if (eventName in resolvedSoundExtension) {
+      playResolvedSound(eventName, resolvedSoundExtension[eventName]);
+    } else {
+      probeExtension(eventName, 0);
+    }
   }
 
   // Reconnexion automatique : si le WiFi coupe un instant ou que l'écran
@@ -273,7 +300,10 @@
     eventTitleBannerEl.textContent = payload.event_title || lastEventTitle;
     lastEventTitle = payload.event_title || lastEventTitle;
 
-    if (payload.sound_pack) currentSoundPack = payload.sound_pack;
+    if (payload.sound_pack && payload.sound_pack !== currentSoundPack) {
+      currentSoundPack = payload.sound_pack;
+      resolvedSoundExtension = {};
+    }
 
     const state = payload.state;
     const isIdle = !state || state.finished;
