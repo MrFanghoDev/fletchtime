@@ -1,7 +1,7 @@
 name: Documentation développeur (GitHub Pages)
 
 # Construit la doc Sphinx/MyST (docs/) et la publie sur GitHub Pages à
-# chaque push sur main qui touche à la doc. Ne concerne QUE la doc
+# chaque push sur master qui touche à la doc. Ne concerne QUE la doc
 # développeur -- le manuel utilisateur (web/manual.html) est servi
 # localement par le serveur FletchTime lui-même, pas publié ici.
 #
@@ -10,7 +10,7 @@ name: Documentation développeur (GitHub Pages)
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "docs/**"
       - ".github/workflows/docs.yml"
