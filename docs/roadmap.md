@@ -55,13 +55,33 @@ valider le comportement avant d'ajouter le réseau.*
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 
-- **Revamping du logo** : le logo actuel (`web/logo.svg`) est une première version
-  fonctionnelle (cible IFAA + aiguilles/boutons de chronomètre) ; à retravailler
-  visuellement à tête reposée, éventuellement avec un vrai graphiste si le
-  projet est partagé plus largement avec la FFTL.
+- ~~**Revamping du logo**~~ -- fait : nouveau logo cadran/flèche noir-or-blanc,
+  wordmark "FletchTime" bicolore Fletch/Time, cohérent avec le thème clair/sombre.
 - **Sécurisation cyber** : le serveur WebSocket n'a actuellement aucune
   authentification -- n'importe qui sur le même réseau WiFi local peut se
   connecter et envoyer des commandes de contrôle (stop, urgence, etc.). Sans
   gravité tant que le réseau du concours est fermé/dédié, mais à documenter
   clairement (voire à durcir, ex. mot de passe simple sur `/control`) avant un
   partage plus large ou un usage sur un réseau moins maîtrisé.
+- **Exécutable autoporteur** : livrer FletchTime en `.exe`/binaire autonome
+  (Windows/macOS/Linux), en plus du parcours Pydroid actuel, pour les clubs
+  qui préfèrent un PC dédié sans installer Python. Implique :
+  - empaqueter `run_server.py` + `src/` + `web/` dans un seul exécutable
+    (voir recommandation ci-dessous) ;
+  - au premier lancement, créer automatiquement les dossiers/fichiers
+    attendus chez l'utilisateur s'ils n'existent pas (`web/assets/club/`,
+    `web/assets/banners/`, `web/assets/targets/`, `sounds/packs/_custom/`)
+    -- aujourd'hui ces dossiers sont gitignorés et n'existent que si le club
+    les a créés manuellement en suivant la doc ; un exécutable autoporteur ne
+    doit pas dépendre de ça ;
+  - documenter ce nouveau mode de déploiement dans le manuel utilisateur
+    (étape 6), en plus du parcours Pydroid déjà couvert.
+- **Web app côté client (PWA)** : transformer `control.html`/`display.html`
+  (voire `index.html`) en Progressive Web App -- `manifest.json` + service
+  worker + icônes. Permettrait d'"installer" l'app sur l'écran d'accueil
+  d'une tablette/téléphone (lancement direct, sans retaper l'URL ni passer
+  par le navigateur), et de mettre en cache les fichiers statiques (HTML/CSS/
+  JS/logo) pour un chargement instantané même en cas de WiFi capricieux --
+  le WebSocket, lui, resterait bien sûr en temps réel, seul l'habillage
+  statique serait mis en cache. Chantier indépendant du reste, à ne traiter
+  qu'une fois l'interface stabilisée.
