@@ -64,6 +64,7 @@
     <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">English</button>
   </div>
   <div id="status" data-i18n="connecting">Connexion en cours...</div>
+  <div id="connected-lanes-line" style="font-size:0.85rem; opacity:0.7; margin-bottom:0.5rem;"></div>
 
   <section>
     <label style="display:block; margin-bottom:0.3rem;" data-i18n="eventTitleLabel">Titre de l'événement (affiché en permanence sur les écrans) :</label>
@@ -156,8 +157,12 @@
   <section>
     <input type="text" id="msg" data-i18n-placeholder="messagePlaceholder"
       placeholder="Message à afficher sur les écrans...">
+    <label style="margin-left:0.5rem;"><span data-i18n="messageTargetLabel">Cible :</span>
+      <input type="text" id="msg-lane-target" data-i18n-placeholder="messageTargetPlaceholder"
+        placeholder="toutes" style="width:5em;">
+    </label>
     <button class="neutral" data-i18n="send" onclick="sendMessage()">Envoyer</button>
-    <button class="neutral" data-i18n="clear" onclick="send({action:'message', value:null})">Effacer</button>
+    <button class="neutral" data-i18n="clear" onclick="clearMessage()">Effacer</button>
 
     <div class="quick-messages" id="quick-messages"></div>
   </section>
@@ -281,6 +286,11 @@
           eventTitleInput.value = data.event_title || "";
         }
 
+        const lanes = data.connected_lanes || [];
+        document.getElementById("connected-lanes-line").textContent =
+          t(currentLanguage, "connectedLanesLabel") + " " +
+          (lanes.length ? lanes.join(", ") : t(currentLanguage, "connectedLanesNone"));
+
         const safeToShow = !data.state || data.state.finished
           || data.state.phase === "pause" || data.state.phase === "emergency";
         const messageStatus = !data.message
@@ -340,7 +350,12 @@
   }
   function sendMessage() {
     const val = document.getElementById("msg").value;
-    send({action: "message", value: val});
+    const lane = document.getElementById("msg-lane-target").value.trim();
+    send({action: "message", value: val, lane: lane});
+  }
+  function clearMessage() {
+    const lane = document.getElementById("msg-lane-target").value.trim();
+    send({action: "message", value: null, lane: lane});
   }
   function fillMsg(text) {
     const input = document.getElementById("msg");

@@ -24,7 +24,7 @@ async def run_ws_server(port: int) -> None:
         await server_state.register(websocket)
         try:
             async for message in websocket:
-                await server_state.handle_command(message)
+                await server_state.handle_command(message, websocket)
         except websockets.exceptions.ConnectionClosed:
             # Expected when a phone/tablet screen locks or the browser tab
             # is backgrounded: Android suspends network activity, the

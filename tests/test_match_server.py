@@ -30,6 +30,9 @@ class FakeWebSocket:
     def last_event_title(self):
         return json.loads(self.sent[-1])["event_title"]
 
+    def last_connected_lanes(self):
+        return json.loads(self.sent[-1])["connected_lanes"]
+
 
 class TestMatchServer(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -235,6 +238,101 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         )
         after = self.display.last_state()
         self.assertEqual(before, after)  # unchanged, no crash
+
+
+class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self) -> None:
+        self.server = MatchServer()
+        self.control = FakeWebSocket()
+        self.lane1 = FakeWebSocket()
+        self.lane2 = FakeWebSocket()
+        await self.server.register(self.control)
+        await self.server.register(self.lane1)
+        await self.server.register(self.lane2)
+
+    async def test_no_lanes_connected_by_default(self) -> None:
+        self.assertEqual(self.control.last_connected_lanes(), [])
+
+    async def test_registering_a_display_adds_it_to_connected_lanes(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "3"}), self.lane1
+        )
+        self.assertEqual(self.control.last_connected_lanes(), ["3"])
+
+    async def test_multiple_lanes_sorted_numerically(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "10"}), self.lane1
+        )
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "2"}), self.lane2
+        )
+        self.assertEqual(self.control.last_connected_lanes(), ["2", "10"])
+
+    async def test_apercu_preview_lane_is_excluded_from_the_list(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "apercu"}), self.lane1
+        )
+        self.assertEqual(self.control.last_connected_lanes(), [])
+
+    async def test_unregistering_removes_the_lane(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "5"}), self.lane1
+        )
+        await self.server.unregister(self.lane1)
+        await self.server.handle_command(json.dumps({"action": "message", "value": None}))
+        self.assertEqual(self.control.last_connected_lanes(), [])
+
+    async def test_targeted_message_only_reaches_its_lane(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "1"}), self.lane1
+        )
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "2"}), self.lane2
+        )
+        await self.server.handle_command(json.dumps({
+            "action": "message", "lane": "1", "value": "Message pour la lane 1 seulement",
+        }))
+        self.assertEqual(self.lane1.last_message(), "Message pour la lane 1 seulement")
+        self.assertIsNone(self.lane2.last_message())
+
+    async def test_targeted_message_does_not_override_global_for_other_lanes(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "1"}), self.lane1
+        )
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "2"}), self.lane2
+        )
+        await self.server.handle_command(
+            json.dumps({"action": "message", "value": "Message global"})
+        )
+        await self.server.handle_command(json.dumps({
+            "action": "message", "lane": "1", "value": "Message pour la lane 1",
+        }))
+        self.assertEqual(self.lane1.last_message(), "Message pour la lane 1")
+        self.assertEqual(self.lane2.last_message(), "Message global")
+
+    async def test_clearing_a_targeted_message_falls_back_to_global(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "1"}), self.lane1
+        )
+        await self.server.handle_command(
+            json.dumps({"action": "message", "value": "Message global"})
+        )
+        await self.server.handle_command(json.dumps({
+            "action": "message", "lane": "1", "value": "Ciblé",
+        }))
+        await self.server.handle_command(json.dumps({
+            "action": "message", "lane": "1", "value": None,
+        }))
+        self.assertEqual(self.lane1.last_message(), "Message global")
+
+    async def test_registration_without_websocket_argument_is_ignored_not_fatal(self) -> None:
+        # handle_command called the "old" way (no websocket) must not crash --
+        # e.g. any test or caller that forgot to pass it.
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "9"})
+        )
+        self.assertEqual(self.control.last_connected_lanes(), [])
 
 
 if __name__ == "__main__":

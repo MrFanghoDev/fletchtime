@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import asdict
-from typing import Optional, Set
+from typing import Dict, Optional, Set
 
 from fletchtime_engine import (
     FlintConfig,
@@ -37,10 +37,13 @@ class MatchServer:
         self.engine: Optional[MatchEngine] = None
         self.clients: Set = set()
         self._lock = asyncio.Lock()
-        # Kept independent of the engine on purpose: a message ("Retard de
-        # 15 minutes...") must be showable even before a match has started,
-        # between matches, or after one has finished.
+        # Message global (toutes les lanes) -- indépendant de l'engine sur
+        # le principe : un message ("Retard de 15 minutes...") doit rester
+        # affichable même avant un match, entre deux matchs, ou après la fin.
         self._message: Optional[str] = None
+        # Messages ciblés sur une seule lane -- prennent le pas sur le
+        # message global pour cette lane précise si les deux sont définis.
+        self._lane_messages: Dict[str, str] = {}
         # Langue de diffusion pour les écrans -- choisie par le DOS, envoyée
         # à tous les clients (control + display) pour que les libellés
         # statiques (phase, série/volée, etc.) s'affichent dans la bonne langue.
@@ -49,6 +52,10 @@ class MatchServer:
         # choisi par le DOS, affiché en permanence sur les écrans -- persiste
         # à travers les matchs, contrairement au message ponctuel.
         self._event_title: Optional[str] = None
+        # Lane déclarée par chaque écran d'affichage à la connexion (voir
+        # action "register_display") -- absent pour les postes de contrôle,
+        # qui ne s'enregistrent jamais comme lane.
+        self._display_lanes: Dict[object, str] = {}
 
     # -- connection lifecycle ---------------------------------------------
 
@@ -58,10 +65,11 @@ class MatchServer:
 
     async def unregister(self, websocket) -> None:
         self.clients.discard(websocket)
+        self._display_lanes.pop(websocket, None)
 
     # -- commands from /control ---------------------------------------------
 
-    async def handle_command(self, raw_message: str) -> None:
+    async def handle_command(self, raw_message: str, websocket=None) -> None:
         try:
             data = json.loads(raw_message)
         except json.JSONDecodeError:
@@ -89,8 +97,20 @@ class MatchServer:
                     )))
                 except ValueError:
                     pass  # invalid turn_mode from a malformed command -- ignore
+            elif action == "register_display":
+                lane = str(data.get("lane", "")).strip()
+                if lane and websocket is not None:
+                    self._display_lanes[websocket] = lane
             elif action == "message":
-                self._message = data.get("value") or None
+                lane = str(data.get("lane") or "").strip()
+                value = data.get("value") or None
+                if lane:
+                    if value is None:
+                        self._lane_messages.pop(lane, None)
+                    else:
+                        self._lane_messages[lane] = value
+                else:
+                    self._message = value
             elif action == "set_language":
                 lang = data.get("value")
                 if lang in ("fr", "en"):
@@ -142,21 +162,42 @@ class MatchServer:
     # -- broadcasting ---------------------------------------------------------
 
     async def broadcast_state(self) -> None:
-        await self._broadcast(self._current_state_payload())
+        """Sends each connected client its own tailored payload -- not a
+        single shared broadcast -- since a display registered on a given
+        lane may have a message targeted just at it (see
+        :meth:`_payload_for`)."""
+        if not self.clients:
+            return
+        for ws in list(self.clients):
+            try:
+                await ws.send(json.dumps(self._payload_for(ws)))
+            except Exception:
+                self.clients.discard(ws)
+                self._display_lanes.pop(ws, None)
 
     async def _send_state_to(self, websocket) -> None:
-        message = json.dumps(self._current_state_payload())
         try:
-            await websocket.send(message)
+            await websocket.send(json.dumps(self._payload_for(websocket)))
         except Exception:
             self.clients.discard(websocket)
+            self._display_lanes.pop(websocket, None)
 
-    def _current_state_payload(self) -> dict:
+    def _payload_for(self, websocket) -> dict:
         state_dict = _state_to_dict(self.engine.current_state) if self.engine is not None else None
+        lane = self._display_lanes.get(websocket)
+        message = self._lane_messages.get(lane) if lane and lane in self._lane_messages else self._message
+        def _lane_sort_key(lane: str):
+            return (0, int(lane)) if lane.isdigit() else (1, lane)
+
+        connected_lanes = sorted(
+            {l for l in self._display_lanes.values() if l != "apercu"},
+            key=_lane_sort_key,
+        )
         return {
             "type": "state", "state": state_dict,
-            "message": self._message, "language": self._language,
+            "message": message, "language": self._language,
             "event_title": self._event_title,
+            "connected_lanes": connected_lanes,
         }
 
     async def _broadcast(self, payload: dict) -> None:
@@ -168,3 +209,4 @@ class MatchServer:
                 await ws.send(message)
             except Exception:
                 self.clients.discard(ws)
+                self._display_lanes.pop(ws, None)

@@ -32,14 +32,17 @@
     position:absolute; bottom:2rem; font-size:4vw; background:rgba(0,0,0,0.6);
     padding:0.5rem 1.2rem; border-radius:10px; display:none;
   }
-  /* Écran neutre (avant le concours ou après sa fin) -- volontairement
-     identique dans les deux cas : logo du club + date/heure en direct.
-     Seule une légende discrète distingue les deux moments. */
+  /* Écran neutre (avant le concours ou après sa fin) -- diaporama qui
+     alterne entre logo+horloge et les bannières sponsors déposées par le
+     DOS dans assets/banners/. */
   #idle { display:none; flex-direction:column; align-items:center; }
   #idle-logo { max-height:32vh; max-width:70vw; object-fit:contain; margin-bottom:1.5rem; }
   #idle-date { font-size:4vw; opacity:0.85; }
   #idle-clock { font-size:9vw; font-weight:bold; font-variant-numeric: tabular-nums; margin-top:0.2em; }
   #idle-caption { font-size:3vw; opacity:0.6; margin-top:1.2rem; }
+  #idle-banner {
+    display:none; max-width:92vw; max-height:80vh; object-fit:contain;
+  }
   .phase-wait { background:#1e1e1e; }
   .phase-red { background:#7f1d1d; }
   .phase-green { background:#14532d; }
@@ -63,11 +66,12 @@
     <div id="dist"></div>
     <div id="idle">
       <img id="idle-logo" src="assets/club/logo.jpg" alt="Logo du club"
-        onerror="this.style.display='none';">
+        onerror="this.style.display='none'; this.dataset.failed='1';">
       <div id="idle-date"></div>
       <div id="idle-clock"></div>
       <div id="idle-caption"></div>
     </div>
+    <img id="idle-banner" alt="" onerror="this.style.display='none';">
     <div id="message"></div>
   </div>
 
@@ -88,6 +92,8 @@
   const idleDateEl = document.getElementById("idle-date");
   const idleClockEl = document.getElementById("idle-clock");
   const idleCaptionEl = document.getElementById("idle-caption");
+  const idleLogoEl = document.getElementById("idle-logo");
+  const idleBannerEl = document.getElementById("idle-banner");
   const eventTitleBannerEl = document.getElementById("event-title-banner");
   const targetImage1El = document.getElementById("target-image-1");
   const targetImage2El = document.getElementById("target-image-2");
@@ -122,6 +128,65 @@
   updateIdleClock();
   setInterval(updateIdleClock, 1000);
 
+  // Diaporama de l'écran neutre : alterne logo+horloge et les bannières
+  // sponsors déposées par le DOS dans assets/banners/. Découverte
+  // automatique via le listing de répertoire du serveur HTTP -- pas besoin
+  // d'un système d'upload, juste déposer les fichiers dans le dossier.
+  const SLIDE_DURATION_MS = 8000;
+  const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp)$/i;
+  let bannerImages = [];
+  let slideshowStep = 0;      // 0 = logo+horloge, 1..N = bannière N-1
+  let slideshowTimer = null;
+
+  async function discoverBanners() {
+    try {
+      const res = await fetch("assets/banners/");
+      if (!res.ok) { bannerImages = []; return; }
+      const html = await res.text();
+      const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(m => decodeURIComponent(m[1]));
+      bannerImages = hrefs
+        .filter(href => IMAGE_EXTENSIONS.test(href) && !href.startsWith(".."))
+        .map(href => "assets/banners/" + href);
+    } catch (e) {
+      bannerImages = [];  // dossier absent ou serveur ne supporte pas le listing -- pas grave
+    }
+  }
+  discoverBanners();
+  setInterval(discoverBanners, 60000);  // reprend les nouveaux fichiers sans relancer le serveur
+
+  function showSlideshowStep() {
+    const isBannerSlide = slideshowStep > 0 && slideshowStep <= bannerImages.length;
+    idleLogoEl.style.display = isBannerSlide ? "none" : (idleLogoEl.dataset.failed ? "none" : "");
+    idleDateEl.style.display = isBannerSlide ? "none" : "";
+    idleClockEl.style.display = isBannerSlide ? "none" : "";
+    idleCaptionEl.style.display = isBannerSlide ? "none" : "";
+    if (isBannerSlide) {
+      idleBannerEl.src = bannerImages[slideshowStep - 1];
+      idleBannerEl.style.display = "block";
+    } else {
+      idleBannerEl.style.display = "none";
+    }
+  }
+
+  function startSlideshow() {
+    if (slideshowTimer) return;  // déjà en cours
+    showSlideshowStep();
+    slideshowTimer = setInterval(() => {
+      const totalSlides = bannerImages.length + 1;  // +1 pour le slide logo/horloge
+      slideshowStep = (slideshowStep + 1) % totalSlides;
+      showSlideshowStep();
+    }, SLIDE_DURATION_MS);
+  }
+
+  function stopSlideshow() {
+    if (slideshowTimer) {
+      clearInterval(slideshowTimer);
+      slideshowTimer = null;
+    }
+    slideshowStep = 0;
+    idleBannerEl.style.display = "none";
+  }
+
   // Bips générés à la volée (Web Audio) -- provisoire : le vrai système de
   // packs de sons interchangeables est prévu à l'étape 5 de la roadmap.
   const SOUND_FREQ = { prep_start: 440, shoot_start: 880, warning_orange: 660 };
@@ -148,7 +213,10 @@
   function connect() {
     const ws = new WebSocket("ws://" + location.hostname + ":8765");
 
-    ws.onopen = () => { isConnected = true; };
+    ws.onopen = () => {
+      isConnected = true;
+      ws.send(JSON.stringify({action: "register_display", lane: lane}));
+    };
 
     ws.onmessage = (evt) => {
       const data = JSON.parse(evt.data);
@@ -190,7 +258,9 @@
       targetImage2El.style.display = "none";
       idleEl.style.display = "flex";
       idleCaptionEl.textContent = isConnected ? "" : t(currentLanguage, "connectingCaption");
+      startSlideshow();
     } else {
+      stopSlideshow();
       idleEl.style.display = "none";
       timeEl.style.display = "";
       turnEl.style.display = "";

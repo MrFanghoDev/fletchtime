@@ -23,6 +23,11 @@ web/assets/club/
 # pas incluses dans le dépôt public par prudence sur les droits d'auteur.
 web/assets/targets/
 
+# Bannières publicitaires / sponsors -- propres à chaque club, jamais
+# versionnées (on garde uniquement le README qui explique leur usage).
+web/assets/banners/*
+!web/assets/banners/README.md
+
 # OS / éditeurs
 .DS_Store
 Thumbs.db
