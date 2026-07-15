@@ -4,8 +4,8 @@
  */
 const TRANSLATIONS = {
   fr: {
-    controlTitle: "Fletchtime — Poste de contrôle",
-    controlSubtitle: "Chronométrage FFTL",
+    controlTitle: "FletchTime — Poste de contrôle",
+    controlSubtitle: "Poste de contrôle",
     panelSetupTitle: "Configuration & démarrage",
     panelLiveTitle: "Contrôle en direct",
     panelMessagesTitle: "Messages",
@@ -22,7 +22,7 @@ const TRANSLATIONS = {
     homeManualTitle: "Manuel utilisateur",
     homeManualDesc: "Guide d'utilisation pour le directeur de tir et les bénévoles du club.",
     homeManualButton: "Consulter le manuel",
-    homeFooter: "Fletchtime — logiciel libre pour la FFTL.",
+    homeFooter: "FletchTime — logiciel libre pour la FFTL.",
     homeFooterDevLink: "Documentation développeur",
     laneInputLabel: "Numéro de pas de tir",
 
@@ -114,8 +114,8 @@ const TRANSLATIONS = {
     lane: "Pas de tir",
   },
   en: {
-    controlTitle: "Fletchtime — Control Panel",
-    controlSubtitle: "FFTL Timing",
+    controlTitle: "FletchTime — Control Panel",
+    controlSubtitle: "Control Panel",
     panelSetupTitle: "Setup & start",
     panelLiveTitle: "Live control",
     panelMessagesTitle: "Messages",
@@ -132,7 +132,7 @@ const TRANSLATIONS = {
     homeManualTitle: "User manual",
     homeManualDesc: "Usage guide for the Director of Shooting and club volunteers.",
     homeManualButton: "View the manual",
-    homeFooter: "Fletchtime — free software for FFTL.",
+    homeFooter: "FletchTime — free software for FFTL.",
     homeFooterDevLink: "Developer documentation",
     laneInputLabel: "Shooting lane number",
 

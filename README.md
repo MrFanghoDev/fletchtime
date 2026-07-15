@@ -1,6 +1,6 @@
-<img src="web/logo.svg" width="80" height="93" alt="Fletchtime logo">
+<img src="web/logo.svg" width="80" height="80" alt="FletchTime logo">
 
-# Fletchtime
+# FletchTime
 
 Logiciel open source de gestion du temps pour compétitions d'archerie FFTL
 (Indoor et Flint), pensé pour être simple à déployer sur un réseau local

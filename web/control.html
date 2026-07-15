@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
-<title>Fletchtime — Contrôle</title>
+<title>FletchTime — Contrôle</title>
 <style>
   :root {
     --bg: #0f1216;
@@ -22,6 +22,26 @@
     --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
     --radius: 10px;
+  }
+
+  /* Mode clair : suit la préférence système par défaut, ou le choix
+     explicite de l'utilisateur (voir theme.js) qui prime toujours. */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #eef1f6; --surface: #ffffff; --surface-2: #f2f4f9; --border: #d7dce6;
+      --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0;
+      --gold: #a8781f; --blue: #3357bf; --red: #b8392f; --green: #227a52;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f6; --surface: #ffffff; --surface-2: #f2f4f9; --border: #d7dce6;
+    --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0;
+    --gold: #a8781f; --blue: #3357bf; --red: #b8392f; --green: #227a52;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --surface: #171b22; --surface-2: #1d232c; --border: #2a3140;
+    --text: #e8ebf1; --text-muted: #8a93a6; --text-faint: #5c6579;
+    --gold: #d1a13d; --blue: #4c7bdb; --red: #d6534a; --green: #3f9868;
   }
 
   * { box-sizing: border-box; }
@@ -51,6 +71,8 @@
   .brand img { height: 2rem; width: auto; flex-shrink: 0; }
   .brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
   .brand-text .title { font-size: 1.05rem; font-weight: 600; white-space: nowrap; }
+  .wordmark .fletch { color: var(--text); }
+  .wordmark .time { color: var(--gold); }
   .brand-text .subtitle {
     font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
     color: var(--text-faint);
@@ -69,6 +91,13 @@
     border: none; background: transparent; color: var(--text-muted); cursor: pointer;
   }
   .lang-btn.active { background: var(--gold); color: #1a1206; font-weight: 600; }
+
+  .theme-toggle { display: flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .theme-btn {
+    font-family: var(--font-ui); font-size: 0.8rem; padding: 0.35rem 0.7rem; margin: 0;
+    border: none; background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .theme-btn.active { background: var(--blue); color: #fff; }
 
   #connected-lanes-line { font-size: 0.78rem; color: var(--text-muted); }
 
@@ -201,8 +230,8 @@
     <div class="brand">
       <img src="logo.svg" alt="">
       <div class="brand-text">
-        <span class="title" data-i18n="controlTitle">Fletchtime — Poste de contrôle</span>
-        <span class="subtitle" data-i18n="controlSubtitle">Chronométrage FFTL</span>
+        <span class="title wordmark"><span class="fletch">Fletch</span><span class="time">Time</span></span>
+        <span class="subtitle" data-i18n="controlSubtitle">Poste de contrôle</span>
       </div>
     </div>
     <div class="header-status">
@@ -210,6 +239,11 @@
       <div class="lang-toggle">
         <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">FR</button>
         <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">EN</button>
+      </div>
+      <div class="theme-toggle">
+        <button class="theme-btn" data-theme="system" onclick="setTheme('system')" title="Auto">◐</button>
+        <button class="theme-btn" data-theme="light" onclick="setTheme('light')" title="Clair">☀</button>
+        <button class="theme-btn" data-theme="dark" onclick="setTheme('dark')" title="Sombre">☾</button>
       </div>
     </div>
   </header>
@@ -360,6 +394,7 @@
   </div>
 
 <script src="i18n.js"></script>
+<script src="theme.js"></script>
 <script>
   const statusEl = document.getElementById("status");
   const stateBox = document.getElementById("state");

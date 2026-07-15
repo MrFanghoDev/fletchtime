@@ -1,4 +1,4 @@
-"""Lance le serveur Fletchtime : ouvrir ce fichier dans Pydroid et appuyer
+"""Lance le serveur FletchTime : ouvrir ce fichier dans Pydroid et appuyer
 sur "Run". Affiche l'adresse à ouvrir depuis les navigateurs (contrôle et
 écrans d'affichage), sur le même réseau WiFi.
 
@@ -39,7 +39,7 @@ def local_ip() -> str:
 def main() -> None:
     ip = local_ip()
     print("=" * 60)
-    print("  Fletchtime -- serveur de contrôle et d'affichage")
+    print("  FletchTime -- serveur de contrôle et d'affichage")
     print("=" * 60)
     print(f"  Accueil   : http://{ip}:{HTTP_PORT}/")
     print(f"  Contrôle  : http://{ip}:{HTTP_PORT}/control.html")

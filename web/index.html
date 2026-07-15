@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
-<title>Fletchtime</title>
+<title>FletchTime</title>
 <style>
   :root {
     --bg: #0f1216;
@@ -19,6 +19,23 @@
     --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
   }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #eef1f6; --surface: #ffffff; --surface-2: #f2f4f9; --border: #d7dce6;
+      --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0;
+      --gold: #a8781f; --blue: #3357bf;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f6; --surface: #ffffff; --surface-2: #f2f4f9; --border: #d7dce6;
+    --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0;
+    --gold: #a8781f; --blue: #3357bf;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --surface: #171b22; --surface-2: #1d232c; --border: #2a3140;
+    --text: #e8ebf1; --text-muted: #8a93a6; --text-faint: #5c6579;
+    --gold: #d1a13d; --blue: #4c7bdb;
+  }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui);
@@ -32,6 +49,8 @@
   .hero { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 640px; }
   .hero img { height: 6rem; width: auto; margin-bottom: 1.25rem; filter: drop-shadow(0 0 24px rgba(209,161,61,0.25)); }
   .hero h1 { font-size: 2rem; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+  .wordmark .fletch { color: var(--text); }
+  .wordmark .time { color: var(--gold); }
   .hero .tagline { color: var(--text-muted); font-size: 1.05rem; margin: 0 0 0.75rem; line-height: 1.5; }
   .hero .blurb { color: var(--text-faint); font-size: 0.92rem; line-height: 1.6; max-width: 540px; }
 
@@ -73,26 +92,44 @@
   }
   footer a { color: var(--text-muted); }
 
+  .top-controls {
+    position: fixed; top: 1rem; right: 1rem; display: flex; gap: 0.5rem; z-index: 10;
+  }
   .lang-toggle {
     display: flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
-    position: fixed; top: 1rem; right: 1rem;
   }
   .lang-btn {
     font-family: var(--font-ui); font-size: 0.75rem; padding: 0.35rem 0.8rem; margin: 0;
     border: none; background: var(--surface); color: var(--text-muted); cursor: pointer;
   }
   .lang-btn.active { background: var(--gold); color: #1a1206; font-weight: 600; }
+
+  .theme-toggle {
+    display: flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
+  }
+  .theme-btn {
+    font-family: var(--font-ui); font-size: 0.85rem; padding: 0.35rem 0.6rem; margin: 0;
+    border: none; background: var(--surface); color: var(--text-muted); cursor: pointer;
+  }
+  .theme-btn.active { background: var(--blue); color: #fff; }
 </style>
 </head>
 <body>
-  <div class="lang-toggle">
-    <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">FR</button>
-    <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">EN</button>
+  <div class="top-controls">
+    <div class="theme-toggle">
+      <button class="theme-btn" data-theme="system" onclick="setTheme('system')" title="Auto">◐</button>
+      <button class="theme-btn" data-theme="light" onclick="setTheme('light')" title="Clair">☀</button>
+      <button class="theme-btn" data-theme="dark" onclick="setTheme('dark')" title="Sombre">☾</button>
+    </div>
+    <div class="lang-toggle">
+      <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">FR</button>
+      <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">EN</button>
+    </div>
   </div>
 
   <div class="hero">
-    <img src="logo.svg" alt="Fletchtime">
-    <h1>Fletchtime</h1>
+    <img src="logo.svg" alt="FletchTime">
+    <h1 class="wordmark"><span class="fletch">Fletch</span><span class="time">Time</span></h1>
     <p class="tagline" data-i18n="homeTagline">Chronométrage open source pour compétitions d'archerie FFTL — Indoor &amp; Flint</p>
     <p class="blurb" data-i18n="homeBlurb">
       Un poste de contrôle pilote le déroulé du concours (volées, relais A-B/C-D,
@@ -128,11 +165,12 @@
   </div>
 
   <footer>
-    <span data-i18n="homeFooter">Fletchtime — logiciel libre pour la FFTL.</span>
+    <span data-i18n="homeFooter">FletchTime — logiciel libre pour la FFTL.</span>
     <a href="manual.html#dev" data-i18n="homeFooterDevLink">Documentation développeur</a>
   </footer>
 
 <script src="i18n.js"></script>
+<script src="theme.js"></script>
 <script>
   let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
 

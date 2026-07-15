@@ -52,3 +52,16 @@ valider le comportement avant d'ajouter le réseau.*
 - Nettoyage, licence open source claire, README d'accueil.
 - Contact fédération pour retour d'expérience / adoption éventuelle par d'autres
   clubs.
+
+## Backlog — à discuter / non encore programmé dans une étape précise
+
+- **Revamping du logo** : le logo actuel (`web/logo.svg`) est une première version
+  fonctionnelle (cible IFAA + aiguilles/boutons de chronomètre) ; à retravailler
+  visuellement à tête reposée, éventuellement avec un vrai graphiste si le
+  projet est partagé plus largement avec la FFTL.
+- **Sécurisation cyber** : le serveur WebSocket n'a actuellement aucune
+  authentification -- n'importe qui sur le même réseau WiFi local peut se
+  connecter et envoyer des commandes de contrôle (stop, urgence, etc.). Sans
+  gravité tant que le réseau du concours est fermé/dédié, mais à documenter
+  clairement (voire à durcir, ex. mot de passe simple sur `/control`) avant un
+  partage plus large ou un usage sur un réseau moins maîtrisé.

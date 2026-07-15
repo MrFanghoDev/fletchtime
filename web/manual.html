@@ -4,12 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
-<title>Fletchtime — Manuel utilisateur</title>
+<title>FletchTime — Manuel utilisateur</title>
 <style>
   :root {
     --bg: #0f1216; --surface: #171b22; --border: #2a3140;
-    --text: #e8ebf1; --text-muted: #8a93a6; --text-faint: #5c6579; --gold: #d1a13d;
+    --text: #e8ebf1; --text-muted: #8a93a6; --text-faint: #5c6579; --gold: #d1a13d; --blue: #4c7bdb;
     --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #eef1f6; --surface: #ffffff; --border: #d7dce6;
+      --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0; --gold: #a8781f; --blue: #3357bf;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f6; --surface: #ffffff; --border: #d7dce6;
+    --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0; --gold: #a8781f; --blue: #3357bf;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --surface: #171b22; --border: #2a3140;
+    --text: #e8ebf1; --text-muted: #8a93a6; --text-faint: #5c6579; --gold: #d1a13d; --blue: #4c7bdb;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui); }
@@ -30,21 +44,39 @@
   section#dev p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; }
   code { background: var(--surface); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.85em; }
 
+  .top-controls {
+    position: fixed; top: 1rem; right: 1rem; display: flex; gap: 0.5rem; z-index: 10;
+  }
   .lang-toggle {
     display: flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
-    position: fixed; top: 1rem; right: 1rem;
   }
   .lang-btn {
     font-family: var(--font-ui); font-size: 0.75rem; padding: 0.35rem 0.8rem; margin: 0;
     border: none; background: var(--surface); color: var(--text-muted); cursor: pointer;
   }
   .lang-btn.active { background: var(--gold); color: #1a1206; font-weight: 600; }
+
+  .theme-toggle {
+    display: flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
+  }
+  .theme-btn {
+    font-family: var(--font-ui); font-size: 0.85rem; padding: 0.35rem 0.6rem; margin: 0;
+    border: none; background: var(--surface); color: var(--text-muted); cursor: pointer;
+  }
+  .theme-btn.active { background: var(--blue); color: #fff; }
 </style>
 </head>
 <body>
-  <div class="lang-toggle">
-    <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">FR</button>
-    <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">EN</button>
+  <div class="top-controls">
+    <div class="theme-toggle">
+      <button class="theme-btn" data-theme="system" onclick="setTheme('system')" title="Auto">◐</button>
+      <button class="theme-btn" data-theme="light" onclick="setTheme('light')" title="Clair">☀</button>
+      <button class="theme-btn" data-theme="dark" onclick="setTheme('dark')" title="Sombre">☾</button>
+    </div>
+    <div class="lang-toggle">
+      <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">FR</button>
+      <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">EN</button>
+    </div>
   </div>
 
   <div class="page">
@@ -77,6 +109,7 @@
   </div>
 
 <script src="i18n.js"></script>
+<script src="theme.js"></script>
 <script>
   let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
 

@@ -1,7 +1,7 @@
 # Configuration file for the Sphinx documentation builder.
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-project = "Fletchtime"
+project = "FletchTime"
 copyright = "2026, [Nom du club]"
 author = "[Nom du club]"
 release = "0.1.0"
@@ -35,6 +35,6 @@ language = "fr"
 
 html_theme = "furo"  # thème moderne, responsive, lisible sur mobile
 html_static_path = ["_static"]
-html_title = "Fletchtime — Documentation"
+html_title = "FletchTime — Documentation"
 html_logo = "_static/logo.svg"
 html_favicon = "_static/logo.svg"
