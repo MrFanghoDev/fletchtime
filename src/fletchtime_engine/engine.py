@@ -18,6 +18,8 @@ from .sequence import Step
 
 
 class MatchEngine:
+    _COUNTDOWN_TICK_SECONDS = (5, 4, 3, 2, 1)
+
     def __init__(self, mode: ShootingMode) -> None:
         self._steps: List[Step] = mode.build_sequence()
         if not self._steps:
@@ -32,6 +34,7 @@ class MatchEngine:
         self._emergency_saved_time: Optional[float] = None
 
         self._orange_event_fired = False
+        self._countdown_ticks_fired: set = set()
 
         self._pending_events: List[str] = []
         self._emit_current_step_event()
@@ -59,6 +62,7 @@ class MatchEngine:
                 break
             self._time_left -= overflow
         self._maybe_emit_orange_threshold_event()
+        self._maybe_emit_countdown_ticks()
         return self.current_state
 
     def next(self) -> MatchState:
@@ -75,6 +79,7 @@ class MatchEngine:
         be resumed) -- this is a deliberate abandon/cancel by the DOS."""
         self._finished = True
         self._time_left = 0.0
+        self._pending_events.append("end_of_match")
         return self.current_state
 
     def restart(self) -> MatchState:
@@ -87,6 +92,7 @@ class MatchEngine:
         self._emergency = False
         self._emergency_saved_time = None
         self._orange_event_fired = False
+        self._countdown_ticks_fired = set()
         self._pending_events = []
         self._emit_current_step_event()
         return self.current_state
@@ -127,6 +133,7 @@ class MatchEngine:
             self._emergency_saved_time = None
             self._pending_events = []
             self._orange_event_fired = False
+            self._countdown_ticks_fired = set()
             self._emit_current_step_event()
             return self.current_state
         raise ValueError(
@@ -140,6 +147,7 @@ class MatchEngine:
         if not self._emergency:
             self._emergency = True
             self._emergency_saved_time = self._time_left
+            self._pending_events.append("emergency_start")
         return self.current_state
 
     def resume(self, adjusted_time_left: Optional[float] = None) -> MatchState:
@@ -153,6 +161,7 @@ class MatchEngine:
                 else self._emergency_saved_time
             )
             self._emergency_saved_time = None
+            self._pending_events.append("emergency_end")
         return self.current_state
 
     def pause(self) -> MatchState:
@@ -179,10 +188,14 @@ class MatchEngine:
         if self._index + 1 >= len(self._steps):
             self._finished = True
             self._time_left = 0.0
+            self._pending_events.append("end_of_match")
         else:
             self._index += 1
             self._time_left = self._steps[self._index].duration
             self._orange_event_fired = False
+            self._countdown_ticks_fired = set()
+            if self._steps[self._index].phase == Phase.PAUSE:
+                self._pending_events.append("end_of_volee")
             self._emit_current_step_event()
 
     def _emit_current_step_event(self) -> None:
@@ -203,6 +216,19 @@ class MatchEngine:
             self._orange_event_fired = True
             if step.orange_sound_event:
                 self._pending_events.append(step.orange_sound_event)
+
+    def _maybe_emit_countdown_ticks(self) -> None:
+        """Fire one "countdown_tick" event for each of the last 5 seconds
+        (5, 4, 3, 2, 1) of the current step's countdown, once each -- e.g.
+        a beep every second on the final stretch of a volée or a walk-up
+        arrow. Works for any timed step (RED prep or GREEN shoot); frozen
+        during emergency/pause since :meth:`tick` doesn't run at all then."""
+        if self._finished or self._time_left is None:
+            return
+        for seconds in self._COUNTDOWN_TICK_SECONDS:
+            if seconds not in self._countdown_ticks_fired and self._time_left <= seconds:
+                self._countdown_ticks_fired.add(seconds)
+                self._pending_events.append("countdown_tick")
 
     @property
     def current_state(self) -> MatchState:

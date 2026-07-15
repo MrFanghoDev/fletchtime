@@ -189,7 +189,16 @@
 
   // Bips générés à la volée (Web Audio) -- provisoire : le vrai système de
   // packs de sons interchangeables est prévu à l'étape 5 de la roadmap.
-  const SOUND_FREQ = { prep_start: 440, shoot_start: 880, warning_orange: 660 };
+  const SOUND_EVENTS = {
+    prep_start:     { freq: 440, duration: 0.2 },
+    shoot_start:    { freq: 880, duration: 0.5 },
+    warning_orange: { freq: 660, duration: 0.2 },
+    countdown_tick: { freq: 550, duration: 0.12 },
+    emergency_start:{ freq: 220, duration: 0.7 },
+    emergency_end:  { freq: 740, duration: 0.3 },
+    end_of_volee:   { freq: 500, duration: 0.3 },
+    end_of_match:   { freq: 950, duration: 0.9 },
+  };
   function beep(freq, duration) {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -223,7 +232,10 @@
       if (data.type === "state") {
         render(data);
       } else if (data.type === "events") {
-        data.events.forEach(ev => beep(SOUND_FREQ[ev] || 500, ev === "shoot_start" ? 0.5 : 0.2));
+        data.events.forEach(ev => {
+          const sound = SOUND_EVENTS[ev] || { freq: 500, duration: 0.2 };
+          beep(sound.freq, sound.duration);
+        });
       }
     };
 

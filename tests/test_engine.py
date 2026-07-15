@@ -182,9 +182,9 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
         # RED(10)->GREEN(120)->PAUSE: the overshoot lands past the orange
         # window straight into the indefinite PAUSE, so no "warning_orange"
         # fires here -- see test_orange_threshold_* below for the normal,
-        # non-overshooting case.
+        # non-overshooting case. Landing on PAUSE does fire "end_of_volee".
         engine.tick(135)
-        self.assertEqual(engine.pop_pending_events(), ["shoot_start"])
+        self.assertEqual(engine.pop_pending_events(), ["shoot_start", "end_of_volee"])
 
     def test_orange_threshold_switches_phase_without_resetting_the_countdown(self) -> None:
         """Le point central du correctif : un seul décompte continu de
@@ -211,6 +211,95 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
 
         engine.tick(5)  # still under threshold, must not re-fire
         self.assertEqual(engine.pop_pending_events(), [])
+
+    def test_emergency_and_resume_fire_distinct_sounds(self) -> None:
+        engine = simple_indoor_engine()
+        engine.pop_pending_events()
+
+        engine.emergency()
+        self.assertEqual(engine.pop_pending_events(), ["emergency_start"])
+
+        engine.resume()
+        self.assertEqual(engine.pop_pending_events(), ["emergency_end"])
+
+    def test_emergency_sound_only_fires_once_even_if_called_again(self) -> None:
+        engine = simple_indoor_engine()
+        engine.pop_pending_events()
+        engine.emergency()
+        engine.pop_pending_events()
+
+        engine.emergency()  # already in emergency, no-op
+        self.assertEqual(engine.pop_pending_events(), [])
+
+    def test_stop_fires_end_of_match(self) -> None:
+        engine = simple_indoor_engine()
+        engine.pop_pending_events()
+        engine.stop()
+        self.assertEqual(engine.pop_pending_events(), ["end_of_match"])
+
+    def test_reaching_the_natural_end_fires_end_of_match(self) -> None:
+        cfg = IndoorConfig(series=1, ends_per_series=1, prep_time=1,
+                            shoot_time=1, orange_warning_time=0, turn_mode="ab_only")
+        engine = MatchEngine(IndoorMode(cfg))
+        engine.pop_pending_events()
+        state = engine.tick(3)  # exactly consumes the only end
+        self.assertTrue(state.finished)
+        self.assertIn("end_of_match", engine.pop_pending_events())
+
+    def test_landing_on_pause_fires_end_of_volee(self) -> None:
+        engine = simple_indoor_engine()
+        engine.next()  # RED -> GREEN
+        engine.pop_pending_events()
+        state = engine.next()  # GREEN -> PAUSE
+        self.assertEqual(state.phase, Phase.PAUSE)
+        self.assertEqual(engine.pop_pending_events(), ["end_of_volee"])
+
+    def test_countdown_ticks_fire_once_per_second_for_the_last_five(self) -> None:
+        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
+                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
+        engine = MatchEngine(IndoorMode(cfg))
+        engine.tick(10)  # enter GREEN(120)
+        engine.pop_pending_events()
+
+        engine.tick(114)  # 120 - 114 = 6s left, not yet in the last 5
+        self.assertEqual(engine.pop_pending_events(), [])
+
+        events = []
+        for _ in range(6):  # 6s -> 5,4,3,2,1,0 : one tick per second
+            state = engine.tick(1)
+            events.extend(engine.pop_pending_events())
+        self.assertEqual(events.count("countdown_tick"), 5)
+        self.assertEqual(state.time_left, 0)
+
+    def test_countdown_tick_does_not_refire_within_the_same_second(self) -> None:
+        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
+                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
+        engine = MatchEngine(IndoorMode(cfg))
+        engine.pop_pending_events()  # drain initial prep_start
+        engine.tick(10)  # enter GREEN
+        engine.pop_pending_events()  # drain shoot_start
+
+        engine.tick(115.4)  # 120 - 115.4 = 4.6s left, crosses the "5" tick
+        self.assertEqual(engine.pop_pending_events(), ["countdown_tick"])
+
+        engine.tick(0.3)  # 4.6 - 0.3 = 4.3s -- still within the "4" bucket,
+        # no new integer boundary crossed yet
+        self.assertEqual(engine.pop_pending_events(), [])
+
+    def test_countdown_ticks_reset_on_restart(self) -> None:
+        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
+                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
+        engine = MatchEngine(IndoorMode(cfg))
+        engine.tick(10)
+        engine.tick(116)  # well into the last 5 seconds, several ticks fired
+        engine.pop_pending_events()
+
+        engine.restart()
+        engine.pop_pending_events()  # drain the initial prep_start
+        engine.next()  # RED -> GREEN
+        engine.pop_pending_events()
+        engine.tick(116)  # should be able to fire the same ticks again
+        self.assertIn("countdown_tick", engine.pop_pending_events())
 
 
 class TestMatchEngineWithFlintMode(unittest.TestCase):
