@@ -187,8 +187,9 @@
     idleBannerEl.style.display = "none";
   }
 
-  // Bips générés à la volée (Web Audio) -- provisoire : le vrai système de
-  // packs de sons interchangeables est prévu à l'étape 5 de la roadmap.
+  // Sons du pack actif (fichiers réels dans assets/sounds/packs/<pack>/) --
+  // repli sur un bip synthétisé (Web Audio) si le fichier est absent, pour
+  // que ça reste fonctionnel même sans pack complet.
   const SOUND_EVENTS = {
     prep_start:     { freq: 440, duration: 0.2 },
     shoot_start:    { freq: 880, duration: 0.5 },
@@ -199,6 +200,9 @@
     end_of_volee:   { freq: 500, duration: 0.3 },
     end_of_match:   { freq: 950, duration: 0.9 },
   };
+  const AUDIO_EXTENSIONS = ["wav", "mp3", "ogg"];
+  let currentSoundPack = "classic";
+
   function beep(freq, duration) {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -212,6 +216,20 @@
       osc.start();
       osc.stop(ctx.currentTime + duration);
     } catch (e) { /* certains navigateurs bloquent l'audio avant interaction utilisateur */ }
+  }
+
+  function playEventSound(eventName, extIndex = 0) {
+    if (extIndex >= AUDIO_EXTENSIONS.length) {
+      // aucun fichier du pack pour cet événement -- repli sur le bip
+      const fallback = SOUND_EVENTS[eventName] || { freq: 500, duration: 0.2 };
+      beep(fallback.freq, fallback.duration);
+      return;
+    }
+    const url = "assets/sounds/packs/" + currentSoundPack + "/" + eventName
+      + "." + AUDIO_EXTENSIONS[extIndex];
+    const audio = new Audio(url);
+    audio.addEventListener("error", () => playEventSound(eventName, extIndex + 1), { once: true });
+    audio.play().catch(() => { /* lecture bloquée par le navigateur -- rien de plus à tenter */ });
   }
 
   // Reconnexion automatique : si le WiFi coupe un instant ou que l'écran
@@ -232,10 +250,7 @@
       if (data.type === "state") {
         render(data);
       } else if (data.type === "events") {
-        data.events.forEach(ev => {
-          const sound = SOUND_EVENTS[ev] || { freq: 500, duration: 0.2 };
-          beep(sound.freq, sound.duration);
-        });
+        data.events.forEach(ev => playEventSound(ev));
       }
     };
 
@@ -257,6 +272,8 @@
 
     eventTitleBannerEl.textContent = payload.event_title || lastEventTitle;
     lastEventTitle = payload.event_title || lastEventTitle;
+
+    if (payload.sound_pack) currentSoundPack = payload.sound_pack;
 
     const state = payload.state;
     const isIdle = !state || state.finished;

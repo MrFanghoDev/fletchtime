@@ -8,17 +8,19 @@ from fletchtime_server import config_store
 class TestConfigStore(unittest.TestCase):
     def setUp(self) -> None:
         # Isole chaque test dans un dossier temporaire : ne jamais toucher
-        # aux vrais fichiers config/indoor.toml et config/flint.toml du
-        # dépôt pendant les tests.
+        # aux vrais fichiers config/*.toml du dépôt pendant les tests.
         self._tmpdir = tempfile.TemporaryDirectory()
         self._original_indoor = config_store.INDOOR_TOML
         self._original_flint = config_store.FLINT_TOML
+        self._original_app = config_store.APP_TOML
         config_store.INDOOR_TOML = Path(self._tmpdir.name) / "indoor.toml"
         config_store.FLINT_TOML = Path(self._tmpdir.name) / "flint.toml"
+        config_store.APP_TOML = Path(self._tmpdir.name) / "app.toml"
 
     def tearDown(self) -> None:
         config_store.INDOOR_TOML = self._original_indoor
         config_store.FLINT_TOML = self._original_flint
+        config_store.APP_TOML = self._original_app
         self._tmpdir.cleanup()
 
     def test_missing_file_falls_back_to_dataclass_defaults(self) -> None:
@@ -69,6 +71,20 @@ class TestConfigStore(unittest.TestCase):
         config_store.save_indoor_config({})
         content = config_store.INDOOR_TOML.read_text(encoding="utf-8")
         self.assertIn("# Temps de tir total, décompte continu (secondes)", content)
+
+    def test_app_config_defaults_to_classic_pack(self) -> None:
+        app = config_store.load_app_config()
+        self.assertEqual(app["sound_pack"], "classic")
+
+    def test_app_config_save_and_reload(self) -> None:
+        config_store.save_app_config({"sound_pack": "mon_club"})
+        app = config_store.load_app_config()
+        self.assertEqual(app["sound_pack"], "mon_club")
+
+    def test_app_config_unknown_key_is_ignored(self) -> None:
+        config_store.save_app_config({"sound_pack": "classic", "bogus_field": "x"})
+        app = config_store.load_app_config()
+        self.assertNotIn("bogus_field", app)
 
 
 if __name__ == "__main__":

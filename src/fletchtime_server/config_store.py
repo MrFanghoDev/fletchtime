@@ -24,6 +24,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = PROJECT_ROOT / "config"
 INDOOR_TOML = CONFIG_DIR / "indoor.toml"
 FLINT_TOML = CONFIG_DIR / "flint.toml"
+APP_TOML = CONFIG_DIR / "app.toml"
+
+APP_COMMENTS: Dict[str, str] = {
+    "sound_pack": "Nom du dossier dans web/assets/sounds/packs/ à utiliser (ex. classic)",
+}
+DEFAULT_APP_CONFIG: Dict[str, Any] = {"sound_pack": "classic"}
 
 INDOOR_COMMENTS: Dict[str, str] = {
     "series": "Nombre de séries",
@@ -87,6 +93,24 @@ def load_flint_config() -> FlintConfig:
     defaults for any missing file or missing field."""
     data = _filtered_overrides(_load_toml(FLINT_TOML), FlintConfig)
     return FlintConfig(**data)
+
+
+def load_app_config() -> Dict[str, Any]:
+    """App-wide settings that aren't specific to Indoor or Flint (currently
+    just the active sound pack). Not a dataclass -- there's only one field
+    today and it may grow, so a plain dict merged over sensible defaults is
+    simpler than a formal schema for now."""
+    data = _load_toml(APP_TOML)
+    merged = dict(DEFAULT_APP_CONFIG)
+    merged.update({k: v for k, v in data.items() if k in DEFAULT_APP_CONFIG})
+    return merged
+
+
+def save_app_config(overrides: Dict[str, Any]) -> Dict[str, Any]:
+    merged = load_app_config()
+    merged.update({k: v for k, v in overrides.items() if k in DEFAULT_APP_CONFIG})
+    _write_toml(APP_TOML, merged, APP_COMMENTS)
+    return merged
 
 
 def save_indoor_config(overrides: Dict[str, Any]) -> IndoorConfig:

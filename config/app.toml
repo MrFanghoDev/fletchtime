@@ -1,0 +1,2 @@
+# Nom du dossier dans web/assets/sounds/packs/ à utiliser (ex. classic)
+sound_pack = "classic"

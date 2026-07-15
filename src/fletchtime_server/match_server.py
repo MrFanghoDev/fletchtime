@@ -61,6 +61,9 @@ class MatchServer:
         # sert uniquement à bloquer la modification de la config de ce mode
         # tant qu'un match de ce type est en cours (voir _handle_config_action).
         self._current_mode_kind: Optional[str] = None
+        # Pack de sons actif, diffusé à tous les écrans (ex. "classic") --
+        # chargé une fois au démarrage, mis à jour via save_config("app", ...).
+        self._sound_pack: str = config_store.load_app_config()["sound_pack"]
 
     # -- connection lifecycle ---------------------------------------------
 
@@ -179,6 +182,7 @@ class MatchServer:
                             "type": "config",
                             "indoor": asdict(config_store.load_indoor_config()),
                             "flint": asdict(config_store.load_flint_config()),
+                            "app": config_store.load_app_config(),
                         }))
                     except Exception:
                         pass
@@ -199,6 +203,11 @@ class MatchServer:
                             saved = config_store.save_flint_config(values)
                             reply["ok"] = True
                             reply["values"] = asdict(saved)
+                        elif mode == "app":
+                            saved = config_store.save_app_config(values)
+                            self._sound_pack = saved["sound_pack"]
+                            reply["ok"] = True
+                            reply["values"] = saved
                         else:
                             reply["ok"] = False
                             reply["error"] = f"unknown mode {mode!r}"
@@ -210,6 +219,11 @@ class MatchServer:
                         await websocket.send(json.dumps(reply))
                     except Exception:
                         pass
+                if reply.get("ok") and mode == "app":
+                    # Le pack de sons s'applique immédiatement à tous les
+                    # écrans déjà connectés, contrairement à la config
+                    # Indoor/Flint qui n'agit qu'au prochain démarrage.
+                    await self.broadcast_state()
 
     def _mode_in_progress(self, mode: str) -> bool:
         """True if a match of this same mode is currently loaded and not
@@ -277,6 +291,7 @@ class MatchServer:
             "event_title": self._event_title,
             "connected_lanes": connected_lanes,
             "active_mode": self._current_mode_kind if match_in_progress else None,
+            "sound_pack": self._sound_pack,
         }
 
     async def _broadcast(self, payload: dict) -> None:

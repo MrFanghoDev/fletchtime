@@ -28,6 +28,12 @@ web/assets/targets/
 web/assets/banners/*
 !web/assets/banners/README.md
 
+# Packs de sons personnalisés -- propres à chaque club, jamais versionnés.
+# Le pack "classic" est généré par synthèse (scripts/generate_classic_sounds.py),
+# libre de droits, donc committé normalement.
+web/assets/sounds/packs/_custom/*
+!web/assets/sounds/packs/_custom/README.md
+
 # OS / éditeurs
 .DS_Store
 Thumbs.db

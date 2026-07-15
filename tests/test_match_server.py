@@ -36,6 +36,16 @@ class FakeWebSocket:
     def last_connected_lanes(self):
         return json.loads(self.sent[-1])["connected_lanes"]
 
+    def last_sound_pack(self):
+        return json.loads(self.sent[-1])["sound_pack"]
+
+    def last_config_saved_reply(self):
+        for raw in reversed(self.sent):
+            parsed = json.loads(raw)
+            if parsed.get("type") == "config_saved":
+                return parsed
+        raise AssertionError("no config_saved reply found")
+
 
 class TestMatchServer(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -374,8 +384,10 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
         self._tmpdir = tempfile.TemporaryDirectory()
         self._original_indoor = config_store.INDOOR_TOML
         self._original_flint = config_store.FLINT_TOML
+        self._original_app = config_store.APP_TOML
         config_store.INDOOR_TOML = Path(self._tmpdir.name) / "indoor.toml"
         config_store.FLINT_TOML = Path(self._tmpdir.name) / "flint.toml"
+        config_store.APP_TOML = Path(self._tmpdir.name) / "app.toml"
 
         self.server = MatchServer()
         self.control = FakeWebSocket()
@@ -384,6 +396,7 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         config_store.INDOOR_TOML = self._original_indoor
         config_store.FLINT_TOML = self._original_flint
+        config_store.APP_TOML = self._original_app
         self._tmpdir.cleanup()
 
     async def test_get_config_returns_defaults_when_no_file_exists(self) -> None:
@@ -497,6 +510,39 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
             "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
         }), self.control)
         reply = json.loads(self.control.sent[-1])
+        self.assertTrue(reply["ok"])
+
+    async def test_default_sound_pack_is_classic(self) -> None:
+        self.assertEqual(self.control.last_sound_pack(), "classic")
+
+    async def test_get_config_includes_app_section(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "get_config"}), self.control)
+        payload = json.loads(self.control.sent[-1])
+        self.assertEqual(payload["app"]["sound_pack"], "classic")
+
+    async def test_saving_sound_pack_broadcasts_immediately_to_all_clients(self) -> None:
+        display = FakeWebSocket()
+        await self.server.register(display)
+
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "app", "values": {"sound_pack": "mon_club"},
+        }), self.control)
+
+        reply = self.control.last_config_saved_reply()
+        self.assertTrue(reply["ok"])
+        self.assertEqual(reply["values"]["sound_pack"], "mon_club")
+        # un écran déjà connecté doit recevoir le nouveau pack tout de suite,
+        # contrairement à la config Indoor/Flint qui n'agit qu'au prochain match
+        self.assertEqual(display.last_sound_pack(), "mon_club")
+
+    async def test_sound_pack_can_be_changed_while_a_match_is_in_progress(self) -> None:
+        """Contrairement à la config Indoor/Flint, le pack de sons n'est
+        pas bloqué par un match en cours -- il n'affecte pas les règles."""
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "app", "values": {"sound_pack": "mon_club"},
+        }), self.control)
+        reply = self.control.last_config_saved_reply()
         self.assertTrue(reply["ok"])
 
 

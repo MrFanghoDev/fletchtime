@@ -144,6 +144,21 @@
         </div>
       </div>
     </details>
+
+    <details class="panel">
+      <summary><span data-i18n="configSoundTitle">Son</span><span class="chevron">▶</span></summary>
+      <div class="panel-body">
+        <div class="field">
+          <label for="app-sound_pack" data-i18n="cfg_sound_pack">Pack de sons</label>
+          <select id="app-sound_pack"></select>
+          <span class="hint" data-i18n="configSoundHint">Dépose un nouveau dossier dans web/assets/sounds/packs/ pour qu'il apparaisse ici.</span>
+        </div>
+        <div class="panel-footer">
+          <button class="btn-save" onclick="saveConfig('app')" data-i18n="configSave">Enregistrer</button>
+          <span class="save-status" id="app-status"></span>
+        </div>
+      </div>
+    </details>
   </div>
 
 <script src="i18n.js"></script>
@@ -290,6 +305,27 @@
   }
 
   let ws;
+  async function discoverSoundPacks() {
+    const select = document.getElementById("app-sound_pack");
+    try {
+      const res = await fetch("assets/sounds/packs/");
+      if (!res.ok) return;
+      const html = await res.text();
+      const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(m => decodeURIComponent(m[1]));
+      const packs = hrefs
+        .filter(href => href.endsWith("/") && !href.startsWith(".."))
+        .map(href => href.replace(/\/$/, ""))
+        .filter(name => !name.startsWith("_"));  // _custom/README etc. -- pas un vrai pack tant qu'il est vide
+      select.innerHTML = "";
+      packs.forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name; opt.textContent = name;
+        select.appendChild(opt);
+      });
+    } catch (e) { /* dossier absent -- pas grave, select restera vide */ }
+  }
+  discoverSoundPacks();
+
   function connect() {
     ws = new WebSocket("ws://" + location.hostname + ":8765");
     ws.onopen = () => send({action: "get_config"});
@@ -298,6 +334,15 @@
       if (data.type === "config") {
         fillForm("indoor", INDOOR_FIELDS, data.indoor);
         fillForm("flint", FLINT_FIELDS, data.flint);
+        if (data.app) {
+          const select = document.getElementById("app-sound_pack");
+          if (![...select.options].some(o => o.value === data.app.sound_pack)) {
+            const opt = document.createElement("option");
+            opt.value = data.app.sound_pack; opt.textContent = data.app.sound_pack;
+            select.appendChild(opt);
+          }
+          select.value = data.app.sound_pack;
+        }
       } else if (data.type === "state") {
         const activeMode = data.active_mode;
         ["indoor", "flint"].forEach((mode) => {
@@ -319,7 +364,11 @@
         if (data.ok) {
           statusEl.textContent = t(currentLanguage, "configSaveOk");
           statusEl.className = "save-status ok";
-          if (data.values) fillForm(data.mode, data.mode === "indoor" ? INDOOR_FIELDS : FLINT_FIELDS, data.values);
+          if (data.values && data.mode === "app") {
+            document.getElementById("app-sound_pack").value = data.values.sound_pack;
+          } else if (data.values) {
+            fillForm(data.mode, data.mode === "indoor" ? INDOOR_FIELDS : FLINT_FIELDS, data.values);
+          }
         } else {
           const errorText = data.error === "match_in_progress"
             ? t(currentLanguage, "configSaveMatchInProgress")
@@ -339,6 +388,11 @@
   }
 
   function saveConfig(mode) {
+    if (mode === "app") {
+      send({action: "save_config", mode: "app",
+            values: {sound_pack: document.getElementById("app-sound_pack").value}});
+      return;
+    }
     const values = collectForm(mode, mode === "indoor" ? INDOOR_FIELDS : FLINT_FIELDS);
     send({action: "save_config", mode: mode, values: values});
   }
