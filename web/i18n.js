@@ -6,7 +6,7 @@ const TRANSLATIONS = {
   fr: {
     controlTitle: "FletchTime — Poste de contrôle",
     controlSubtitle: "Poste de contrôle",
-    panelSetupTitle: "Configuration & démarrage",
+    panelSetupTitle: "Démarrage",
     panelLiveTitle: "Contrôle en direct",
     panelMessagesTitle: "Messages",
     panelDebugTitle: "Détails techniques",
@@ -52,7 +52,6 @@ const TRANSLATIONS = {
     connectedLanesLabel: "Écrans connectés :",
 
     configLink: "⚙ Configuration",
-    configHintLink: "Ordre A-B/C-D, temps, distances... → Configuration",
     configBack: "← Retour au contrôle",
     configTitle: "Configuration",
     configIntro: "Ces réglages sont lus depuis config/indoor.toml et config/flint.toml au démarrage du serveur. Modifie-les ici et enregistre -- ça écrit directement le fichier, effectif dès le prochain match démarré (pas besoin de relancer le serveur).",
@@ -156,7 +155,7 @@ const TRANSLATIONS = {
   en: {
     controlTitle: "FletchTime — Control Panel",
     controlSubtitle: "Control Panel",
-    panelSetupTitle: "Setup & start",
+    panelSetupTitle: "Start",
     panelLiveTitle: "Live control",
     panelMessagesTitle: "Messages",
     panelDebugTitle: "Technical details",
@@ -202,7 +201,6 @@ const TRANSLATIONS = {
     connectedLanesLabel: "Connected screens:",
 
     configLink: "⚙ Configuration",
-    configHintLink: "A-B/C-D order, times, distances... → Configuration",
     configBack: "← Back to control",
     configTitle: "Configuration",
     configIntro: "These settings are read from config/indoor.toml and config/flint.toml when the server starts. Edit them here and save -- it writes the file directly, effective from the next match started (no need to restart the server).",
