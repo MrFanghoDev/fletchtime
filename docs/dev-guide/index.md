@@ -16,3 +16,9 @@ contribuer sans devoir relire tout le code.
 - Conventions de code et process de contribution (PR, issues).
 - Choix historiques et alternatives écartées (ex. pourquoi pas un fork
   d'ArcheryClock — voir discussion initiale).
+
+```{note}
+La publication automatique de cette doc sur GitHub Pages est déjà en place
+(`.github/workflows/docs.yml`) -- voir le README à la racine du dépôt pour
+l'activer (une seule fois, côté réglages GitHub).
+```
