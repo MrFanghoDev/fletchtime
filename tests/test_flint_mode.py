@@ -34,9 +34,19 @@ class TestFlintMode(unittest.TestCase):
 
         end1 = [s for s in steps if s.unit_number == 1 and s.end_number == 1
                 and s.phase != Phase.PAUSE]
-        self.assertEqual([s.phase for s in end1], [Phase.RED, Phase.GREEN, Phase.ORANGE])
+        self.assertEqual([s.phase for s in end1], [Phase.RED, Phase.GREEN])
         self.assertTrue(all(s.distance_label == "25 yards" for s in end1))
         self.assertTrue(all(s.arrow_in_end == 0 for s in end1))  # not a walk-up
+
+    def test_standard_shoot_time_is_continuous_210s_with_20s_orange(self) -> None:
+        cfg = FlintConfig()
+        self.assertEqual(cfg.standard_shoot_time, 210.0)
+        self.assertEqual(cfg.standard_orange_warning_time, 20.0)
+
+        steps = FlintMode(cfg).build_sequence()
+        green_step = next(s for s in steps if s.phase == Phase.GREEN and s.arrow_in_end == 0)
+        self.assertEqual(green_step.duration, 210.0)
+        self.assertEqual(green_step.orange_threshold, 20.0)
 
     def test_walkup_end_has_45_seconds_per_arrow_and_4_distances(self) -> None:
         mode = FlintMode(FlintConfig(units=1, turn_mode="ab_only"))

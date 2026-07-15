@@ -34,8 +34,8 @@ class FlintConfig:
     standard_ends_per_unit: int = 6
     arrows_per_standard_end: int = 4
     standard_prep_time: float = 15.0
-    standard_green_time: float = 150.0
-    standard_orange_time: float = 30.0  # total standard end time = green + orange
+    standard_shoot_time: float = 210.0          # temps de tir total, continu
+    standard_orange_warning_time: float = 20.0  # passage à l'orange sans reset du décompte
     standard_distances: List[str] = field(default_factory=lambda: [
         "25 yards", "20 pieds", "30 yards", "15 yards", "20 yards", "10 yards",
     ])
@@ -77,13 +77,18 @@ class FlintConfig:
             )
         for name, value in (
             ("standard_prep_time", self.standard_prep_time),
-            ("standard_green_time", self.standard_green_time),
-            ("standard_orange_time", self.standard_orange_time),
+            ("standard_shoot_time", self.standard_shoot_time),
+            ("standard_orange_warning_time", self.standard_orange_warning_time),
             ("walkup_time_per_arrow", self.walkup_time_per_arrow),
             ("walkup_prep_time", self.walkup_prep_time),
         ):
             if value < 0:
                 raise ValueError(f"{name} must be >= 0, got {value}")
+        if self.standard_orange_warning_time > self.standard_shoot_time:
+            raise ValueError(
+                "standard_orange_warning_time must be <= standard_shoot_time, got "
+                f"{self.standard_orange_warning_time} > {self.standard_shoot_time}"
+            )
         if self.turn_mode not in TURN_MODES:
             raise ValueError(
                 f"turn_mode must be one of {sorted(TURN_MODES)}, got {self.turn_mode!r}"
@@ -161,11 +166,14 @@ class FlintMode(ShootingMode):
         if cfg.standard_prep_time > 0:
             steps.append(Step(phase=Phase.RED, duration=cfg.standard_prep_time,
                                sound_event="prep_start", **common))
-        steps.append(Step(phase=Phase.GREEN, duration=cfg.standard_green_time,
-                           sound_event="shoot_start", **common))
-        if cfg.standard_orange_time > 0:
-            steps.append(Step(phase=Phase.ORANGE, duration=cfg.standard_orange_time,
-                               sound_event="warning_orange", **common))
+        steps.append(Step(
+            phase=Phase.GREEN, duration=cfg.standard_shoot_time,
+            sound_event="shoot_start",
+            orange_threshold=(cfg.standard_orange_warning_time
+                               if cfg.standard_orange_warning_time > 0 else None),
+            orange_sound_event="warning_orange",
+            **common,
+        ))
         return steps
 
     @staticmethod

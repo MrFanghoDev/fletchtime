@@ -24,6 +24,12 @@ class Step:
     meaning "wait here indefinitely until the DOS presses next" -- used for
     the PAUSE step inserted between volées, where archers retrieve arrows
     at their own pace.
+
+    A GREEN step can carry an ``orange_threshold``: once ``duration``
+    seconds have counted down to that many seconds remaining, the engine
+    *displays* the step as ORANGE, but it stays the same step -- the
+    countdown never resets or jumps, it's one continuous timer that just
+    changes colour near the end (e.g. 240s total, orange in the last 30s).
     """
 
     phase: Phase
@@ -43,6 +49,22 @@ class Step:
     # filename -- see docs/architecture.md "Packs de sons".
     sound_event: Optional[str] = None
 
+    # seconds remaining at which the step's displayed phase switches from
+    # GREEN to ORANGE, without resetting the countdown. None = no switch.
+    orange_threshold: Optional[float] = None
+    # sound event fired once, exactly when time_left crosses orange_threshold
+    orange_sound_event: Optional[str] = None
+
     def __post_init__(self) -> None:
         if self.duration is not None and self.duration < 0:
             raise ValueError(f"Step duration must be >= 0 or None, got {self.duration}")
+        if self.orange_threshold is not None:
+            if self.orange_threshold < 0:
+                raise ValueError(
+                    f"orange_threshold must be >= 0, got {self.orange_threshold}"
+                )
+            if self.duration is not None and self.orange_threshold > self.duration:
+                raise ValueError(
+                    "orange_threshold must be <= duration, got "
+                    f"orange_threshold={self.orange_threshold} > duration={self.duration}"
+                )

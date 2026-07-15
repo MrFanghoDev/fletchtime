@@ -60,7 +60,7 @@
   <section>
     <h2 style="font-size:1rem; margin:0 0 0.5rem;">Aperçu de l'affichage</h2>
     <div class="preview-wrapper">
-      <iframe src="display.html?lane=apercu" class="preview-frame" title="Aperçu écran"></iframe>
+      <iframe id="preview-frame" class="preview-frame" title="Aperçu écran"></iframe>
     </div>
     <button class="neutral" onclick="window.open('display.html?lane=1', '_blank')">
       Ouvrir en plein écran
@@ -187,6 +187,12 @@
     } catch (e) { /* refusé (batterie faible, etc.) -- pas bloquant */ }
   }
   requestWakeLock();
+
+  // Force le rechargement de la miniature à chaque ouverture de la page,
+  // pour éviter d'afficher une version périmée mise en cache par le
+  // navigateur (l'iframe pointe vers le même display.html que les vrais
+  // écrans, donc doit toujours refléter la version la plus récente).
+  document.getElementById("preview-frame").src = "display.html?lane=apercu&_=" + Date.now();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") requestWakeLock();
   });

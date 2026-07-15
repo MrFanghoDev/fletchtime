@@ -37,9 +37,9 @@ class IndoorConfig:
     ends_per_series: int = 6
     arrows_per_end: int = 5
 
-    prep_time: float = 15.0     # red: préparation / mise en place
-    green_time: float = 210.0   # main shooting time
-    orange_time: float = 30.0   # warning period -- total shoot time = green+orange = 4 min (règle IFAA)
+    prep_time: float = 15.0            # red: préparation / mise en place
+    shoot_time: float = 240.0          # temps de tir total, continu (règle IFAA : 4 min)
+    orange_warning_time: float = 30.0  # passage à l'orange quand il reste ce temps (sans reset)
 
     distance_label: str = "20 yards"
     target_image: str = "wa_indoor_40cm.png"
@@ -61,11 +61,16 @@ class IndoorConfig:
             raise ValueError("series, ends_per_series and arrows_per_end must be >= 1")
         for name, value in (
             ("prep_time", self.prep_time),
-            ("green_time", self.green_time),
-            ("orange_time", self.orange_time),
+            ("shoot_time", self.shoot_time),
+            ("orange_warning_time", self.orange_warning_time),
         ):
             if value < 0:
                 raise ValueError(f"{name} must be >= 0, got {value}")
+        if self.orange_warning_time > self.shoot_time:
+            raise ValueError(
+                "orange_warning_time must be <= shoot_time, got "
+                f"orange_warning_time={self.orange_warning_time} > shoot_time={self.shoot_time}"
+            )
         if self.turn_mode not in TURN_MODES:
             raise ValueError(
                 f"turn_mode must be one of {sorted(TURN_MODES)}, got {self.turn_mode!r}"
@@ -107,11 +112,13 @@ class IndoorMode(ShootingMode):
             if cfg.prep_time > 0:
                 block.append(Step(phase=Phase.RED, duration=cfg.prep_time,
                                    sound_event="prep_start", **common))
-            block.append(Step(phase=Phase.GREEN, duration=cfg.green_time,
-                               sound_event="shoot_start", **common))
-            if cfg.orange_time > 0:
-                block.append(Step(phase=Phase.ORANGE, duration=cfg.orange_time,
-                                   sound_event="warning_orange", **common))
+            block.append(Step(
+                phase=Phase.GREEN, duration=cfg.shoot_time,
+                sound_event="shoot_start",
+                orange_threshold=cfg.orange_warning_time if cfg.orange_warning_time > 0 else None,
+                orange_sound_event="warning_orange",
+                **common,
+            ))
             return block
 
         steps: List[Step] = []

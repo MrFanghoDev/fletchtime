@@ -12,7 +12,7 @@ from fletchtime_engine import (
 
 def simple_indoor_engine() -> MatchEngine:
     cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
-                        green_time=90, orange_time=30, turn_mode="ab_only")
+                        shoot_time=120, orange_warning_time=30, turn_mode="ab_only")
     return MatchEngine(IndoorMode(cfg))
 
 
@@ -35,7 +35,7 @@ class TestMatchEngineTicking(unittest.TestCase):
         engine = simple_indoor_engine()
         state = engine.tick(10)  # exactly the RED duration
         self.assertEqual(state.phase, Phase.GREEN)
-        self.assertEqual(state.time_left, 90)
+        self.assertEqual(state.time_left, 120)
 
     def test_tick_cascades_through_multiple_steps_after_lag(self) -> None:
         """A single large dt (e.g. after the process was suspended) should
@@ -43,7 +43,7 @@ class TestMatchEngineTicking(unittest.TestCase):
         the end of a volée always requires a manual next(), no matter how
         large the elapsed time was."""
         engine = simple_indoor_engine()
-        # RED(10) + GREEN(90) + ORANGE(30) = 130s for end 1, then PAUSE
+        # RED(10) + GREEN(120, continuous) = 130s for end 1, then PAUSE
         # (indefinite) before end 2 -- a huge dt must stop there, not
         # auto-start end 2.
         state = engine.tick(135)
@@ -59,7 +59,7 @@ class TestMatchEngineTicking(unittest.TestCase):
 
     def test_reaching_the_end_of_sequence_finishes(self) -> None:
         cfg = IndoorConfig(series=1, ends_per_series=1, prep_time=1,
-                            green_time=1, orange_time=1, turn_mode="ab_only")
+                            shoot_time=1, orange_warning_time=1, turn_mode="ab_only")
         engine = MatchEngine(IndoorMode(cfg))
         state = engine.tick(3)  # exactly consumes the only end
         self.assertTrue(state.finished)
@@ -75,11 +75,11 @@ class TestMatchEngineManualControl(unittest.TestCase):
         engine = simple_indoor_engine()
         state = engine.next()
         self.assertEqual(state.phase, Phase.GREEN)
-        self.assertEqual(state.time_left, 90)
+        self.assertEqual(state.time_left, 120)
 
     def test_next_through_full_end_reaches_pause_previewing_next_end(self) -> None:
         engine = simple_indoor_engine()
-        for _ in range(3):  # RED -> GREEN -> ORANGE -> PAUSE (preview end 2)
+        for _ in range(2):  # RED -> GREEN -> PAUSE (preview end 2)
             state = engine.next()
         self.assertEqual(state.phase, Phase.PAUSE)
         self.assertEqual(state.end_number, 2)
@@ -92,20 +92,20 @@ class TestMatchEngineManualControl(unittest.TestCase):
         """A-B et C-D tirent la même volée : le numéro ne doit pas changer
         entre les deux relais, seul le tireur actif change."""
         cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
-                            green_time=90, orange_time=30, turn_mode="ab_then_cd")
+                            shoot_time=90, orange_warning_time=30, turn_mode="ab_then_cd")
         engine = MatchEngine(IndoorMode(cfg))
 
         state = engine.current_state
         self.assertEqual(state.current_turn, "A-B")
         self.assertEqual(state.end_number, 1)
 
-        for _ in range(3):  # RED->GREEN->ORANGE of A-B's relay
+        for _ in range(2):  # RED -> GREEN of A-B's relay
             state = engine.next()
         self.assertEqual(state.phase, Phase.RED)  # C-D's own prep, same end
         self.assertEqual(state.current_turn, "C-D")
         self.assertEqual(state.end_number, 1)  # unchanged -- still volée 1
 
-        for _ in range(3):  # RED->GREEN->ORANGE of C-D's relay
+        for _ in range(2):  # RED -> GREEN of C-D's relay
             state = engine.next()
         self.assertEqual(state.phase, Phase.PAUSE)  # now end 1 is truly over
         self.assertEqual(state.end_number, 2)  # preview of end 2
@@ -179,11 +179,38 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
     def test_cascading_tick_emits_all_crossed_events_in_order(self) -> None:
         engine = simple_indoor_engine()
         engine.pop_pending_events()
-        engine.tick(135)  # RED->GREEN->ORANGE->PAUSE (stops there, no event)
-        self.assertEqual(
-            engine.pop_pending_events(),
-            ["shoot_start", "warning_orange"],
-        )
+        # RED(10)->GREEN(120)->PAUSE: the overshoot lands past the orange
+        # window straight into the indefinite PAUSE, so no "warning_orange"
+        # fires here -- see test_orange_threshold_* below for the normal,
+        # non-overshooting case.
+        engine.tick(135)
+        self.assertEqual(engine.pop_pending_events(), ["shoot_start"])
+
+    def test_orange_threshold_switches_phase_without_resetting_the_countdown(self) -> None:
+        """Le point central du correctif : un seul décompte continu de
+        120s, qui passe juste à l'orange dans les 30 dernières secondes --
+        pas de redémarrage ni de saut de valeur affichée."""
+        engine = simple_indoor_engine()
+        engine.tick(10)  # enter GREEN(120)
+        state = engine.tick(85)  # 120 - 85 = 35s left, still green
+        self.assertEqual(state.phase, Phase.GREEN)
+        self.assertEqual(state.time_left, 35)
+
+        state = engine.tick(6)  # 35 - 6 = 29s left, crosses the 30s threshold
+        self.assertEqual(state.phase, Phase.ORANGE)
+        self.assertEqual(state.time_left, 29)  # continuous, no jump/reset
+        self.assertEqual(state.end_number, 1)  # same volée throughout
+
+    def test_orange_threshold_sound_event_fires_once(self) -> None:
+        engine = simple_indoor_engine()
+        engine.tick(10)  # enter GREEN
+        engine.pop_pending_events()
+
+        engine.tick(91)  # 120 - 91 = 29s left, crosses the 30s threshold
+        self.assertEqual(engine.pop_pending_events(), ["warning_orange"])
+
+        engine.tick(5)  # still under threshold, must not re-fire
+        self.assertEqual(engine.pop_pending_events(), [])
 
 
 class TestMatchEngineWithFlintMode(unittest.TestCase):
@@ -191,9 +218,9 @@ class TestMatchEngineWithFlintMode(unittest.TestCase):
         cfg = FlintConfig(units=1, turn_mode="ab_only")
         engine = MatchEngine(FlintMode(cfg))
 
-        # each standard end is RED+GREEN+ORANGE+PAUSE (4 steps); play through
-        # all 6 via next(), landing exactly on the walk-up end's first arrow
-        for _ in range(6 * 4):
+        # each standard end is RED+GREEN(continu)+PAUSE (3 steps); play
+        # through all 6 via next(), landing on the walk-up end's first arrow
+        for _ in range(6 * 3):
             engine.next()
 
         state = engine.current_state
@@ -204,7 +231,7 @@ class TestMatchEngineWithFlintMode(unittest.TestCase):
     def test_walkup_arrows_play_back_to_back_without_looping(self) -> None:
         cfg = FlintConfig(units=1, turn_mode="ab_only")
         engine = MatchEngine(FlintMode(cfg))
-        for _ in range(6 * 4):  # skip to the walk-up end (see test above)
+        for _ in range(6 * 3):  # skip to the walk-up end (see test above)
             engine.next()
 
         seen_arrows = []

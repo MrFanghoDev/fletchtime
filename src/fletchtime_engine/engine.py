@@ -31,6 +31,8 @@ class MatchEngine:
         self._emergency = False
         self._emergency_saved_time: Optional[float] = None
 
+        self._orange_event_fired = False
+
         self._pending_events: List[str] = []
         self._emit_current_step_event()
 
@@ -56,6 +58,7 @@ class MatchEngine:
             if self._finished or self._time_left is None:
                 break
             self._time_left -= overflow
+        self._maybe_emit_orange_threshold_event()
         return self.current_state
 
     def next(self) -> MatchState:
@@ -83,6 +86,7 @@ class MatchEngine:
         self._paused = False
         self._emergency = False
         self._emergency_saved_time = None
+        self._orange_event_fired = False
         self._pending_events = []
         self._emit_current_step_event()
         return self.current_state
@@ -122,6 +126,7 @@ class MatchEngine:
             self._emergency = False
             self._emergency_saved_time = None
             self._pending_events = []
+            self._orange_event_fired = False
             self._emit_current_step_event()
             return self.current_state
         raise ValueError(
@@ -177,6 +182,7 @@ class MatchEngine:
         else:
             self._index += 1
             self._time_left = self._steps[self._index].duration
+            self._orange_event_fired = False
             self._emit_current_step_event()
 
     def _emit_current_step_event(self) -> None:
@@ -184,14 +190,35 @@ class MatchEngine:
         if event:
             self._pending_events.append(event)
 
+    def _maybe_emit_orange_threshold_event(self) -> None:
+        """Check whether the current step just crossed its orange
+        threshold (e.g. 30s remaining out of a continuous 240s countdown)
+        and fire its sound event exactly once. Does not change ``_index``
+        or reset the countdown -- the displayed phase switch is computed
+        in :attr:`current_state`."""
+        if self._finished or self._orange_event_fired or self._time_left is None:
+            return
+        step = self._steps[self._index]
+        if step.orange_threshold is not None and self._time_left <= step.orange_threshold:
+            self._orange_event_fired = True
+            if step.orange_sound_event:
+                self._pending_events.append(step.orange_sound_event)
+
     @property
     def current_state(self) -> MatchState:
         if self._finished:
             return MatchState(phase=Phase.FINISHED, finished=True)
 
         step = self._steps[self._index]
-        phase = Phase.EMERGENCY if self._emergency else step.phase
         time_left = self._emergency_saved_time if self._emergency else self._time_left
+
+        if self._emergency:
+            phase = Phase.EMERGENCY
+        elif (step.orange_threshold is not None and time_left is not None
+              and time_left <= step.orange_threshold):
+            phase = Phase.ORANGE
+        else:
+            phase = step.phase
 
         return MatchState(
             phase=phase,
