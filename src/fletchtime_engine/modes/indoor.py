@@ -42,7 +42,10 @@ class IndoorConfig:
     orange_warning_time: float = 30.0  # passage à l'orange quand il reste ce temps (sans reset)
 
     distance_label: str = "20 yards"
-    target_image: str = "wa_indoor_40cm.png"
+    # Deux blasons affichés côte à côte : recourbe/trad à gauche, poulies à
+    # droite -- les deux catégories tirent souvent ensemble en Indoor.
+    target_image_recurve: str = "assets/targets/indoor_recurve.jpg"
+    target_image_compound: str = "assets/targets/indoor_compound.jpg"
 
     # Comment les archers se relaient sur un même blason pendant une volée :
     # "ab_then_cd", "cd_then_ab" (les deux relais, dans un ordre ou
@@ -106,7 +109,8 @@ class IndoorMode(ShootingMode):
                 total_ends=cfg.ends_per_series,
                 unit_number=self._series_index(global_end_index),
                 distance_label=cfg.distance_label,
-                target_image=cfg.target_image,
+                target_image=cfg.target_image_recurve,
+                target_image_2=cfg.target_image_compound,
             )
             block: List[Step] = []
             if cfg.prep_time > 0:
@@ -144,6 +148,8 @@ class IndoorMode(ShootingMode):
                     end_number=self._end_in_series(next_index),
                     total_ends=cfg.ends_per_series,
                     unit_number=self._series_index(next_index),
-                    distance_label=cfg.distance_label, target_image=cfg.target_image,
+                    distance_label=cfg.distance_label,
+                    target_image=cfg.target_image_recurve,
+                    target_image_2=cfg.target_image_compound,
                 ))
         return steps

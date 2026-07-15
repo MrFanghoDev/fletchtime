@@ -189,6 +189,24 @@ class TestIndoorMode(unittest.TestCase):
         self.assertEqual(cfg.ends_per_series, 6)
         self.assertEqual(cfg.series, 2)
 
+    def test_both_target_images_are_carried_on_every_shooting_step(self) -> None:
+        """Recourbe/trad et poulies tirent souvent ensemble : les deux
+        blasons doivent être disponibles en même temps sur chaque step."""
+        cfg = IndoorConfig()
+        steps = IndoorMode(cfg).build_sequence()
+        shooting_steps = [s for s in steps if s.phase != Phase.PAUSE]
+
+        self.assertTrue(all(s.target_image == cfg.target_image_recurve for s in shooting_steps))
+        self.assertTrue(all(s.target_image_2 == cfg.target_image_compound for s in shooting_steps))
+
+    def test_pause_preview_also_carries_both_target_images(self) -> None:
+        cfg = IndoorConfig(series=1, ends_per_series=2)
+        steps = IndoorMode(cfg).build_sequence()
+        pause_step = next(s for s in steps if s.phase == Phase.PAUSE)
+
+        self.assertEqual(pause_step.target_image, cfg.target_image_recurve)
+        self.assertEqual(pause_step.target_image_2, cfg.target_image_compound)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,6 +18,11 @@ docs/_build/
 sounds/packs/_custom/
 web/assets/club/
 
+# Images de cibles -- à fournir par chaque club depuis une source dont il
+# possède les droits (catalogue fournisseur, document FFTL/IFAA officiel...);
+# pas incluses dans le dépôt public par prudence sur les droits d'auteur.
+web/assets/targets/
+
 # OS / éditeurs
 .DS_Store
 Thumbs.db

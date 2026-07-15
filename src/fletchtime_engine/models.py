@@ -55,5 +55,6 @@ class MatchState:
 
     distance_label: str = ""
     target_image: str = ""
+    target_image_2: str = ""
 
     finished: bool = False

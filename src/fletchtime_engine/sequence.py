@@ -44,6 +44,10 @@ class Step:
 
     distance_label: str = ""
     target_image: str = ""
+    # deuxième image de cible, affichée en parallèle de la première --
+    # utilisé par l'Indoor (recourbe/trad à gauche, poulies à droite),
+    # laissé vide pour le Flint (une seule cible).
+    target_image_2: str = ""
 
     # identifier consumed by the transport layer to trigger a sound; not a
     # filename -- see docs/architecture.md "Packs de sons".

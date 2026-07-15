@@ -14,6 +14,14 @@
   #time { font-size: 22vw; font-weight:bold; line-height:1; font-variant-numeric: tabular-nums; }
   #turn { font-size:6vw; margin-top:1rem; min-height:1.2em; }
   #dist { font-size:4vw; opacity:0.85; min-height:1.2em; }
+  #target-images {
+    display:flex; gap:2rem; justify-content:center; align-items:center;
+    margin-bottom:1rem; min-height:1px;
+  }
+  #target-images img {
+    max-height:20vh; max-width:22vw; object-fit:contain;
+    border-radius:8px; background:white; padding:4px; display:none;
+  }
   #lane { position:absolute; top:1rem; left:1rem; font-size:3vw; opacity:0.6; }
   #event-title-banner {
     position:absolute; top:1rem; left:50%; transform:translateX(-50%);
@@ -46,6 +54,10 @@
   <div id="root" class="phase-wait">
     <div id="lane"></div>
     <div id="event-title-banner"></div>
+    <div id="target-images">
+      <img id="target-image-1" alt="" onerror="this.style.display='none';">
+      <img id="target-image-2" alt="" onerror="this.style.display='none';">
+    </div>
     <div id="time">--</div>
     <div id="turn"></div>
     <div id="dist"></div>
@@ -77,6 +89,8 @@
   const idleClockEl = document.getElementById("idle-clock");
   const idleCaptionEl = document.getElementById("idle-caption");
   const eventTitleBannerEl = document.getElementById("event-title-banner");
+  const targetImage1El = document.getElementById("target-image-1");
+  const targetImage2El = document.getElementById("target-image-2");
 
   // Empêche l'écran de la tablette de s'éteindre pendant l'affichage.
   // Sans ça, Android met le navigateur en veille réseau dès l'extinction
@@ -172,6 +186,8 @@
       timeEl.style.display = "none";
       turnEl.style.display = "none";
       distEl.style.display = "none";
+      targetImage1El.style.display = "none";
+      targetImage2El.style.display = "none";
       idleEl.style.display = "flex";
       idleCaptionEl.textContent = isConnected ? "" : t(currentLanguage, "connectingCaption");
     } else {
@@ -194,6 +210,21 @@
       distEl.textContent = state.distance_label
         ? (serieLabel + " — " + voleeLabel + " — " + state.distance_label)
         : (serieLabel + (voleeLabel ? " — " + voleeLabel : ""));
+
+      // Une seule image (Flint) ou deux côte à côte (Indoor : recourbe/trad
+      // à gauche, poulies à droite) -- masquée si le champ est vide.
+      if (state.target_image) {
+        targetImage1El.src = state.target_image;
+        targetImage1El.style.display = "inline-block";
+      } else {
+        targetImage1El.style.display = "none";
+      }
+      if (state.target_image_2) {
+        targetImage2El.src = state.target_image_2;
+        targetImage2El.style.display = "inline-block";
+      } else {
+        targetImage2El.style.display = "none";
+      }
     }
 
     // Le message ne doit jamais déconcentrer les archers en plein tir :

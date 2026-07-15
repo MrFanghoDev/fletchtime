@@ -231,5 +231,6 @@ class MatchEngine:
             total_arrows_in_end=step.total_arrows_in_end,
             distance_label=step.distance_label,
             target_image=step.target_image,
+            target_image_2=step.target_image_2,
             finished=False,
         )
