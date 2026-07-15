@@ -298,7 +298,7 @@
       <summary><span class="accent-bar"></span><span data-i18n="panelLiveTitle">Contrôle en direct</span><span class="chevron">▶</span></summary>
       <div class="panel-body">
         <div class="btn-row">
-          <button class="btn-go" data-i18n="next" onclick="send({action:'next'})">Next ▶</button>
+          <button class="btn-go" id="next-btn" data-i18n="next" onclick="send({action:'next'})" disabled>Next ▶</button>
           <button class="btn-quiet" id="pause-btn" data-i18n="pause"
             onclick="send({action:'pause'})" disabled>⏸ Pause</button>
           <button class="btn-quiet" id="play-btn" data-i18n="resume"
@@ -548,6 +548,7 @@
         const inEmergency = hasMatch && data.state.phase === "emergency";
         document.getElementById("emergency-btn").disabled = !matchIsRunning || inEmergency;
         document.getElementById("resume-btn").disabled = !inEmergency;
+        document.getElementById("next-btn").disabled = !matchIsRunning || inEmergency;
 
         // Ouvre/ferme automatiquement les bons panneaux au démarrage et à
         // l'arrêt d'un match -- seulement au changement d'état, pas à
