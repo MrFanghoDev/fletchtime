@@ -27,6 +27,9 @@ class FakeWebSocket:
     def last_language(self):
         return json.loads(self.sent[-1])["language"]
 
+    def last_event_title(self):
+        return json.loads(self.sent[-1])["event_title"]
+
 
 class TestMatchServer(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -131,6 +134,35 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
             json.dumps({"action": "set_language", "value": "de"})
         )
         self.assertEqual(self.display.last_language(), "fr")  # unchanged
+
+    async def test_default_event_title_is_none(self) -> None:
+        self.assertIsNone(self.display.last_event_title())
+
+    async def test_event_title_can_be_set(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "set_event_title", "value": "Concours FFTL Indoor -- Février 2026",
+        }))
+        self.assertEqual(
+            self.display.last_event_title(), "Concours FFTL Indoor -- Février 2026"
+        )
+
+    async def test_event_title_persists_across_match_start_stop_and_restart(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "set_event_title", "value": "Championnat 77"})
+        )
+        await self.server.handle_command(json.dumps({"action": "start_flint"}))
+        self.assertEqual(self.display.last_event_title(), "Championnat 77")
+        await self.server.handle_command(json.dumps({"action": "stop"}))
+        self.assertEqual(self.display.last_event_title(), "Championnat 77")
+
+    async def test_event_title_can_be_cleared(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "set_event_title", "value": "Championnat 77"})
+        )
+        await self.server.handle_command(
+            json.dumps({"action": "set_event_title", "value": None})
+        )
+        self.assertIsNone(self.display.last_event_title())
 
     async def test_tick_updates_time_left_and_emits_events(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))

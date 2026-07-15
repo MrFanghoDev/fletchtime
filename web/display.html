@@ -15,6 +15,11 @@
   #turn { font-size:6vw; margin-top:1rem; min-height:1.2em; }
   #dist { font-size:4vw; opacity:0.85; min-height:1.2em; }
   #lane { position:absolute; top:1rem; left:1rem; font-size:3vw; opacity:0.6; }
+  #event-title-banner {
+    position:absolute; top:1rem; left:50%; transform:translateX(-50%);
+    font-size:2.8vw; opacity:0.7; max-width:80vw; text-align:center;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
   #message {
     position:absolute; bottom:2rem; font-size:4vw; background:rgba(0,0,0,0.6);
     padding:0.5rem 1.2rem; border-radius:10px; display:none;
@@ -40,6 +45,7 @@
 <body>
   <div id="root" class="phase-wait">
     <div id="lane"></div>
+    <div id="event-title-banner"></div>
     <div id="time">--</div>
     <div id="turn"></div>
     <div id="dist"></div>
@@ -58,6 +64,7 @@
   const params = new URLSearchParams(location.search);
   const lane = params.get("lane") || "?";
   let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
+  let lastEventTitle = "";
   document.getElementById("lane").textContent = t(currentLanguage, "lane") + " " + lane;
 
   const root = document.getElementById("root");
@@ -69,6 +76,7 @@
   const idleDateEl = document.getElementById("idle-date");
   const idleClockEl = document.getElementById("idle-clock");
   const idleCaptionEl = document.getElementById("idle-caption");
+  const eventTitleBannerEl = document.getElementById("event-title-banner");
 
   // Empêche l'écran de la tablette de s'éteindre pendant l'affichage.
   // Sans ça, Android met le navigateur en veille réseau dès l'extinction
@@ -152,6 +160,9 @@
       localStorage.setItem("fletchtime_lang", currentLanguage);
       document.getElementById("lane").textContent = t(currentLanguage, "lane") + " " + lane;
     }
+
+    eventTitleBannerEl.textContent = payload.event_title || lastEventTitle;
+    lastEventTitle = payload.event_title || lastEventTitle;
 
     const state = payload.state;
     const isIdle = !state || state.finished;

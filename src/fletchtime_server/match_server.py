@@ -45,6 +45,10 @@ class MatchServer:
         # à tous les clients (control + display) pour que les libellés
         # statiques (phase, série/volée, etc.) s'affichent dans la bonne langue.
         self._language: str = "fr"
+        # Titre de l'événement (ex. "Concours FFTL Indoor -- Février 2026"),
+        # choisi par le DOS, affiché en permanence sur les écrans -- persiste
+        # à travers les matchs, contrairement au message ponctuel.
+        self._event_title: Optional[str] = None
 
     # -- connection lifecycle ---------------------------------------------
 
@@ -91,6 +95,8 @@ class MatchServer:
                 lang = data.get("value")
                 if lang in ("fr", "en"):
                     self._language = lang
+            elif action == "set_event_title":
+                self._event_title = data.get("value") or None
             elif self.engine is not None:
                 try:
                     if action == "next":
@@ -150,6 +156,7 @@ class MatchServer:
         return {
             "type": "state", "state": state_dict,
             "message": self._message, "language": self._language,
+            "event_title": self._event_title,
         }
 
     async def _broadcast(self, payload: dict) -> None:
