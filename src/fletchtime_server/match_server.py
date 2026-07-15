@@ -111,6 +111,10 @@ class MatchServer:
                         self._lane_messages[lane] = value
                 else:
                     self._message = value
+                    # Un message "à tous" doit remplacer tout message ciblé
+                    # existant -- sinon une lane restée sur un message ciblé
+                    # ne verrait jamais le nouveau message global.
+                    self._lane_messages.clear()
             elif action == "set_language":
                 lang = data.get("value")
                 if lang in ("fr", "en"):

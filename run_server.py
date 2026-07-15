@@ -41,6 +41,7 @@ def main() -> None:
     print("=" * 60)
     print("  Fletchtime -- serveur de contrôle et d'affichage")
     print("=" * 60)
+    print(f"  Accueil   : http://{ip}:{HTTP_PORT}/")
     print(f"  Contrôle  : http://{ip}:{HTTP_PORT}/control.html")
     print(f"  Affichage : http://{ip}:{HTTP_PORT}/display.html?lane=1")
     print()

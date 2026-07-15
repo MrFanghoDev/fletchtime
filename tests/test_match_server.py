@@ -326,6 +326,22 @@ class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
         }))
         self.assertEqual(self.lane1.last_message(), "Message global")
 
+    async def test_global_message_after_targeted_overrides_it(self) -> None:
+        """Régression : un message ciblé envoyé plus tôt ne doit pas rester
+        collé sur sa lane une fois qu'un nouveau message global est envoyé."""
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "1"}), self.lane1
+        )
+        await self.server.handle_command(json.dumps({
+            "action": "message", "lane": "1", "value": "Message ciblé lane 1",
+        }))
+        self.assertEqual(self.lane1.last_message(), "Message ciblé lane 1")
+
+        await self.server.handle_command(
+            json.dumps({"action": "message", "value": "Nouveau message global"})
+        )
+        self.assertEqual(self.lane1.last_message(), "Nouveau message global")
+
     async def test_registration_without_websocket_argument_is_ignored_not_fatal(self) -> None:
         # handle_command called the "old" way (no websocket) must not crash --
         # e.g. any test or caller that forgot to pass it.

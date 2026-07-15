@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<title>Fletchtime — Manuel utilisateur</title>
+<style>
+  :root {
+    --bg: #0f1216; --surface: #171b22; --border: #2a3140;
+    --text: #e8ebf1; --text-muted: #8a93a6; --text-faint: #5c6579; --gold: #d1a13d;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui); }
+  .page { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.25rem 3rem; }
+  a.back { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; }
+  a.back:hover { color: var(--text); }
+  h1 { display: flex; align-items: center; gap: 0.6rem; font-size: 1.5rem; margin: 1.25rem 0 0.25rem; }
+  h1 img { height: 1.7em; width: auto; }
+  .placeholder {
+    margin-top: 2rem; background: var(--surface); border: 1px dashed var(--border);
+    border-radius: 12px; padding: 2rem; text-align: center; color: var(--text-muted);
+  }
+  .placeholder .icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .placeholder p { line-height: 1.6; font-size: 0.92rem; }
+  ul.todo { text-align: left; color: var(--text-faint); font-size: 0.85rem; line-height: 1.8;
+    max-width: 420px; margin: 1rem auto 0; }
+  section#dev { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  section#dev p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; }
+  code { background: var(--surface); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.85em; }
+
+  .lang-toggle {
+    display: flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
+    position: fixed; top: 1rem; right: 1rem;
+  }
+  .lang-btn {
+    font-family: var(--font-ui); font-size: 0.75rem; padding: 0.35rem 0.8rem; margin: 0;
+    border: none; background: var(--surface); color: var(--text-muted); cursor: pointer;
+  }
+  .lang-btn.active { background: var(--gold); color: #1a1206; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="lang-toggle">
+    <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">FR</button>
+    <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">EN</button>
+  </div>
+
+  <div class="page">
+    <a class="back" href="index.html" data-i18n="manualBack">← Retour à l'accueil</a>
+    <h1><img src="logo.svg" alt=""><span data-i18n="manualTitle">Manuel utilisateur</span></h1>
+
+    <div class="placeholder">
+      <div class="icon">🚧</div>
+      <p data-i18n="manualPlaceholder">Ce manuel est en cours de rédaction — pas encore rempli.</p>
+      <ul class="todo">
+        <li data-i18n="manualTodo1">Premier lancement du serveur sur Pydroid</li>
+        <li data-i18n="manualTodo2">Choisir un mode de concours (Indoor / Flint) sans coder</li>
+        <li data-i18n="manualTodo3">Connecter un écran d'affichage sur une tablette</li>
+        <li data-i18n="manualTodo4">Ajouter le logo du club et des bannières sponsors</li>
+        <li data-i18n="manualTodo5">Changer le pack de sons</li>
+        <li data-i18n="manualTodo6">Envoyer un message pendant la compétition</li>
+        <li data-i18n="manualTodo7">Foire aux questions</li>
+      </ul>
+    </div>
+
+    <section id="dev">
+      <h2 data-i18n="manualDevTitle">Documentation développeur</h2>
+      <p data-i18n="manualDevDesc">
+        La documentation technique complète (spécifications, architecture, plan
+        de développement) est construite avec Sphinx à partir du dossier
+        <code>docs/</code> du dépôt :
+      </p>
+      <p><code>sphinx-build -b html docs docs/_build/html</code></p>
+    </section>
+  </div>
+
+<script src="i18n.js"></script>
+<script>
+  let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
+
+  function applyTranslations() {
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t(currentLanguage, el.getAttribute("data-i18n"));
+    });
+    document.getElementById("lang-fr-btn").classList.toggle("active", currentLanguage === "fr");
+    document.getElementById("lang-en-btn").classList.toggle("active", currentLanguage === "en");
+    document.documentElement.lang = currentLanguage;
+  }
+
+  function setLanguage(lang) {
+    currentLanguage = lang;
+    localStorage.setItem("fletchtime_lang", lang);
+    applyTranslations();
+  }
+
+  applyTranslations();
+</script>
+</body>
+</html>
