@@ -3,10 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <title>Fletchtime — Contrôle</title>
 <style>
   body { font-family: sans-serif; background:#111; color:#eee; padding:1rem; margin:0; }
-  h1 { font-size:1.3rem; }
+  h1 { font-size:1.3rem; display:flex; align-items:center; gap:0.5rem; }
+  h1 img { height:1.6em; width:1.6em; }
   button {
     font-size:1.05rem; padding:0.7rem 1rem; margin:0.25rem; border-radius:8px;
     border:none; cursor:pointer; color:white;
@@ -56,7 +58,7 @@
 </style>
 </head>
 <body>
-  <h1 data-i18n="controlTitle">Fletchtime — Poste de contrôle</h1>
+  <h1><img src="logo.svg" alt=""><span data-i18n="controlTitle">Fletchtime — Poste de contrôle</span></h1>
   <div>
     <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">Français</button>
     <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">English</button>

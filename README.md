@@ -1,3 +1,5 @@
+<img src="web/logo.svg" width="80" height="80" alt="Fletchtime logo">
+
 # Fletchtime
 
 Logiciel open source de gestion du temps pour compétitions d'archerie FFTL
@@ -18,5 +20,6 @@ Ouvrir ensuite `docs/_build/html/index.html` dans un navigateur.
 
 ## État du projet
 
-En phase de spécification — voir `docs/roadmap.md` pour le plan de développement
-par étapes.
+Étapes 1 et 2 terminées (moteur de séquencement, serveur temps réel), étapes 3
+et 4 en cours (affichage, interface de contrôle) — voir `docs/roadmap.md` pour
+le détail du plan de développement par étapes.

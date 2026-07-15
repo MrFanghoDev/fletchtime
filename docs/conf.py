@@ -36,3 +36,5 @@ language = "fr"
 html_theme = "furo"  # thème moderne, responsive, lisible sur mobile
 html_static_path = ["_static"]
 html_title = "Fletchtime — Documentation"
+html_logo = "_static/logo.svg"
+html_favicon = "_static/logo.svg"
