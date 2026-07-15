@@ -236,6 +236,7 @@
     </div>
     <div class="header-status">
       <div id="status"><span class="dot"></span>Connexion en cours...</div>
+      <a href="config.html" class="btn-quiet" style="text-decoration:none; padding:0.5rem 0.8rem; font-size:0.85rem;" data-i18n="configLink">⚙ Configuration</a>
       <div class="lang-toggle">
         <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">FR</button>
         <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">EN</button>
@@ -280,41 +281,18 @@
 
         <div class="two-col">
           <div class="field-group">
-            <div class="panel-subhead" data-i18n="indoorModeLabel">Mode Indoor :</div>
-            <div class="row">
-              <select id="turn-mode">
-                <option value="ab_then_cd" data-i18n="abThenCd">A-B puis C-D</option>
-                <option value="cd_then_ab" data-i18n="cdThenAb">C-D puis A-B</option>
-                <option value="ab_only" data-i18n="abOnly">A-B seulement</option>
-                <option value="cd_only" data-i18n="cdOnly">C-D seulement</option>
-              </select>
-            </div>
-            <label class="checkbox">
-              <input type="checkbox" id="alternate-relay" checked>
-              <span data-i18n="alternateEachSeries">Alterner l'ordre à chaque série</span>
-            </label>
             <button class="btn-start" id="start-indoor-btn" data-i18n="startIndoor"
               onclick="startIndoor()">▶ Démarrer Indoor</button>
           </div>
 
           <div class="field-group">
-            <div class="panel-subhead" data-i18n="flintModeLabel">Mode Flint :</div>
-            <div class="row">
-              <select id="flint-turn-mode">
-                <option value="ab_then_cd" data-i18n="abThenCd">A-B puis C-D</option>
-                <option value="cd_then_ab" data-i18n="cdThenAb">C-D puis A-B</option>
-                <option value="ab_only" data-i18n="abOnly">A-B seulement</option>
-                <option value="cd_only" data-i18n="cdOnly">C-D seulement</option>
-              </select>
-            </div>
-            <label class="checkbox">
-              <input type="checkbox" id="flint-alternate-relay" checked>
-              <span data-i18n="alternateEachUnit">Alterner l'ordre à chaque unité</span>
-            </label>
             <button class="btn-start" id="start-flint-btn" data-i18n="startFlint"
               onclick="startFlint()">▶ Démarrer Flint</button>
           </div>
         </div>
+        <p class="panel-subhead" style="margin-top:0.4rem;">
+          <a href="config.html" data-i18n="configHintLink">Ordre A-B/C-D, temps, distances... → Configuration</a>
+        </p>
       </div>
     </details>
 
@@ -558,10 +536,6 @@
         // tourne (state non nul et pas encore terminé).
         const hasMatch = !!data.state;
         const matchIsRunning = hasMatch && !data.state.finished;
-        document.getElementById("turn-mode").disabled = matchIsRunning;
-        document.getElementById("alternate-relay").disabled = matchIsRunning;
-        document.getElementById("flint-turn-mode").disabled = matchIsRunning;
-        document.getElementById("flint-alternate-relay").disabled = matchIsRunning;
         document.getElementById("start-indoor-btn").disabled = matchIsRunning;
         document.getElementById("start-flint-btn").disabled = matchIsRunning;
 
@@ -596,18 +570,10 @@
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
   }
   function startIndoor() {
-    send({
-      action: "start_indoor",
-      turn_mode: document.getElementById("turn-mode").value,
-      alternate: document.getElementById("alternate-relay").checked,
-    });
+    send({action: "start_indoor"});
   }
   function startFlint() {
-    send({
-      action: "start_flint",
-      turn_mode: document.getElementById("flint-turn-mode").value,
-      alternate: document.getElementById("flint-alternate-relay").checked,
-    });
+    send({action: "start_flint"});
   }
   function sendMessage() {
     const val = document.getElementById("msg").value;

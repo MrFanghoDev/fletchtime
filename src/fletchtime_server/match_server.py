@@ -11,17 +11,17 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import Dict, Optional, Set
 
 from fletchtime_engine import (
-    FlintConfig,
     FlintMode,
-    IndoorConfig,
     IndoorMode,
     MatchEngine,
     MatchState,
 )
+
+from . import config_store
 
 TICK_INTERVAL = 0.2  # seconds between engine ticks / broadcasts
 
@@ -56,6 +56,11 @@ class MatchServer:
         # action "register_display") -- absent pour les postes de contrôle,
         # qui ne s'enregistrent jamais comme lane.
         self._display_lanes: Dict[object, str] = {}
+        # Mode ("indoor"/"flint") du match actuellement chargé dans
+        # self.engine, quel que soit son état (actif, pause, urgence) --
+        # sert uniquement à bloquer la modification de la config de ce mode
+        # tant qu'un match de ce type est en cours (voir _handle_config_action).
+        self._current_mode_kind: Optional[str] = None
 
     # -- connection lifecycle ---------------------------------------------
 
@@ -76,25 +81,35 @@ class MatchServer:
             return
         action = data.get("action")
 
+        if action in ("get_config", "save_config"):
+            await self._handle_config_action(action, data, websocket)
+            return
+
         async with self._lock:
             if action == "start_indoor":
-                turn_mode = data.get("turn_mode", "ab_then_cd")
-                alternate = data.get("alternate", True)
                 try:
-                    self.engine = MatchEngine(IndoorMode(IndoorConfig(
-                        turn_mode=turn_mode,
-                        alternate_relay_order_each_series=bool(alternate),
-                    )))
+                    base = config_store.load_indoor_config()
+                    overrides = {}
+                    if "turn_mode" in data:
+                        overrides["turn_mode"] = data["turn_mode"]
+                    if "alternate" in data:
+                        overrides["alternate_relay_order_each_series"] = bool(data["alternate"])
+                    cfg = replace(base, **overrides) if overrides else base
+                    self.engine = MatchEngine(IndoorMode(cfg))
+                    self._current_mode_kind = "indoor"
                 except ValueError:
                     pass  # invalid turn_mode from a malformed command -- ignore
             elif action == "start_flint":
-                turn_mode = data.get("turn_mode", "ab_then_cd")
-                alternate = data.get("alternate", True)
                 try:
-                    self.engine = MatchEngine(FlintMode(FlintConfig(
-                        turn_mode=turn_mode,
-                        alternate_relay_order_each_unit=bool(alternate),
-                    )))
+                    base = config_store.load_flint_config()
+                    overrides = {}
+                    if "turn_mode" in data:
+                        overrides["turn_mode"] = data["turn_mode"]
+                    if "alternate" in data:
+                        overrides["alternate_relay_order_each_unit"] = bool(data["alternate"])
+                    cfg = replace(base, **overrides) if overrides else base
+                    self.engine = MatchEngine(FlintMode(cfg))
+                    self._current_mode_kind = "flint"
                 except ValueError:
                     pass  # invalid turn_mode from a malformed command -- ignore
             elif action == "register_display":
@@ -149,6 +164,64 @@ class MatchServer:
 
         await self.broadcast_state()
 
+    # -- config get/save (no match-state broadcast involved) -----------------
+
+    async def _handle_config_action(self, action: str, data: dict, websocket) -> None:
+        """Handles get_config/save_config directly, without going through
+        the usual broadcast_state() at the end of handle_command -- these
+        don't change any match state, and broadcasting would overwrite the
+        direct reply we just sent to the requesting client."""
+        async with self._lock:
+            if action == "get_config":
+                if websocket is not None:
+                    try:
+                        await websocket.send(json.dumps({
+                            "type": "config",
+                            "indoor": asdict(config_store.load_indoor_config()),
+                            "flint": asdict(config_store.load_flint_config()),
+                        }))
+                    except Exception:
+                        pass
+            elif action == "save_config":
+                mode = data.get("mode")
+                values = data.get("values") or {}
+                reply: Dict[str, object] = {"type": "config_saved", "mode": mode}
+                if self._mode_in_progress(mode):
+                    reply["ok"] = False
+                    reply["error"] = "match_in_progress"
+                else:
+                    try:
+                        if mode == "indoor":
+                            saved = config_store.save_indoor_config(values)
+                            reply["ok"] = True
+                            reply["values"] = asdict(saved)
+                        elif mode == "flint":
+                            saved = config_store.save_flint_config(values)
+                            reply["ok"] = True
+                            reply["values"] = asdict(saved)
+                        else:
+                            reply["ok"] = False
+                            reply["error"] = f"unknown mode {mode!r}"
+                    except (ValueError, TypeError) as exc:
+                        reply["ok"] = False
+                        reply["error"] = str(exc)
+                if websocket is not None:
+                    try:
+                        await websocket.send(json.dumps(reply))
+                    except Exception:
+                        pass
+
+    def _mode_in_progress(self, mode: str) -> bool:
+        """True if a match of this same mode is currently loaded and not
+        finished (active, paused, or in emergency) -- saving new config
+        values for that mode is blocked in that case, so nobody edits the
+        rules of a competition while it's actually being shot."""
+        return (
+            self.engine is not None
+            and self._current_mode_kind == mode
+            and not self.engine.current_state.finished
+        )
+
     # -- background ticking -------------------------------------------------
 
     async def tick_loop(self) -> None:
@@ -197,11 +270,13 @@ class MatchServer:
             {l for l in self._display_lanes.values() if l != "apercu"},
             key=_lane_sort_key,
         )
+        match_in_progress = self.engine is not None and not self.engine.current_state.finished
         return {
             "type": "state", "state": state_dict,
             "message": message, "language": self._language,
             "event_title": self._event_title,
             "connected_lanes": connected_lanes,
+            "active_mode": self._current_mode_kind if match_in_progress else None,
         }
 
     async def _broadcast(self, payload: dict) -> None:

@@ -1,6 +1,9 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
+from fletchtime_server import config_store
 from fletchtime_server.match_server import MatchServer
 
 
@@ -44,6 +47,21 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_match_at_startup(self) -> None:
         self.assertIsNone(self.control.last_state())
+
+    async def test_active_mode_is_none_before_any_match(self) -> None:
+        payload = json.loads(self.control.sent[-1])
+        self.assertIsNone(payload["active_mode"])
+
+    async def test_active_mode_reflects_the_running_indoor_match(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        payload = json.loads(self.control.sent[-1])
+        self.assertEqual(payload["active_mode"], "indoor")
+
+    async def test_active_mode_is_none_after_stop(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({"action": "stop"}))
+        payload = json.loads(self.control.sent[-1])
+        self.assertIsNone(payload["active_mode"])
 
     async def test_start_flint_broadcasts_first_step_to_all_clients(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_flint"}))
@@ -349,6 +367,137 @@ class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
             json.dumps({"action": "register_display", "lane": "9"})
         )
         self.assertEqual(self.control.last_connected_lanes(), [])
+
+
+class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self) -> None:
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._original_indoor = config_store.INDOOR_TOML
+        self._original_flint = config_store.FLINT_TOML
+        config_store.INDOOR_TOML = Path(self._tmpdir.name) / "indoor.toml"
+        config_store.FLINT_TOML = Path(self._tmpdir.name) / "flint.toml"
+
+        self.server = MatchServer()
+        self.control = FakeWebSocket()
+        await self.server.register(self.control)
+
+    async def asyncTearDown(self) -> None:
+        config_store.INDOOR_TOML = self._original_indoor
+        config_store.FLINT_TOML = self._original_flint
+        self._tmpdir.cleanup()
+
+    async def test_get_config_returns_defaults_when_no_file_exists(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "get_config"}), self.control)
+        payload = json.loads(self.control.sent[-1])
+        self.assertEqual(payload["type"], "config")
+        self.assertEqual(payload["indoor"]["shoot_time"], 240.0)
+        self.assertEqual(payload["flint"]["units"], 2)
+
+    async def test_save_config_indoor_persists_and_confirms(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor",
+            "values": {"shoot_time": 200.0},
+        }), self.control)
+        reply = json.loads(self.control.sent[-1])
+        self.assertEqual(reply["type"], "config_saved")
+        self.assertTrue(reply["ok"])
+        self.assertEqual(reply["values"]["shoot_time"], 200.0)
+
+        # une nouvelle lecture doit refléter la valeur sauvegardée
+        await self.server.handle_command(json.dumps({"action": "get_config"}), self.control)
+        payload = json.loads(self.control.sent[-1])
+        self.assertEqual(payload["indoor"]["shoot_time"], 200.0)
+
+    async def test_save_config_invalid_values_reports_error_without_crashing(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor",
+            "values": {"shoot_time": 10.0, "orange_warning_time": 999.0},
+        }), self.control)
+        reply = json.loads(self.control.sent[-1])
+        self.assertEqual(reply["type"], "config_saved")
+        self.assertFalse(reply["ok"])
+        self.assertIn("error", reply)
+
+    async def test_starting_a_match_uses_the_saved_config(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor",
+            "values": {"shoot_time": 77.0, "orange_warning_time": 10.0},
+        }), self.control)
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({"action": "next"}))  # RED -> GREEN
+        state = self.control.last_state()
+        self.assertEqual(state["time_left"], 77.0)
+
+    async def test_bare_start_uses_the_saved_turn_mode_without_override(self) -> None:
+        """Le bouton Démarrer simplifié n'envoie plus turn_mode/alternate --
+        le match doit utiliser tel quel ce qui est enregistré dans la config,
+        pas retomber sur un défaut codé en dur côté serveur."""
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor",
+            "values": {"turn_mode": "cd_only", "alternate_relay_order_each_series": False},
+        }), self.control)
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        state = self.control.last_state()
+        self.assertEqual(state["current_turn"], "C-D")
+
+    async def test_unknown_config_mode_reports_error(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "bogus", "values": {},
+        }), self.control)
+        reply = json.loads(self.control.sent[-1])
+        self.assertFalse(reply["ok"])
+
+    async def test_cannot_save_indoor_config_while_indoor_match_is_active(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
+        }), self.control)
+        reply = json.loads(self.control.sent[-1])
+        self.assertFalse(reply["ok"])
+        self.assertEqual(reply["error"], "match_in_progress")
+
+    async def test_cannot_save_indoor_config_while_indoor_match_is_paused(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({"action": "pause"}))
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
+        }), self.control)
+        reply = json.loads(self.control.sent[-1])
+        self.assertFalse(reply["ok"])
+
+    async def test_cannot_save_indoor_config_during_emergency(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({"action": "emergency"}))
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
+        }), self.control)
+        reply = json.loads(self.control.sent[-1])
+        self.assertFalse(reply["ok"])
+
+    async def test_can_save_flint_config_while_indoor_match_is_active(self) -> None:
+        """Un match Indoor en cours ne doit pas bloquer la config Flint."""
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "flint", "values": {"units": 3},
+        }), self.control)
+        reply = json.loads(self.control.sent[-1])
+        self.assertTrue(reply["ok"])
+
+    async def test_can_save_indoor_config_after_the_match_is_stopped(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({"action": "stop"}))
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
+        }), self.control)
+        reply = json.loads(self.control.sent[-1])
+        self.assertTrue(reply["ok"])
+
+    async def test_can_save_indoor_config_when_no_match_has_ever_started(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
+        }), self.control)
+        reply = json.loads(self.control.sent[-1])
+        self.assertTrue(reply["ok"])
 
 
 if __name__ == "__main__":
