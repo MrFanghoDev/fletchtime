@@ -1,19 +1,43 @@
-# Pack de sons personnalisé
+# `_custom/` — dossier gabarit, pas un pack à sélectionner
 
-Pour créer un pack perso, copie ce dossier `_custom/` (ou crée-en un autre à
-côté, ex. `mon_club/`) et remplis-le avec des fichiers portant **exactement**
-ces noms (extension `.mp3`, `.wav` ou `.ogg`) :
+Ce dossier `_custom/` n'est **pas destiné à être utilisé tel quel** : il
+n'apparaît volontairement pas dans la liste des packs de `config.html`.
+C'est juste un aide-mémoire pour la convention de nommage.
 
-- `prep_start` — début de la mise en place (rouge)
-- `shoot_start` — début du tir (vert)
-- `warning_orange` — passage à l'orange
-- `countdown_tick` — chaque seconde des 5 dernières secondes
-- `emergency_start` — déclenchement de l'urgence
-- `emergency_end` — reprise après urgence
-- `end_of_volee` — fin de volée (récupération des flèches)
-- `end_of_match` — fin de match (arrêt ou fin naturelle)
+## Pour créer un vrai pack utilisable
+
+1. Crée un **nouveau dossier** à côté de celui-ci, directement dans
+   `web/assets/sounds/packs/` — donne-lui le nom que tu veux
+   (ex. `mon_club`, `concours_fevrier`, peu importe).
+2. Mets-y des fichiers portant **exactement** ces noms (extension `.mp3`,
+   `.wav` ou `.ogg`) :
+
+   - `prep_start` — début de la mise en place (rouge)
+   - `shoot_start` — début du tir (vert)
+   - `warning_orange` — passage à l'orange
+   - `countdown_tick` — chaque seconde des 5 dernières secondes
+   - `emergency_start` — déclenchement de l'urgence
+   - `emergency_end` — reprise après urgence
+   - `end_of_volee` — fin de volée (récupération des flèches)
+   - `end_of_match` — fin de match (arrêt ou fin naturelle)
+
+3. Ton dossier apparaît alors automatiquement dans `config.html` → section
+   "Son" → liste déroulante. Sélectionne-le et enregistre.
 
 Un événement sans fichier correspondant retombe automatiquement sur un bip
 générique -- pas besoin de fournir les 8 sons d'un coup.
 
-Sélectionne ensuite ce pack dans `config.html` → section "Son".
+## Un seul pack par dossier
+
+Chaque dossier sous `packs/` = un pack complet et indépendant. Si tu veux
+plusieurs ambiances sonores (ex. une pour l'Indoor plus feutrée, une pour
+le Flint plus franche), crée **plusieurs dossiers** distincts
+(`packs/indoor_douce/`, `packs/flint_franc/`, etc.) et bascule de l'un à
+l'autre dans `config.html` selon le concours -- il n'y a qu'un seul pack
+actif à la fois pour toute l'application.
+
+## Rien de tout ça n'est versionné
+
+Seul le pack `classic` (fourni avec FletchTime, généré par synthèse) est
+suivi par Git. N'importe quel autre dossier que tu crées ici reste
+uniquement sur ton appareil, jamais poussé vers le dépôt partagé.

@@ -12,10 +12,8 @@ venv/
 # Sphinx
 docs/_build/
 
-# Assets propres à un club (packs de sons perso, logo, banderoles) --
-# jamais versionnés dans le dépôt public partagé avec la FFTL, voir
-# docs/architecture.md.
-sounds/packs/_custom/
+# Assets propres à un club (logo, banderoles) -- jamais versionnés dans le
+# dépôt public partagé avec la FFTL, voir docs/architecture.md.
 web/assets/club/
 
 # Images de cibles -- à fournir par chaque club depuis une source dont il
@@ -28,9 +26,12 @@ web/assets/targets/
 web/assets/banners/*
 !web/assets/banners/README.md
 
-# Packs de sons personnalisés -- propres à chaque club, jamais versionnés.
-# Le pack "classic" est généré par synthèse (scripts/generate_classic_sounds.py),
-# libre de droits, donc committé normalement.
+# Packs de sons : seul "classic" (généré par synthèse, libre de droits) est
+# suivi par Git. N'importe quel autre dossier sous packs/ -- quel que soit
+# son nom -- est un pack propre à un club et reste local, jamais versionné.
+web/assets/sounds/packs/*
+!web/assets/sounds/packs/classic/
+!web/assets/sounds/packs/_custom/
 web/assets/sounds/packs/_custom/*
 !web/assets/sounds/packs/_custom/README.md
 

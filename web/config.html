@@ -315,7 +315,7 @@
       const packs = hrefs
         .filter(href => href.endsWith("/") && !href.startsWith(".."))
         .map(href => href.replace(/\/$/, ""))
-        .filter(name => !name.startsWith("_"));  // _custom/README etc. -- pas un vrai pack tant qu'il est vide
+        .filter(name => name !== "_custom");  // dossier gabarit/instructions, pas un vrai pack à sélectionner
       select.innerHTML = "";
       packs.forEach((name) => {
         const opt = document.createElement("option");
