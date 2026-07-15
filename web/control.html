@@ -15,6 +15,8 @@
   .next { background:#16a34a; }
   .danger { background:#dc2626; }
   .neutral { background:#4b5563; }
+  .lang-btn { background:#1f2937; font-size:0.85rem; padding:0.4rem 0.8rem; }
+  .lang-btn.active { background:#2563eb; }
   .quick-messages { margin-top: 0.75rem; }
   .quick-messages-group { margin-bottom: 0.5rem; }
   .quick-messages-label {
@@ -54,129 +56,167 @@
 </style>
 </head>
 <body>
-  <h1>Fletchtime — Poste de contrôle</h1>
-  <div id="status">Connexion en cours...</div>
+  <h1 data-i18n="controlTitle">Fletchtime — Poste de contrôle</h1>
+  <div>
+    <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">Français</button>
+    <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">English</button>
+  </div>
+  <div id="status" data-i18n="connecting">Connexion en cours...</div>
 
   <section>
-    <h2 style="font-size:1rem; margin:0 0 0.5rem;">Aperçu de l'affichage</h2>
+    <h2 style="font-size:1rem; margin:0 0 0.5rem;" data-i18n="previewTitle">Aperçu de l'affichage</h2>
     <div class="preview-wrapper">
       <iframe id="preview-frame" class="preview-frame" title="Aperçu écran"></iframe>
     </div>
-    <button class="neutral" onclick="window.open('display.html?lane=1', '_blank')">
-      Ouvrir en plein écran
-    </button>
+    <button class="neutral" data-i18n="openFullscreen"
+      onclick="window.open('display.html?lane=1', '_blank')">Ouvrir en plein écran</button>
   </section>
 
   <section>
-    <label>Mode Indoor :
+    <label><span data-i18n="indoorModeLabel">Mode Indoor :</span>
       <select id="turn-mode">
-        <option value="ab_then_cd">A-B puis C-D</option>
-        <option value="cd_then_ab">C-D puis A-B</option>
-        <option value="ab_only">A-B seulement</option>
-        <option value="cd_only">C-D seulement</option>
+        <option value="ab_then_cd" data-i18n="abThenCd">A-B puis C-D</option>
+        <option value="cd_then_ab" data-i18n="cdThenAb">C-D puis A-B</option>
+        <option value="ab_only" data-i18n="abOnly">A-B seulement</option>
+        <option value="cd_only" data-i18n="cdOnly">C-D seulement</option>
       </select>
     </label>
     <label style="margin-left:1rem;">
       <input type="checkbox" id="alternate-relay" checked>
-      Alterner l'ordre à chaque série
+      <span data-i18n="alternateEachSeries">Alterner l'ordre à chaque série</span>
     </label><br>
-    <button class="start" id="start-indoor-btn" onclick="startIndoor()">▶ Démarrer Indoor</button>
+    <button class="start" id="start-indoor-btn" data-i18n="startIndoor"
+      onclick="startIndoor()">▶ Démarrer Indoor</button>
     <br><br>
-    <label>Mode Flint :
+    <label><span data-i18n="flintModeLabel">Mode Flint :</span>
       <select id="flint-turn-mode">
-        <option value="ab_then_cd">A-B puis C-D (chacun toute l'unité)</option>
-        <option value="cd_then_ab">C-D puis A-B (chacun toute l'unité)</option>
-        <option value="ab_only">A-B seulement</option>
-        <option value="cd_only">C-D seulement</option>
+        <option value="ab_then_cd" data-i18n="abThenCdWhole">A-B puis C-D (chacun toute l'unité)</option>
+        <option value="cd_then_ab" data-i18n="cdThenAbWhole">C-D puis A-B (chacun toute l'unité)</option>
+        <option value="ab_only" data-i18n="abOnly">A-B seulement</option>
+        <option value="cd_only" data-i18n="cdOnly">C-D seulement</option>
       </select>
     </label>
     <label style="margin-left:1rem;">
       <input type="checkbox" id="flint-alternate-relay" checked>
-      Alterner l'ordre à chaque unité
+      <span data-i18n="alternateEachUnit">Alterner l'ordre à chaque unité</span>
     </label><br>
-    <button class="start" id="start-flint-btn" onclick="startFlint()">▶ Démarrer Flint</button>
+    <button class="start" id="start-flint-btn" data-i18n="startFlint"
+      onclick="startFlint()">▶ Démarrer Flint</button>
   </section>
 
   <section>
-    <button class="next" onclick="send({action:'next'})">Next ▶</button>
-    <button class="neutral" id="pause-btn" onclick="send({action:'pause'})" disabled>⏸ Pause</button>
-    <button class="neutral" id="play-btn" onclick="send({action:'play'})" disabled>▶ Reprendre</button>
+    <button class="next" data-i18n="next" onclick="send({action:'next'})">Next ▶</button>
+    <button class="neutral" id="pause-btn" data-i18n="pause"
+      onclick="send({action:'pause'})" disabled>⏸ Pause</button>
+    <button class="neutral" id="play-btn" data-i18n="resume"
+      onclick="send({action:'play'})" disabled>▶ Reprendre</button>
   </section>
 
   <section>
-    <button class="danger" id="stop-btn" onclick="send({action:'stop'})" disabled>⏹ Arrêt du match</button>
-    <button class="neutral" id="restart-btn" onclick="send({action:'restart'})" disabled>↻ Recommencer depuis le début</button>
+    <button class="danger" id="stop-btn" data-i18n="stopMatch"
+      onclick="send({action:'stop'})" disabled>⏹ Arrêt du match</button>
+    <button class="neutral" id="restart-btn" data-i18n="restart"
+      onclick="send({action:'restart'})" disabled>↻ Recommencer depuis le début</button>
   </section>
 
   <section>
-    <label>Aller à : unité <input type="number" id="goto-unit" value="1" min="1" style="width:3.5em;">
-      volée <input type="number" id="goto-end" value="1" min="1" style="width:3.5em;">
-      flèche (walk-up) <input type="number" id="goto-arrow" value="0" min="0" style="width:3.5em;">
-      relais <select id="goto-turn">
-        <option value="">(peu importe)</option>
+    <label><span data-i18n="gotoLabel">Aller à : unité</span>
+      <input type="number" id="goto-unit" value="1" min="1" style="width:3.5em;">
+      <span data-i18n="gotoVolee">volée</span>
+      <input type="number" id="goto-end" value="1" min="1" style="width:3.5em;">
+      <span data-i18n="gotoArrow">flèche (walk-up)</span>
+      <input type="number" id="goto-arrow" value="0" min="0" style="width:3.5em;">
+      <span data-i18n="gotoRelay">relais</span>
+      <select id="goto-turn">
+        <option value="" data-i18n="gotoAny">(peu importe)</option>
         <option value="A-B">A-B</option>
         <option value="C-D">C-D</option>
       </select>
     </label>
-    <button class="neutral" onclick="sendGoto()">Aller à cette volée</button>
+    <button class="neutral" data-i18n="gotoButton" onclick="sendGoto()">Aller à cette volée</button>
   </section>
 
   <section>
-    <button class="danger" id="emergency-btn" onclick="send({action:'emergency'})" disabled>🚨 Urgence</button>
-    <button class="neutral" id="resume-btn" onclick="send({action:'resume'})" disabled>✅ Reprise après urgence</button>
+    <button class="danger" id="emergency-btn" data-i18n="emergency"
+      onclick="send({action:'emergency'})" disabled>🚨 Urgence</button>
+    <button class="neutral" id="resume-btn" data-i18n="resumeAfterEmergency"
+      onclick="send({action:'resume'})" disabled>✅ Reprise après urgence</button>
   </section>
 
   <section>
-    <input type="text" id="msg" placeholder="Message à afficher sur les écrans...">
-    <button class="neutral" onclick="sendMessage()">Envoyer</button>
-    <button class="neutral" onclick="send({action:'message', value:null})">Effacer</button>
+    <input type="text" id="msg" data-i18n-placeholder="messagePlaceholder"
+      placeholder="Message à afficher sur les écrans...">
+    <button class="neutral" data-i18n="send" onclick="sendMessage()">Envoyer</button>
+    <button class="neutral" data-i18n="clear" onclick="send({action:'message', value:null})">Effacer</button>
 
-    <div class="quick-messages">
-      <div class="quick-messages-group">
-        <span class="quick-messages-label">Retards / démarrage</span>
-        <button class="quick" onclick="fillMsg('Retard de 5 minutes')">Retard 5 min</button>
-        <button class="quick" onclick="fillMsg('Retard de 10 minutes')">Retard 10 min</button>
-        <button class="quick" onclick="fillMsg('Retard de 15 minutes')">Retard 15 min</button>
-        <button class="quick" onclick="fillMsg('Le concours va bientôt commencer, merci de rejoindre votre pas de tir')">Rejoindre pas de tir</button>
-      </div>
-      <div class="quick-messages-group">
-        <span class="quick-messages-label">Pauses</span>
-        <button class="quick" onclick="fillMsg('Pause de 15 minutes')">Pause 15 min</button>
-        <button class="quick" onclick="fillMsg('Pause déjeuner, reprise à l\'heure annoncée')">Pause déjeuner</button>
-        <button class="quick" onclick="fillMsg('Reprise imminente, merci de vous préparer')">Reprise imminente</button>
-      </div>
-      <div class="quick-messages-group">
-        <span class="quick-messages-label">Sécurité / incident</span>
-        <button class="quick" onclick="fillMsg('Arrêt de tir — incident sur le pas de tir')">Arrêt de tir</button>
-        <button class="quick" onclick="fillMsg('Ligne de tir dégagée, reprise dans quelques instants')">Ligne dégagée</button>
-        <button class="quick" onclick="fillMsg('Merci de ne pas tirer, contrôle en cours')">Contrôle en cours</button>
-      </div>
-      <div class="quick-messages-group">
-        <span class="quick-messages-label">Logistique / scores</span>
-        <button class="quick" onclick="fillMsg('Merci de rapporter vos feuilles de marque')">Rapporter feuilles</button>
-        <button class="quick" onclick="fillMsg('Ramassage des feuilles de score en cours')">Ramassage scores</button>
-        <button class="quick" onclick="fillMsg('Contrôle de matériel en cours')">Contrôle matériel</button>
-      </div>
-      <div class="quick-messages-group">
-        <span class="quick-messages-label">Météo</span>
-        <button class="quick" onclick="fillMsg('Alerte météo, vérifiez votre matériel')">Alerte météo</button>
-        <button class="quick" onclick="fillMsg('Reprise après interruption météo')">Reprise météo</button>
-      </div>
-      <div class="quick-messages-group">
-        <span class="quick-messages-label">Fin de concours</span>
-        <button class="quick" onclick="fillMsg('Fin de la compétition, merci de votre participation')">Fin compétition</button>
-        <button class="quick" onclick="fillMsg('Résultats affichés sous peu')">Résultats à venir</button>
-        <button class="quick" onclick="fillMsg('Remise des prix dans quelques minutes')">Remise des prix</button>
-      </div>
-    </div>
+    <div class="quick-messages" id="quick-messages"></div>
   </section>
 
   <div id="state">En attente de connexion...</div>
 
+<script src="i18n.js"></script>
 <script>
   const statusEl = document.getElementById("status");
   const stateBox = document.getElementById("state");
   let ws;
+  let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
+
+  // Structure des messages rapides : (clé de catégorie, [clés de message]).
+  const QUICK_MESSAGE_GROUPS = [
+    ["quickCategoryDelay", ["delay5", "delay10", "delay15", "joinLane"]],
+    ["quickCategoryPause", ["pause15", "lunchBreak", "resumingSoon"]],
+    ["quickCategorySafety", ["stopShooting", "lineClear", "inspection"]],
+    ["quickCategoryLogistics", ["returnScoresheets", "collectingScores", "equipmentCheck"]],
+    ["quickCategoryWeather", ["weatherAlert", "weatherResume"]],
+    ["quickCategoryEnd", ["competitionEnd", "resultsSoon", "awards"]],
+  ];
+
+  function renderQuickMessages() {
+    const container = document.getElementById("quick-messages");
+    container.innerHTML = "";
+    QUICK_MESSAGE_GROUPS.forEach(([categoryKey, messageKeys]) => {
+      const group = document.createElement("div");
+      group.className = "quick-messages-group";
+
+      const label = document.createElement("span");
+      label.className = "quick-messages-label";
+      label.textContent = t(currentLanguage, categoryKey);
+      group.appendChild(label);
+
+      messageKeys.forEach((key) => {
+        const text = t(currentLanguage, "quickMessages")[key];
+        const btn = document.createElement("button");
+        btn.className = "quick";
+        btn.textContent = text;
+        btn.onclick = () => fillMsg(text);
+        group.appendChild(btn);
+      });
+
+      container.appendChild(group);
+    });
+  }
+
+  function applyTranslations() {
+    document.title = t(currentLanguage, "controlTitle");
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t(currentLanguage, el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      el.placeholder = t(currentLanguage, el.getAttribute("data-i18n-placeholder"));
+    });
+    document.getElementById("lang-fr-btn").classList.toggle("active", currentLanguage === "fr");
+    document.getElementById("lang-en-btn").classList.toggle("active", currentLanguage === "en");
+    renderQuickMessages();
+  }
+
+  function setLanguage(lang) {
+    currentLanguage = lang;
+    localStorage.setItem("fletchtime_lang", lang);
+    applyTranslations();
+    send({action: "set_language", value: lang});
+  }
+
+  applyTranslations();
 
   // Empêche l'écran du poste de contrôle de s'éteindre pendant le concours.
   async function requestWakeLock() {
@@ -197,12 +237,14 @@
     if (document.visibilityState === "visible") requestWakeLock();
   });
 
+  let hasSyncedLanguageFromServer = false;
+
   function connect() {
     ws = new WebSocket("ws://" + location.hostname + ":8765");
 
-    ws.onopen = () => statusEl.textContent = "Connecté au serveur.";
+    ws.onopen = () => statusEl.textContent = t(currentLanguage, "connected");
     ws.onclose = () => {
-      statusEl.textContent = "⚠ Déconnecté -- nouvelle tentative dans 2s...";
+      statusEl.textContent = t(currentLanguage, "disconnected");
       setTimeout(connect, 2000);
     };
     ws.onerror = () => ws.close();
@@ -210,15 +252,27 @@
     ws.onmessage = (evt) => {
       const data = JSON.parse(evt.data);
       if (data.type === "state") {
+        // À la toute première connexion, on adopte la langue déjà diffusée
+        // par le serveur (au cas où un autre poste de contrôle l'aurait
+        // déjà changée), plutôt que d'imposer la préférence locale.
+        if (!hasSyncedLanguageFromServer) {
+          hasSyncedLanguageFromServer = true;
+          if (data.language && data.language !== currentLanguage) {
+            currentLanguage = data.language;
+            localStorage.setItem("fletchtime_lang", currentLanguage);
+            applyTranslations();
+          }
+        }
+
         const safeToShow = !data.state || data.state.finished
           || data.state.phase === "pause" || data.state.phase === "emergency";
         const messageStatus = !data.message
-          ? "(aucun)"
-          : JSON.stringify(data.message) + (safeToShow ? " -- affiché à l'écran" : " -- en attente (tir en cours, pas encore affiché)");
-        const messageLine = "Message : " + messageStatus;
+          ? t(currentLanguage, "messageNone")
+          : JSON.stringify(data.message) + " -- " + (safeToShow ? t(currentLanguage, "messageShown") : t(currentLanguage, "messageWaiting"));
+        const messageLine = t(currentLanguage, "messageLabel") + " : " + messageStatus;
         const stateLine = data.state
           ? JSON.stringify(data.state, null, 2)
-          : "Aucun match en cours -- démarre un mode ci-dessus.";
+          : t(currentLanguage, "noMatch");
         stateBox.textContent = messageLine + "\n\n" + stateLine;
 
         // Le mode A-B/C-D est fixé au démarrage et ne doit pas changer en

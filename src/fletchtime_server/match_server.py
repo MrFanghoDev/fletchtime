@@ -41,6 +41,10 @@ class MatchServer:
         # 15 minutes...") must be showable even before a match has started,
         # between matches, or after one has finished.
         self._message: Optional[str] = None
+        # Langue de diffusion pour les écrans -- choisie par le DOS, envoyée
+        # à tous les clients (control + display) pour que les libellés
+        # statiques (phase, série/volée, etc.) s'affichent dans la bonne langue.
+        self._language: str = "fr"
 
     # -- connection lifecycle ---------------------------------------------
 
@@ -83,6 +87,10 @@ class MatchServer:
                     pass  # invalid turn_mode from a malformed command -- ignore
             elif action == "message":
                 self._message = data.get("value") or None
+            elif action == "set_language":
+                lang = data.get("value")
+                if lang in ("fr", "en"):
+                    self._language = lang
             elif self.engine is not None:
                 try:
                     if action == "next":
@@ -139,7 +147,10 @@ class MatchServer:
 
     def _current_state_payload(self) -> dict:
         state_dict = _state_to_dict(self.engine.current_state) if self.engine is not None else None
-        return {"type": "state", "state": state_dict, "message": self._message}
+        return {
+            "type": "state", "state": state_dict,
+            "message": self._message, "language": self._language,
+        }
 
     async def _broadcast(self, payload: dict) -> None:
         if not self.clients:

@@ -37,10 +37,12 @@
     <div id="message"></div>
   </div>
 
+<script src="i18n.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const lane = params.get("lane") || "?";
-  document.getElementById("lane").textContent = "Pas de tir " + lane;
+  let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
+  document.getElementById("lane").textContent = t(currentLanguage, "lane") + " " + lane;
 
   const root = document.getElementById("root");
   const timeEl = document.getElementById("time");
@@ -105,24 +107,31 @@
   connect();
 
   function render(payload) {
+    if (payload.language && payload.language !== currentLanguage) {
+      currentLanguage = payload.language;
+      localStorage.setItem("fletchtime_lang", currentLanguage);
+      document.getElementById("lane").textContent = t(currentLanguage, "lane") + " " + lane;
+    }
+
     const state = payload.state;
     if (!state) {
       root.className = "phase-wait";
       timeEl.textContent = "--";
       turnEl.textContent = "";
-      distEl.textContent = "En attente du départ";
+      distEl.textContent = t(currentLanguage, "waitingStart");
     } else {
       root.className = "phase-" + state.phase;
-      timeEl.textContent = state.finished ? "FIN" : (state.phase === "pause" ? "⏸" : Math.ceil(state.time_left));
+      timeEl.textContent = state.finished ? t(currentLanguage, "finished")
+        : (state.phase === "pause" ? "⏸" : Math.ceil(state.time_left));
       turnEl.textContent = state.phase === "pause"
-        ? "Récupération des flèches -- prochaine volée : "
-          + (state.current_turn || (state.arrow_in_end ? ("flèche " + state.arrow_in_end) : ""))
+        ? t(currentLanguage, "retrieving")
+          + (state.current_turn || (state.arrow_in_end ? (t(currentLanguage, "arrowWord") + " " + state.arrow_in_end) : ""))
         : (state.current_turn
             ? state.current_turn
-            : (state.arrow_in_end ? ("Flèche " + state.arrow_in_end + "/" + state.total_arrows_in_end) : ""));
+            : (state.arrow_in_end ? (t(currentLanguage, "arrowWord") + " " + state.arrow_in_end + "/" + state.total_arrows_in_end) : ""));
 
-      const serieLabel = "Série " + state.unit_number;
-      const voleeLabel = state.end_number ? "Volée " + state.end_number + "/" + state.total_ends : "";
+      const serieLabel = t(currentLanguage, "series") + " " + state.unit_number;
+      const voleeLabel = state.end_number ? t(currentLanguage, "volee") + " " + state.end_number + "/" + state.total_ends : "";
       distEl.textContent = state.distance_label
         ? (serieLabel + " — " + voleeLabel + " — " + state.distance_label)
         : (serieLabel + (voleeLabel ? " — " + voleeLabel : ""));

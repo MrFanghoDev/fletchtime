@@ -24,6 +24,9 @@ class FakeWebSocket:
     def last_message(self):
         return json.loads(self.sent[-1])["message"]
 
+    def last_language(self):
+        return json.loads(self.sent[-1])["language"]
+
 
 class TestMatchServer(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -104,6 +107,30 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         )
         await self.server.handle_command(json.dumps({"action": "stop"}))
         self.assertEqual(self.display.last_message(), "Pause déjeuner")
+
+    async def test_default_language_is_french(self) -> None:
+        self.assertEqual(self.display.last_language(), "fr")
+
+    async def test_language_can_be_switched_to_english(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "set_language", "value": "en"})
+        )
+        self.assertEqual(self.display.last_language(), "en")
+
+    async def test_language_persists_across_match_start_and_stop(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "set_language", "value": "en"})
+        )
+        await self.server.handle_command(json.dumps({"action": "start_flint"}))
+        self.assertEqual(self.display.last_language(), "en")
+        await self.server.handle_command(json.dumps({"action": "stop"}))
+        self.assertEqual(self.display.last_language(), "en")
+
+    async def test_invalid_language_is_ignored_not_fatal(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "set_language", "value": "de"})
+        )
+        self.assertEqual(self.display.last_language(), "fr")  # unchanged
 
     async def test_tick_updates_time_left_and_emits_events(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
