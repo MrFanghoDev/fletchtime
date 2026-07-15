@@ -1,13 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Fletchtime">
-  <!-- Blason d'archerie (couleurs World Archery, du centre vers l'extérieur) -->
-  <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
-  <circle cx="50" cy="50" r="37" fill="#0f172a"/>
-  <circle cx="50" cy="50" r="28" fill="#2563eb"/>
-  <circle cx="50" cy="50" r="19" fill="#dc2626"/>
-  <circle cx="50" cy="50" r="10" fill="#facc15"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 116" width="100" height="116" role="img" aria-label="Fletchtime">
+  <!-- Bouton latéral du chronomètre (façon "reset") -->
+  <rect x="22" y="10" width="10" height="16" rx="3" fill="#111827"
+        transform="rotate(-35 27 18)"/>
 
-  <!-- Aiguilles façon chronomètre, superposées au blason -->
-  <line x1="50" y1="50" x2="50" y2="22" stroke="#111827" stroke-width="4" stroke-linecap="round"/>
-  <line x1="50" y1="50" x2="70" y2="50" stroke="#111827" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="50" cy="50" r="4.5" fill="#111827"/>
+  <!-- Couronne / bouton du haut -->
+  <rect x="44" y="0" width="12" height="16" rx="3" fill="#111827"/>
+
+  <!-- Cible IFAA : anneaux noir et blanc, centre avec X -->
+  <circle cx="50" cy="60" r="44" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+  <circle cx="50" cy="60" r="36" fill="#111827"/>
+  <circle cx="50" cy="60" r="25" fill="#ffffff"/>
+  <circle cx="50" cy="60" r="16" fill="#111827"/>
+  <circle cx="50" cy="60" r="8" fill="#ffffff"/>
+  <circle cx="50" cy="60" r="4.5" fill="#111827"/>
+
+  <!-- X central (repère de visée IFAA) -->
+  <line x1="47.5" y1="57.5" x2="52.5" y2="62.5" stroke="#ffffff" stroke-width="1.2"/>
+  <line x1="52.5" y1="57.5" x2="47.5" y2="62.5" stroke="#ffffff" stroke-width="1.2"/>
+
+  <!-- Aiguilles de chronomètre, en couleur pour ressortir sur le noir et blanc -->
+  <line x1="50" y1="60" x2="50" y2="32" stroke="#2563eb" stroke-width="4" stroke-linecap="round"/>
+  <line x1="50" y1="60" x2="68" y2="60" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="50" cy="60" r="4.5" fill="#2563eb" stroke="#ffffff" stroke-width="1"/>
 </svg>

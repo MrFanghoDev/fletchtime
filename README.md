@@ -1,4 +1,4 @@
-<img src="web/logo.svg" width="80" height="80" alt="Fletchtime logo">
+<img src="web/logo.svg" width="80" height="93" alt="Fletchtime logo">
 
 # Fletchtime
 
