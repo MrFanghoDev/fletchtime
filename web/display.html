@@ -19,13 +19,21 @@
     position:absolute; bottom:2rem; font-size:4vw; background:rgba(0,0,0,0.6);
     padding:0.5rem 1.2rem; border-radius:10px; display:none;
   }
+  /* Écran neutre (avant le concours ou après sa fin) -- volontairement
+     identique dans les deux cas : logo du club + date/heure en direct.
+     Seule une légende discrète distingue les deux moments. */
+  #idle { display:none; flex-direction:column; align-items:center; }
+  #idle-logo { max-height:32vh; max-width:70vw; object-fit:contain; margin-bottom:1.5rem; }
+  #idle-date { font-size:4vw; opacity:0.85; }
+  #idle-clock { font-size:9vw; font-weight:bold; font-variant-numeric: tabular-nums; margin-top:0.2em; }
+  #idle-caption { font-size:3vw; opacity:0.6; margin-top:1.2rem; }
   .phase-wait { background:#1e1e1e; }
   .phase-red { background:#7f1d1d; }
   .phase-green { background:#14532d; }
   .phase-orange { background:#78350f; }
   .phase-pause { background:#374151; }
   .phase-emergency { background:#dc2626; animation: blink 0.6s steps(1) infinite; }
-  .phase-finished { background:#1e293b; }
+  .phase-finished { background:#1e1e1e; }
   @keyframes blink { 50% { background:#000; } }
 </style>
 </head>
@@ -35,6 +43,13 @@
     <div id="time">--</div>
     <div id="turn"></div>
     <div id="dist"></div>
+    <div id="idle">
+      <img id="idle-logo" src="assets/club/logo.jpg" alt="Logo du club"
+        onerror="this.style.display='none';">
+      <div id="idle-date"></div>
+      <div id="idle-clock"></div>
+      <div id="idle-caption"></div>
+    </div>
     <div id="message"></div>
   </div>
 
@@ -50,6 +65,10 @@
   const turnEl = document.getElementById("turn");
   const distEl = document.getElementById("dist");
   const msgEl = document.getElementById("message");
+  const idleEl = document.getElementById("idle");
+  const idleDateEl = document.getElementById("idle-date");
+  const idleClockEl = document.getElementById("idle-clock");
+  const idleCaptionEl = document.getElementById("idle-caption");
 
   // Empêche l'écran de la tablette de s'éteindre pendant l'affichage.
   // Sans ça, Android met le navigateur en veille réseau dès l'extinction
@@ -65,6 +84,21 @@
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") requestWakeLock();
   });
+
+  // Horloge locale, indépendante du serveur -- tourne tant que la page est
+  // ouverte, y compris avant qu'une première mise à jour WebSocket arrive.
+  function updateIdleClock() {
+    const now = new Date();
+    const locale = currentLanguage === "en" ? "en-GB" : "fr-FR";
+    idleDateEl.textContent = new Intl.DateTimeFormat(locale, {
+      weekday: "long", year: "numeric", month: "long", day: "numeric",
+    }).format(now);
+    idleClockEl.textContent = new Intl.DateTimeFormat(locale, {
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    }).format(now);
+  }
+  updateIdleClock();
+  setInterval(updateIdleClock, 1000);
 
   // Bips générés à la volée (Web Audio) -- provisoire : le vrai système de
   // packs de sons interchangeables est prévu à l'étape 5 de la roadmap.
@@ -87,8 +121,12 @@
   // Reconnexion automatique : si le WiFi coupe un instant ou que l'écran
   // s'est éteint malgré le wake lock, on retente régulièrement plutôt que
   // de rester bloqué sur un état figé.
+  let isConnected = false;
+
   function connect() {
     const ws = new WebSocket("ws://" + location.hostname + ":8765");
+
+    ws.onopen = () => { isConnected = true; };
 
     ws.onmessage = (evt) => {
       const data = JSON.parse(evt.data);
@@ -100,7 +138,8 @@
     };
 
     ws.onclose = () => {
-      root.classList.add("phase-wait");
+      isConnected = false;
+      render({state: null, message: null});
       setTimeout(connect, 2000);
     };
     ws.onerror = () => ws.close();
@@ -115,15 +154,23 @@
     }
 
     const state = payload.state;
-    if (!state) {
-      root.className = "phase-wait";
-      timeEl.textContent = "--";
-      turnEl.textContent = "";
-      distEl.textContent = t(currentLanguage, "waitingStart");
+    const isIdle = !state || state.finished;
+
+    if (isIdle) {
+      root.className = (state && state.finished) ? "phase-finished" : "phase-wait";
+      timeEl.style.display = "none";
+      turnEl.style.display = "none";
+      distEl.style.display = "none";
+      idleEl.style.display = "flex";
+      idleCaptionEl.textContent = isConnected ? "" : t(currentLanguage, "connectingCaption");
     } else {
+      idleEl.style.display = "none";
+      timeEl.style.display = "";
+      turnEl.style.display = "";
+      distEl.style.display = "";
+
       root.className = "phase-" + state.phase;
-      timeEl.textContent = state.finished ? t(currentLanguage, "finished")
-        : (state.phase === "pause" ? "⏸" : Math.ceil(state.time_left));
+      timeEl.textContent = state.phase === "pause" ? "⏸" : Math.ceil(state.time_left);
       turnEl.textContent = state.phase === "pause"
         ? t(currentLanguage, "retrieving")
           + (state.current_turn || (state.arrow_in_end ? (t(currentLanguage, "arrowWord") + " " + state.arrow_in_end) : ""))
