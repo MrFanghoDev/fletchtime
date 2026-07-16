@@ -23,17 +23,25 @@ class TestFlintMode(unittest.TestCase):
             if s.end_number <= 6:
                 distances_by_end.setdefault(s.end_number, s.distance_label)
 
-        self.assertEqual(distances_by_end, {
-            1: "25 yards", 2: "20 pieds", 3: "30 yards",
-            4: "15 yards", 5: "20 yards", 6: "10 yards",
-        })
+        self.assertEqual(
+            distances_by_end,
+            {
+                1: "25 yards",
+                2: "20 pieds",
+                3: "30 yards",
+                4: "15 yards",
+                5: "20 yards",
+                6: "10 yards",
+            },
+        )
 
     def test_standard_end_has_correct_phases(self) -> None:
         mode = FlintMode(FlintConfig(units=1, turn_mode="ab_only"))
         steps = mode.build_sequence()
 
-        end1 = [s for s in steps if s.unit_number == 1 and s.end_number == 1
-                and s.phase != Phase.PAUSE]
+        end1 = [
+            s for s in steps if s.unit_number == 1 and s.end_number == 1 and s.phase != Phase.PAUSE
+        ]
         self.assertEqual([s.phase for s in end1], [Phase.RED, Phase.GREEN])
         self.assertTrue(all(s.distance_label == "25 yards" for s in end1))
         self.assertTrue(all(s.arrow_in_end == 0 for s in end1))  # not a walk-up
@@ -59,9 +67,7 @@ class TestFlintMode(unittest.TestCase):
     def test_walkup_arrows_switch_to_orange_in_the_last_10_seconds(self) -> None:
         cfg = FlintConfig(units=1, turn_mode="ab_only")
         steps = FlintMode(cfg).build_sequence()
-        walkup_green_steps = [
-            s for s in steps if s.end_number == 7 and s.phase == Phase.GREEN
-        ]
+        walkup_green_steps = [s for s in steps if s.end_number == 7 and s.phase == Phase.GREEN]
         self.assertEqual(len(walkup_green_steps), 4)
         self.assertTrue(all(s.orange_threshold == 10.0 for s in walkup_green_steps))
         self.assertTrue(all(s.orange_sound_event == "warning_orange" for s in walkup_green_steps))
@@ -208,8 +214,7 @@ class TestFlintMode(unittest.TestCase):
         self.assertTrue(all(t == "A-B" for t in unit2_turns_in_order[half2:]))
 
     def test_alternation_disabled_keeps_the_same_order_every_unit(self) -> None:
-        cfg = FlintConfig(units=2, turn_mode="ab_then_cd",
-                           alternate_relay_order_each_unit=False)
+        cfg = FlintConfig(units=2, turn_mode="ab_then_cd", alternate_relay_order_each_unit=False)
         steps = FlintMode(cfg).build_sequence()
         shooting_steps = [s for s in steps if s.phase != Phase.PAUSE]
 
@@ -226,9 +231,7 @@ class TestFlintMode(unittest.TestCase):
         cfg = FlintConfig(units=2, turn_mode="ab_then_cd")
         steps = FlintMode(cfg).build_sequence()
 
-        pause_before_unit2 = next(
-            s for s in steps if s.phase == Phase.PAUSE and s.unit_number == 2
-        )
+        pause_before_unit2 = next(s for s in steps if s.phase == Phase.PAUSE and s.unit_number == 2)
         self.assertEqual(pause_before_unit2.current_turn, "C-D")  # unit 2 starts with C-D
         self.assertEqual(pause_before_unit2.end_number, 1)
         self.assertEqual(pause_before_unit2.distance_label, "25 yards")  # end 1's distance
@@ -240,8 +243,9 @@ class TestFlintMode(unittest.TestCase):
         steps = FlintMode(cfg).build_sequence()
 
         pause_before_cd = next(
-            s for s in steps if s.phase == Phase.PAUSE and s.current_turn == "C-D"
-            and s.end_number == 1
+            s
+            for s in steps
+            if s.phase == Phase.PAUSE and s.current_turn == "C-D" and s.end_number == 1
         )
         self.assertEqual(pause_before_cd.distance_label, "25 yards")
 

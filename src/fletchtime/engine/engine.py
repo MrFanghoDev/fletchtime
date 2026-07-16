@@ -10,8 +10,6 @@ isolation (see tests/test_indoor_mode.py, tests/test_flint_mode.py).
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from .models import MatchState, Phase
 from .modes.base import ShootingMode
 from .sequence import Step
@@ -21,22 +19,22 @@ class MatchEngine:
     _COUNTDOWN_TICK_SECONDS = (5, 4, 3, 2, 1)
 
     def __init__(self, mode: ShootingMode) -> None:
-        self._steps: List[Step] = mode.build_sequence()
+        self._steps: list[Step] = mode.build_sequence()
         if not self._steps:
             raise ValueError("A shooting mode must produce at least one step")
 
         self._index = 0
-        self._time_left: Optional[float] = self._steps[0].duration
+        self._time_left: float | None = self._steps[0].duration
         self._finished = False
         self._paused = False
 
         self._emergency = False
-        self._emergency_saved_time: Optional[float] = None
+        self._emergency_saved_time: float | None = None
 
         self._orange_event_fired = False
         self._countdown_ticks_fired: set = set()
 
-        self._pending_events: List[str] = []
+        self._pending_events: list[str] = []
         self._emit_current_step_event()
 
     # -- controls --------------------------------------------------------
@@ -97,8 +95,9 @@ class MatchEngine:
         self._emit_current_step_event()
         return self.current_state
 
-    def goto(self, unit_number: int, end_number: int, arrow_in_end: int = 0,
-             turn: str = "") -> MatchState:
+    def goto(
+        self, unit_number: int, end_number: int, arrow_in_end: int = 0, turn: str = ""
+    ) -> MatchState:
         """Jump to a specific volée (and, for a walk-up end, optionally a
         specific arrow). ``turn`` disambiguates when the same
         (unit, end_number) occurs more than once -- e.g. Flint, where each
@@ -150,15 +149,14 @@ class MatchEngine:
             self._pending_events.append("emergency_start")
         return self.current_state
 
-    def resume(self, adjusted_time_left: Optional[float] = None) -> MatchState:
+    def resume(self, adjusted_time_left: float | None = None) -> MatchState:
         """Recover from emergency. ``adjusted_time_left`` lets the DOS
         compensate the archers for time lost, per FFTL rules on equipment
         failure."""
         if self._emergency:
             self._emergency = False
             self._time_left = (
-                adjusted_time_left if adjusted_time_left is not None
-                else self._emergency_saved_time
+                adjusted_time_left if adjusted_time_left is not None else self._emergency_saved_time
             )
             self._emergency_saved_time = None
             self._pending_events.append("emergency_end")
@@ -176,7 +174,7 @@ class MatchEngine:
             self._pending_events.append("pause_end")
         return self.current_state
 
-    def pop_pending_events(self) -> List[str]:
+    def pop_pending_events(self) -> list[str]:
         """Return and clear sound events accumulated since the last call.
 
         Kept separate from ``current_state`` on purpose: an event (e.g.
@@ -244,8 +242,11 @@ class MatchEngine:
 
         if self._emergency:
             phase = Phase.EMERGENCY
-        elif (step.orange_threshold is not None and time_left is not None
-              and time_left <= step.orange_threshold):
+        elif (
+            step.orange_threshold is not None
+            and time_left is not None
+            and time_left <= step.orange_threshold
+        ):
             phase = Phase.ORANGE
         else:
             phase = step.phase

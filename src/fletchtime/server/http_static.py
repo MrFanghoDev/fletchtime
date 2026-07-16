@@ -12,7 +12,6 @@ from __future__ import annotations
 import functools
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Optional
 
 
 class _DualRootHandler(SimpleHTTPRequestHandler):
@@ -35,7 +34,7 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
 
     def translate_path(self, path: str) -> str:
         if path == "/assets" or path.startswith("/assets/"):
-            rel = path[len("/assets"):].lstrip("/")
+            rel = path[len("/assets") :].lstrip("/")
             # reproduit la logique de nettoyage de chemin de la classe de
             # base (retire la query string, etc.) en la réappliquant à un
             # chemin de base différent
@@ -48,7 +47,7 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
         return super().translate_path(path)
 
 
-def start_http_server(directory: str, port: int, assets_dir: Optional[str] = None) -> None:
+def start_http_server(directory: str, port: int, assets_dir: str | None = None) -> None:
     """``assets_dir`` defaults to ``<directory>/assets`` when not given,
     matching the historical single-root behaviour (dev checkout, or a
     PyInstaller build where everything sits together next to the exe)."""

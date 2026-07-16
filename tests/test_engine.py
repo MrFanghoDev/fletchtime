@@ -11,8 +11,14 @@ from fletchtime.engine import (
 
 
 def simple_indoor_engine() -> MatchEngine:
-    cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
-                        shoot_time=120, orange_warning_time=30, turn_mode="ab_only")
+    cfg = IndoorConfig(
+        series=1,
+        ends_per_series=2,
+        prep_time=10,
+        shoot_time=120,
+        orange_warning_time=30,
+        turn_mode="ab_only",
+    )
     return MatchEngine(IndoorMode(cfg))
 
 
@@ -58,8 +64,14 @@ class TestMatchEngineTicking(unittest.TestCase):
         self.assertEqual(state.time_left, 10)
 
     def test_reaching_the_end_of_sequence_finishes(self) -> None:
-        cfg = IndoorConfig(series=1, ends_per_series=1, prep_time=1,
-                            shoot_time=1, orange_warning_time=1, turn_mode="ab_only")
+        cfg = IndoorConfig(
+            series=1,
+            ends_per_series=1,
+            prep_time=1,
+            shoot_time=1,
+            orange_warning_time=1,
+            turn_mode="ab_only",
+        )
         engine = MatchEngine(IndoorMode(cfg))
         state = engine.tick(3)  # exactly consumes the only end
         self.assertTrue(state.finished)
@@ -91,8 +103,14 @@ class TestMatchEngineManualControl(unittest.TestCase):
     def test_ab_then_cd_relay_within_the_same_end_via_next(self) -> None:
         """A-B et C-D tirent la même volée : le numéro ne doit pas changer
         entre les deux relais, seul le tireur actif change."""
-        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
-                            shoot_time=90, orange_warning_time=30, turn_mode="ab_then_cd")
+        cfg = IndoorConfig(
+            series=1,
+            ends_per_series=2,
+            prep_time=10,
+            shoot_time=90,
+            orange_warning_time=30,
+            turn_mode="ab_then_cd",
+        )
         engine = MatchEngine(IndoorMode(cfg))
 
         state = engine.current_state
@@ -257,8 +275,14 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
         self.assertEqual(engine.pop_pending_events(), ["end_of_match"])
 
     def test_reaching_the_natural_end_fires_end_of_match(self) -> None:
-        cfg = IndoorConfig(series=1, ends_per_series=1, prep_time=1,
-                            shoot_time=1, orange_warning_time=0, turn_mode="ab_only")
+        cfg = IndoorConfig(
+            series=1,
+            ends_per_series=1,
+            prep_time=1,
+            shoot_time=1,
+            orange_warning_time=0,
+            turn_mode="ab_only",
+        )
         engine = MatchEngine(IndoorMode(cfg))
         engine.pop_pending_events()
         state = engine.tick(3)  # exactly consumes the only end
@@ -274,8 +298,14 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
         self.assertEqual(engine.pop_pending_events(), ["end_of_volee"])
 
     def test_countdown_ticks_fire_once_per_second_for_the_last_five(self) -> None:
-        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
-                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
+        cfg = IndoorConfig(
+            series=1,
+            ends_per_series=2,
+            prep_time=10,
+            shoot_time=120,
+            orange_warning_time=0,
+            turn_mode="ab_only",
+        )
         engine = MatchEngine(IndoorMode(cfg))
         engine.tick(10)  # enter GREEN(120)
         engine.pop_pending_events()
@@ -291,8 +321,14 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
         self.assertEqual(state.time_left, 0)
 
     def test_countdown_tick_does_not_refire_within_the_same_second(self) -> None:
-        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
-                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
+        cfg = IndoorConfig(
+            series=1,
+            ends_per_series=2,
+            prep_time=10,
+            shoot_time=120,
+            orange_warning_time=0,
+            turn_mode="ab_only",
+        )
         engine = MatchEngine(IndoorMode(cfg))
         engine.pop_pending_events()  # drain initial prep_start
         engine.tick(10)  # enter GREEN
@@ -306,8 +342,14 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
         self.assertEqual(engine.pop_pending_events(), [])
 
     def test_countdown_ticks_reset_on_restart(self) -> None:
-        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
-                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
+        cfg = IndoorConfig(
+            series=1,
+            ends_per_series=2,
+            prep_time=10,
+            shoot_time=120,
+            orange_warning_time=0,
+            turn_mode="ab_only",
+        )
         engine = MatchEngine(IndoorMode(cfg))
         engine.tick(10)
         engine.tick(116)  # well into the last 5 seconds, several ticks fired

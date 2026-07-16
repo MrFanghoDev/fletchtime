@@ -88,9 +88,15 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.display.last_state()["current_turn"], "C-D")
 
     async def test_start_flint_alternate_flag_can_be_disabled(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "start_flint", "turn_mode": "ab_then_cd", "alternate": False,
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "start_flint",
+                    "turn_mode": "ab_then_cd",
+                    "alternate": False,
+                }
+            )
+        )
         await self.server.handle_command(
             json.dumps({"action": "goto", "unit": 2, "end": 1, "turn": "A-B"})
         )
@@ -146,36 +152,33 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.display.last_language(), "fr")
 
     async def test_language_can_be_switched_to_english(self) -> None:
-        await self.server.handle_command(
-            json.dumps({"action": "set_language", "value": "en"})
-        )
+        await self.server.handle_command(json.dumps({"action": "set_language", "value": "en"}))
         self.assertEqual(self.display.last_language(), "en")
 
     async def test_language_persists_across_match_start_and_stop(self) -> None:
-        await self.server.handle_command(
-            json.dumps({"action": "set_language", "value": "en"})
-        )
+        await self.server.handle_command(json.dumps({"action": "set_language", "value": "en"}))
         await self.server.handle_command(json.dumps({"action": "start_flint"}))
         self.assertEqual(self.display.last_language(), "en")
         await self.server.handle_command(json.dumps({"action": "stop"}))
         self.assertEqual(self.display.last_language(), "en")
 
     async def test_invalid_language_is_ignored_not_fatal(self) -> None:
-        await self.server.handle_command(
-            json.dumps({"action": "set_language", "value": "de"})
-        )
+        await self.server.handle_command(json.dumps({"action": "set_language", "value": "de"}))
         self.assertEqual(self.display.last_language(), "fr")  # unchanged
 
     async def test_default_event_title_is_none(self) -> None:
         self.assertIsNone(self.display.last_event_title())
 
     async def test_event_title_can_be_set(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "set_event_title", "value": "Concours FFTL Indoor -- Février 2026",
-        }))
-        self.assertEqual(
-            self.display.last_event_title(), "Concours FFTL Indoor -- Février 2026"
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "set_event_title",
+                    "value": "Concours FFTL Indoor -- Février 2026",
+                }
+            )
         )
+        self.assertEqual(self.display.last_event_title(), "Concours FFTL Indoor -- Février 2026")
 
     async def test_event_title_persists_across_match_start_stop_and_restart(self) -> None:
         await self.server.handle_command(
@@ -190,9 +193,7 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         await self.server.handle_command(
             json.dumps({"action": "set_event_title", "value": "Championnat 77"})
         )
-        await self.server.handle_command(
-            json.dumps({"action": "set_event_title", "value": None})
-        )
+        await self.server.handle_command(json.dumps({"action": "set_event_title", "value": None}))
         self.assertIsNone(self.display.last_event_title())
 
     async def test_tick_updates_time_left_and_emits_events(self) -> None:
@@ -221,9 +222,15 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.display.last_state()["current_turn"], "C-D")
 
     async def test_start_indoor_alternate_flag_can_be_disabled(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "start_indoor", "turn_mode": "ab_then_cd", "alternate": False,
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "start_indoor",
+                    "turn_mode": "ab_then_cd",
+                    "alternate": False,
+                }
+            )
+        )
         # jump straight to série 2, volée 1
         await self.server.handle_command(json.dumps({"action": "goto", "unit": 2, "end": 1}))
         await self.server.handle_command(json.dumps({"action": "next"}))  # leave the preview pause
@@ -251,9 +258,7 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
 
     async def test_goto_command_jumps_to_requested_end(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_flint"}))
-        await self.server.handle_command(
-            json.dumps({"action": "goto", "unit": 1, "end": 4})
-        )
+        await self.server.handle_command(json.dumps({"action": "goto", "unit": 1, "end": 4}))
         state = self.display.last_state()
         self.assertEqual(state["end_number"], 4)
         self.assertEqual(state["distance_label"], "15 yards")
@@ -261,9 +266,7 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
     async def test_goto_command_with_bad_target_is_ignored_not_fatal(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         before = self.display.last_state()
-        await self.server.handle_command(
-            json.dumps({"action": "goto", "unit": 1, "end": 999})
-        )
+        await self.server.handle_command(json.dumps({"action": "goto", "unit": 1, "end": 999}))
         after = self.display.last_state()
         self.assertEqual(before, after)  # unchanged, no crash
 
@@ -317,9 +320,15 @@ class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
         await self.server.handle_command(
             json.dumps({"action": "register_display", "lane": "2"}), self.lane2
         )
-        await self.server.handle_command(json.dumps({
-            "action": "message", "lane": "1", "value": "Message pour la lane 1 seulement",
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "message",
+                    "lane": "1",
+                    "value": "Message pour la lane 1 seulement",
+                }
+            )
+        )
         self.assertEqual(self.lane1.last_message(), "Message pour la lane 1 seulement")
         self.assertIsNone(self.lane2.last_message())
 
@@ -333,9 +342,15 @@ class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
         await self.server.handle_command(
             json.dumps({"action": "message", "value": "Message global"})
         )
-        await self.server.handle_command(json.dumps({
-            "action": "message", "lane": "1", "value": "Message pour la lane 1",
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "message",
+                    "lane": "1",
+                    "value": "Message pour la lane 1",
+                }
+            )
+        )
         self.assertEqual(self.lane1.last_message(), "Message pour la lane 1")
         self.assertEqual(self.lane2.last_message(), "Message global")
 
@@ -346,12 +361,24 @@ class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
         await self.server.handle_command(
             json.dumps({"action": "message", "value": "Message global"})
         )
-        await self.server.handle_command(json.dumps({
-            "action": "message", "lane": "1", "value": "Ciblé",
-        }))
-        await self.server.handle_command(json.dumps({
-            "action": "message", "lane": "1", "value": None,
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "message",
+                    "lane": "1",
+                    "value": "Ciblé",
+                }
+            )
+        )
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "message",
+                    "lane": "1",
+                    "value": None,
+                }
+            )
+        )
         self.assertEqual(self.lane1.last_message(), "Message global")
 
     async def test_global_message_after_targeted_overrides_it(self) -> None:
@@ -360,9 +387,15 @@ class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
         await self.server.handle_command(
             json.dumps({"action": "register_display", "lane": "1"}), self.lane1
         )
-        await self.server.handle_command(json.dumps({
-            "action": "message", "lane": "1", "value": "Message ciblé lane 1",
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "message",
+                    "lane": "1",
+                    "value": "Message ciblé lane 1",
+                }
+            )
+        )
         self.assertEqual(self.lane1.last_message(), "Message ciblé lane 1")
 
         await self.server.handle_command(
@@ -373,9 +406,7 @@ class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
     async def test_registration_without_websocket_argument_is_ignored_not_fatal(self) -> None:
         # handle_command called the "old" way (no websocket) must not crash --
         # e.g. any test or caller that forgot to pass it.
-        await self.server.handle_command(
-            json.dumps({"action": "register_display", "lane": "9"})
-        )
+        await self.server.handle_command(json.dumps({"action": "register_display", "lane": "9"}))
         self.assertEqual(self.control.last_connected_lanes(), [])
 
 
@@ -407,10 +438,16 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["flint"]["units"], 2)
 
     async def test_save_config_indoor_persists_and_confirms(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor",
-            "values": {"shoot_time": 200.0},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 200.0},
+                }
+            ),
+            self.control,
+        )
         reply = json.loads(self.control.sent[-1])
         self.assertEqual(reply["type"], "config_saved")
         self.assertTrue(reply["ok"])
@@ -422,20 +459,32 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["indoor"]["shoot_time"], 200.0)
 
     async def test_save_config_invalid_values_reports_error_without_crashing(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor",
-            "values": {"shoot_time": 10.0, "orange_warning_time": 999.0},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 10.0, "orange_warning_time": 999.0},
+                }
+            ),
+            self.control,
+        )
         reply = json.loads(self.control.sent[-1])
         self.assertEqual(reply["type"], "config_saved")
         self.assertFalse(reply["ok"])
         self.assertIn("error", reply)
 
     async def test_starting_a_match_uses_the_saved_config(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor",
-            "values": {"shoot_time": 77.0, "orange_warning_time": 10.0},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 77.0, "orange_warning_time": 10.0},
+                }
+            ),
+            self.control,
+        )
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         await self.server.handle_command(json.dumps({"action": "next"}))  # RED -> GREEN
         state = self.control.last_state()
@@ -445,26 +494,46 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
         """Le bouton Démarrer simplifié n'envoie plus turn_mode/alternate --
         le match doit utiliser tel quel ce qui est enregistré dans la config,
         pas retomber sur un défaut codé en dur côté serveur."""
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor",
-            "values": {"turn_mode": "cd_only", "alternate_relay_order_each_series": False},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"turn_mode": "cd_only", "alternate_relay_order_each_series": False},
+                }
+            ),
+            self.control,
+        )
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         state = self.control.last_state()
         self.assertEqual(state["current_turn"], "C-D")
 
     async def test_unknown_config_mode_reports_error(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "bogus", "values": {},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "bogus",
+                    "values": {},
+                }
+            ),
+            self.control,
+        )
         reply = json.loads(self.control.sent[-1])
         self.assertFalse(reply["ok"])
 
     async def test_cannot_save_indoor_config_while_indoor_match_is_active(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 111.0},
+                }
+            ),
+            self.control,
+        )
         reply = json.loads(self.control.sent[-1])
         self.assertFalse(reply["ok"])
         self.assertEqual(reply["error"], "match_in_progress")
@@ -472,43 +541,78 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
     async def test_cannot_save_indoor_config_while_indoor_match_is_paused(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         await self.server.handle_command(json.dumps({"action": "pause"}))
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 111.0},
+                }
+            ),
+            self.control,
+        )
         reply = json.loads(self.control.sent[-1])
         self.assertFalse(reply["ok"])
 
     async def test_cannot_save_indoor_config_during_emergency(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         await self.server.handle_command(json.dumps({"action": "emergency"}))
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 111.0},
+                }
+            ),
+            self.control,
+        )
         reply = json.loads(self.control.sent[-1])
         self.assertFalse(reply["ok"])
 
     async def test_can_save_flint_config_while_indoor_match_is_active(self) -> None:
         """Un match Indoor en cours ne doit pas bloquer la config Flint."""
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "flint", "values": {"units": 3},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "flint",
+                    "values": {"units": 3},
+                }
+            ),
+            self.control,
+        )
         reply = json.loads(self.control.sent[-1])
         self.assertTrue(reply["ok"])
 
     async def test_can_save_indoor_config_after_the_match_is_stopped(self) -> None:
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         await self.server.handle_command(json.dumps({"action": "stop"}))
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 111.0},
+                }
+            ),
+            self.control,
+        )
         reply = json.loads(self.control.sent[-1])
         self.assertTrue(reply["ok"])
 
     async def test_can_save_indoor_config_when_no_match_has_ever_started(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 111.0},
+                }
+            ),
+            self.control,
+        )
         reply = json.loads(self.control.sent[-1])
         self.assertTrue(reply["ok"])
 
@@ -524,9 +628,16 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
         display = FakeWebSocket()
         await self.server.register(display)
 
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "app", "values": {"sound_pack": "mon_club"},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "app",
+                    "values": {"sound_pack": "mon_club"},
+                }
+            ),
+            self.control,
+        )
 
         reply = self.control.last_config_saved_reply()
         self.assertTrue(reply["ok"])
@@ -539,9 +650,16 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
         """Contrairement à la config Indoor/Flint, le pack de sons n'est
         pas bloqué par un match en cours -- il n'affecte pas les règles."""
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "app", "values": {"sound_pack": "mon_club"},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "app",
+                    "values": {"sound_pack": "mon_club"},
+                }
+            ),
+            self.control,
+        )
         reply = self.control.last_config_saved_reply()
         self.assertTrue(reply["ok"])
 

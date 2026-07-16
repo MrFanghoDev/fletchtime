@@ -10,7 +10,6 @@ ones -- see docs/dev-guide for the walkthrough.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List
 
 from ..sequence import Step
 
@@ -23,6 +22,6 @@ class ShootingMode(ABC):
     """
 
     @abstractmethod
-    def build_sequence(self) -> List[Step]:
+    def build_sequence(self) -> list[Step]:
         """Return the ordered, non-empty list of steps for this round."""
         raise NotImplementedError

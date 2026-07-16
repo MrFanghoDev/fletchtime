@@ -11,7 +11,6 @@ timer at all.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .models import Phase
 
@@ -33,7 +32,7 @@ class Step:
     """
 
     phase: Phase
-    duration: Optional[float]
+    duration: float | None
 
     current_turn: str = ""
     end_number: int = 0
@@ -51,22 +50,20 @@ class Step:
 
     # identifier consumed by the transport layer to trigger a sound; not a
     # filename -- see docs/architecture.md "Packs de sons".
-    sound_event: Optional[str] = None
+    sound_event: str | None = None
 
     # seconds remaining at which the step's displayed phase switches from
     # GREEN to ORANGE, without resetting the countdown. None = no switch.
-    orange_threshold: Optional[float] = None
+    orange_threshold: float | None = None
     # sound event fired once, exactly when time_left crosses orange_threshold
-    orange_sound_event: Optional[str] = None
+    orange_sound_event: str | None = None
 
     def __post_init__(self) -> None:
         if self.duration is not None and self.duration < 0:
             raise ValueError(f"Step duration must be >= 0 or None, got {self.duration}")
         if self.orange_threshold is not None:
             if self.orange_threshold < 0:
-                raise ValueError(
-                    f"orange_threshold must be >= 0, got {self.orange_threshold}"
-                )
+                raise ValueError(f"orange_threshold must be >= 0, got {self.orange_threshold}")
             if self.duration is not None and self.orange_threshold > self.duration:
                 raise ValueError(
                     "orange_threshold must be <= duration, got "

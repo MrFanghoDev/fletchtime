@@ -16,7 +16,7 @@ import sys
 import tomllib
 from dataclasses import fields
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from fletchtime.engine import FlintConfig, IndoorConfig
 
@@ -36,12 +36,12 @@ INDOOR_TOML = CONFIG_DIR / "indoor.toml"
 FLINT_TOML = CONFIG_DIR / "flint.toml"
 APP_TOML = CONFIG_DIR / "app.toml"
 
-APP_COMMENTS: Dict[str, str] = {
+APP_COMMENTS: dict[str, str] = {
     "sound_pack": "Nom du dossier dans web/assets/sounds/packs/ à utiliser (ex. classic)",
 }
-DEFAULT_APP_CONFIG: Dict[str, Any] = {"sound_pack": "classic"}
+DEFAULT_APP_CONFIG: dict[str, Any] = {"sound_pack": "classic"}
 
-INDOOR_COMMENTS: Dict[str, str] = {
+INDOOR_COMMENTS: dict[str, str] = {
     "series": "Nombre de séries",
     "ends_per_series": "Nombre de volées par série",
     "arrows_per_end": "Nombre de flèches par volée",
@@ -55,7 +55,7 @@ INDOOR_COMMENTS: Dict[str, str] = {
     "alternate_relay_order_each_series": "Alterner l'ordre des relais à chaque série (true/false)",
 }
 
-FLINT_COMMENTS: Dict[str, str] = {
+FLINT_COMMENTS: dict[str, str] = {
     "units": "Nombre d'unités standards (2 = un parcours complet)",
     "standard_ends_per_unit": "Nombre de volées standards par unité",
     "arrows_per_standard_end": "Nombre de flèches par volée standard",
@@ -76,14 +76,14 @@ FLINT_COMMENTS: Dict[str, str] = {
 }
 
 
-def _load_toml(path: Path) -> Dict[str, Any]:
+def _load_toml(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     with path.open("rb") as f:
         return tomllib.load(f)
 
 
-def _filtered_overrides(data: Dict[str, Any], config_cls: type) -> Dict[str, Any]:
+def _filtered_overrides(data: dict[str, Any], config_cls: type) -> dict[str, Any]:
     """Ignore silently any key in the file that isn't a real field -- a
     typo or leftover key in a hand-edited TOML file shouldn't crash the
     server, just be ignored."""
@@ -105,7 +105,7 @@ def load_flint_config() -> FlintConfig:
     return FlintConfig(**data)
 
 
-def load_app_config() -> Dict[str, Any]:
+def load_app_config() -> dict[str, Any]:
     """App-wide settings that aren't specific to Indoor or Flint (currently
     just the active sound pack). Not a dataclass -- there's only one field
     today and it may grow, so a plain dict merged over sensible defaults is
@@ -116,14 +116,14 @@ def load_app_config() -> Dict[str, Any]:
     return merged
 
 
-def save_app_config(overrides: Dict[str, Any]) -> Dict[str, Any]:
+def save_app_config(overrides: dict[str, Any]) -> dict[str, Any]:
     merged = load_app_config()
     merged.update({k: v for k, v in overrides.items() if k in DEFAULT_APP_CONFIG})
     _write_toml(APP_TOML, merged, APP_COMMENTS)
     return merged
 
 
-def save_indoor_config(overrides: Dict[str, Any]) -> IndoorConfig:
+def save_indoor_config(overrides: dict[str, Any]) -> IndoorConfig:
     """Validates ``overrides`` by constructing a real IndoorConfig (raises
     ValueError if inconsistent, e.g. orange_warning_time > shoot_time)
     before writing anything to disk."""
@@ -134,7 +134,7 @@ def save_indoor_config(overrides: Dict[str, Any]) -> IndoorConfig:
     return config
 
 
-def save_flint_config(overrides: Dict[str, Any]) -> FlintConfig:
+def save_flint_config(overrides: dict[str, Any]) -> FlintConfig:
     """Validates ``overrides`` by constructing a real FlintConfig (raises
     ValueError if inconsistent) before writing anything to disk."""
     filtered = _filtered_overrides(overrides, FlintConfig)
@@ -145,6 +145,7 @@ def save_flint_config(overrides: Dict[str, Any]) -> FlintConfig:
 
 
 # -- petit sérialiseur TOML maison (écriture uniquement) ----------------------
+
 
 def _toml_value(value: Any) -> str:
     if isinstance(value, bool):
@@ -159,7 +160,7 @@ def _toml_value(value: Any) -> str:
     raise TypeError(f"Unsupported TOML value type: {type(value)!r}")
 
 
-def _write_toml(path: Path, values: Dict[str, Any], comments: Dict[str, str]) -> None:
+def _write_toml(path: Path, values: dict[str, Any], comments: dict[str, str]) -> None:
     lines = []
     for key, value in values.items():
         comment = comments.get(key)

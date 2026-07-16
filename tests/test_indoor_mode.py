@@ -52,8 +52,9 @@ class TestIndoorMode(unittest.TestCase):
         self.assertEqual(turns_in_order, ["A-B", "A-B", "C-D", "C-D"])
 
     def test_end_number_only_increments_after_both_relays_shot(self) -> None:
-        mode = IndoorMode(IndoorConfig(series=1, ends_per_series=2,
-                                        alternate_relay_order_each_series=False))
+        mode = IndoorMode(
+            IndoorConfig(series=1, ends_per_series=2, alternate_relay_order_each_series=False)
+        )
         steps = mode.build_sequence()
 
         shooting_steps = [s for s in steps if s.phase != Phase.PAUSE]
@@ -101,8 +102,9 @@ class TestIndoorMode(unittest.TestCase):
         self.assertTrue(all(s.current_turn == "C-D" for s in steps))
 
     def test_alternation_has_no_effect_on_single_relay_modes(self) -> None:
-        cfg = IndoorConfig(series=2, ends_per_series=1, turn_mode="ab_only",
-                            alternate_relay_order_each_series=True)
+        cfg = IndoorConfig(
+            series=2, ends_per_series=1, turn_mode="ab_only", alternate_relay_order_each_series=True
+        )
         steps = IndoorMode(cfg).build_sequence()
         self.assertTrue(all(s.current_turn == "A-B" for s in steps))
 
@@ -111,8 +113,14 @@ class TestIndoorMode(unittest.TestCase):
             IndoorConfig(turn_mode="something_else")
 
     def test_shoot_time_and_orange_threshold_are_configurable(self) -> None:
-        cfg = IndoorConfig(series=1, ends_per_series=1, turn_mode="ab_only",
-                            prep_time=10, shoot_time=90, orange_warning_time=20)
+        cfg = IndoorConfig(
+            series=1,
+            ends_per_series=1,
+            turn_mode="ab_only",
+            prep_time=10,
+            shoot_time=90,
+            orange_warning_time=20,
+        )
         steps = IndoorMode(cfg).build_sequence()
 
         self.assertEqual([s.phase for s in steps], [Phase.RED, Phase.GREEN])
@@ -125,8 +133,7 @@ class TestIndoorMode(unittest.TestCase):
         self.assertNotIn(Phase.RED, [s.phase for s in steps])
 
     def test_zero_orange_warning_disables_the_threshold(self) -> None:
-        cfg = IndoorConfig(series=1, ends_per_series=1, turn_mode="ab_only",
-                            orange_warning_time=0)
+        cfg = IndoorConfig(series=1, ends_per_series=1, turn_mode="ab_only", orange_warning_time=0)
         steps = IndoorMode(cfg).build_sequence()
         green_step = next(s for s in steps if s.phase == Phase.GREEN)
         self.assertIsNone(green_step.orange_threshold)
@@ -148,8 +155,9 @@ class TestIndoorMode(unittest.TestCase):
         self.assertEqual(steps[-1].phase, Phase.GREEN)  # sequence ends on shooting, not pause
 
     def test_pause_step_previews_the_next_end(self) -> None:
-        mode = IndoorMode(IndoorConfig(series=1, ends_per_series=2,
-                                        alternate_relay_order_each_series=False))
+        mode = IndoorMode(
+            IndoorConfig(series=1, ends_per_series=2, alternate_relay_order_each_series=False)
+        )
         steps = mode.build_sequence()
 
         pause_step = next(s for s in steps if s.phase == Phase.PAUSE)

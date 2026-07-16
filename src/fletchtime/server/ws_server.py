@@ -37,8 +37,11 @@ async def run_ws_server(port: int) -> None:
     tick_task = asyncio.create_task(server_state.tick_loop())
     try:
         async with websockets.serve(
-            handler, "0.0.0.0", port,
-            ping_interval=20, ping_timeout=20,
+            handler,
+            "0.0.0.0",
+            port,
+            ping_interval=20,
+            ping_timeout=20,
         ):
             await asyncio.Future()  # run forever
     finally:

@@ -19,7 +19,6 @@ See docs/specifications.md for the full rule text this is derived from.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
 
 from ..models import Phase
 from ..sequence import Step
@@ -34,11 +33,18 @@ class FlintConfig:
     standard_ends_per_unit: int = 6
     arrows_per_standard_end: int = 4
     standard_prep_time: float = 10.0
-    standard_shoot_time: float = 180.0          # temps de tir total, continu (3 min)
+    standard_shoot_time: float = 180.0  # temps de tir total, continu (3 min)
     standard_orange_warning_time: float = 20.0  # passage à l'orange sans reset du décompte
-    standard_distances: List[str] = field(default_factory=lambda: [
-        "25 yards", "20 pieds", "30 yards", "15 yards", "20 yards", "10 yards",
-    ])
+    standard_distances: list[str] = field(
+        default_factory=lambda: [
+            "25 yards",
+            "20 pieds",
+            "30 yards",
+            "15 yards",
+            "20 yards",
+            "10 yards",
+        ]
+    )
     # Les volées impaires (1, 3, 5) tirent sur le blason 35cm à 1 spot ; les
     # volées paires (2, 4, 6) sur le blason 20cm à 4 spots.
     standard_target_image_1spot: str = "assets/targets/flint_35cm_1spot.jpg"
@@ -48,9 +54,14 @@ class FlintConfig:
     walkup_time_per_arrow: float = 45.0
     walkup_prep_time: float = 10.0
     walkup_orange_warning_time: float = 10.0  # passage à l'orange sans reset du décompte
-    walkup_distances: List[str] = field(default_factory=lambda: [
-        "30 yards", "25 yards", "20 yards", "15 yards",
-    ])
+    walkup_distances: list[str] = field(
+        default_factory=lambda: [
+            "30 yards",
+            "25 yards",
+            "20 yards",
+            "15 yards",
+        ]
+    )
     # La volée 7 (walk-up) suit le même schéma que les volées impaires : 1 spot.
     walkup_target_image: str = "assets/targets/flint_35cm_1spot.jpg"
 
@@ -110,14 +121,14 @@ class FlintMode(ShootingMode):
     def __init__(self, config: FlintConfig | None = None) -> None:
         self.config = config or FlintConfig()
 
-    def _relays_for_unit(self, unit: int) -> List[str]:
+    def _relays_for_unit(self, unit: int) -> list[str]:
         cfg = self.config
         base = TURN_MODES[cfg.turn_mode]
         if cfg.alternate_relay_order_each_unit and len(base) == 2 and unit % 2 == 0:
             return list(reversed(base))
         return base
 
-    def build_sequence(self) -> List[Step]:
+    def build_sequence(self) -> list[Step]:
         cfg = self.config
         total_ends_per_unit = cfg.standard_ends_per_unit + 1  # +1 for walk-up end
         walkup_end_number = cfg.standard_ends_per_unit + 1
@@ -129,7 +140,7 @@ class FlintMode(ShootingMode):
         # goes first can alternate from one unit to the next (see
         # ``alternate_relay_order_each_unit``), e.g. the club's real
         # competition: unité 1 = A-B puis C-D, unité 2 = C-D puis A-B.
-        end_blocks: List[List[Step]] = []
+        end_blocks: list[list[Step]] = []
         for unit in range(1, cfg.units + 1):
             for turn in self._relays_for_unit(unit):
                 for end_index in range(1, cfg.standard_ends_per_unit + 1):
@@ -140,7 +151,7 @@ class FlintMode(ShootingMode):
                     self._walkup_end(cfg, unit, total_ends_per_unit, walkup_end_number, turn)
                 )
 
-        steps: List[Step] = []
+        steps: list[Step] = []
         for i, block in enumerate(end_blocks):
             steps.extend(block)
             if i + 1 < len(end_blocks):
@@ -148,25 +159,30 @@ class FlintMode(ShootingMode):
                 # des flèches / changement de relais, pas de décompte. Le
                 # DOS déclenche la suite manuellement (next()).
                 next_step = end_blocks[i + 1][0]
-                steps.append(Step(
-                    phase=Phase.PAUSE, duration=None,
-                    current_turn=next_step.current_turn,
-                    end_number=next_step.end_number,
-                    total_ends=next_step.total_ends,
-                    unit_number=next_step.unit_number,
-                    arrow_in_end=next_step.arrow_in_end,
-                    total_arrows_in_end=next_step.total_arrows_in_end,
-                    distance_label=next_step.distance_label,
-                    target_image=next_step.target_image,
-                ))
+                steps.append(
+                    Step(
+                        phase=Phase.PAUSE,
+                        duration=None,
+                        current_turn=next_step.current_turn,
+                        end_number=next_step.end_number,
+                        total_ends=next_step.total_ends,
+                        unit_number=next_step.unit_number,
+                        arrow_in_end=next_step.arrow_in_end,
+                        total_arrows_in_end=next_step.total_arrows_in_end,
+                        distance_label=next_step.distance_label,
+                        target_image=next_step.target_image,
+                    )
+                )
         return steps
 
     @staticmethod
-    def _standard_end(cfg: FlintConfig, unit: int, end_index: int,
-                       total_ends: int, turn: str) -> List[Step]:
+    def _standard_end(
+        cfg: FlintConfig, unit: int, end_index: int, total_ends: int, turn: str
+    ) -> list[Step]:
         distance = cfg.standard_distances[end_index - 1]
         target_image = (
-            cfg.standard_target_image_1spot if end_index % 2 == 1
+            cfg.standard_target_image_1spot
+            if end_index % 2 == 1
             else cfg.standard_target_image_4spot
         )
         common = dict(
@@ -177,24 +193,37 @@ class FlintMode(ShootingMode):
             distance_label=distance,
             target_image=target_image,
         )
-        steps: List[Step] = []
+        steps: list[Step] = []
         if cfg.standard_prep_time > 0:
-            steps.append(Step(phase=Phase.RED, duration=cfg.standard_prep_time,
-                               sound_event="prep_start", **common))
-        steps.append(Step(
-            phase=Phase.GREEN, duration=cfg.standard_shoot_time,
-            sound_event="shoot_start",
-            orange_threshold=(cfg.standard_orange_warning_time
-                               if cfg.standard_orange_warning_time > 0 else None),
-            orange_sound_event="warning_orange",
-            **common,
-        ))
+            steps.append(
+                Step(
+                    phase=Phase.RED,
+                    duration=cfg.standard_prep_time,
+                    sound_event="prep_start",
+                    **common,
+                )
+            )
+        steps.append(
+            Step(
+                phase=Phase.GREEN,
+                duration=cfg.standard_shoot_time,
+                sound_event="shoot_start",
+                orange_threshold=(
+                    cfg.standard_orange_warning_time
+                    if cfg.standard_orange_warning_time > 0
+                    else None
+                ),
+                orange_sound_event="warning_orange",
+                **common,
+            )
+        )
         return steps
 
     @staticmethod
-    def _walkup_end(cfg: FlintConfig, unit: int, total_ends: int,
-                     end_number: int, turn: str) -> List[Step]:
-        steps: List[Step] = []
+    def _walkup_end(
+        cfg: FlintConfig, unit: int, total_ends: int, end_number: int, turn: str
+    ) -> list[Step]:
+        steps: list[Step] = []
         for arrow_index in range(1, cfg.walkup_arrows + 1):
             distance = cfg.walkup_distances[arrow_index - 1]
             common = dict(
@@ -208,14 +237,26 @@ class FlintMode(ShootingMode):
                 target_image=cfg.walkup_target_image,
             )
             if cfg.walkup_prep_time > 0:
-                steps.append(Step(phase=Phase.RED, duration=cfg.walkup_prep_time,
-                                   sound_event="prep_start", **common))
-            steps.append(Step(
-                phase=Phase.GREEN, duration=cfg.walkup_time_per_arrow,
-                sound_event="shoot_start",
-                orange_threshold=(cfg.walkup_orange_warning_time
-                                   if cfg.walkup_orange_warning_time > 0 else None),
-                orange_sound_event="warning_orange",
-                **common,
-            ))
+                steps.append(
+                    Step(
+                        phase=Phase.RED,
+                        duration=cfg.walkup_prep_time,
+                        sound_event="prep_start",
+                        **common,
+                    )
+                )
+            steps.append(
+                Step(
+                    phase=Phase.GREEN,
+                    duration=cfg.walkup_time_per_arrow,
+                    sound_event="shoot_start",
+                    orange_threshold=(
+                        cfg.walkup_orange_warning_time
+                        if cfg.walkup_orange_warning_time > 0
+                        else None
+                    ),
+                    orange_sound_event="warning_orange",
+                    **common,
+                )
+            )
         return steps

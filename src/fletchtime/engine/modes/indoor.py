@@ -23,7 +23,6 @@ not a running total across the whole match.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 from ..models import Phase
 from ..sequence import Step
@@ -37,8 +36,8 @@ class IndoorConfig:
     ends_per_series: int = 6
     arrows_per_end: int = 5
 
-    prep_time: float = 10.0            # red: préparation / mise en place
-    shoot_time: float = 240.0          # temps de tir total, continu (règle IFAA : 4 min)
+    prep_time: float = 10.0  # red: préparation / mise en place
+    shoot_time: float = 240.0  # temps de tir total, continu (règle IFAA : 4 min)
     orange_warning_time: float = 30.0  # passage à l'orange quand il reste ce temps (sans reset)
 
     distance_label: str = "20 yards"
@@ -90,7 +89,7 @@ class IndoorMode(ShootingMode):
     def _end_in_series(self, global_end_index: int) -> int:
         return (global_end_index - 1) % self.config.ends_per_series + 1
 
-    def _relays_for(self, global_end_index: int) -> List[str]:
+    def _relays_for(self, global_end_index: int) -> list[str]:
         cfg = self.config
         base = TURN_MODES[cfg.turn_mode]
         series_index = self._series_index(global_end_index)
@@ -98,11 +97,11 @@ class IndoorMode(ShootingMode):
             return list(reversed(base))
         return base
 
-    def build_sequence(self) -> List[Step]:
+    def build_sequence(self) -> list[Step]:
         cfg = self.config
         total_global_ends = cfg.series * cfg.ends_per_series
 
-        def relay_block(global_end_index: int, turn: str) -> List[Step]:
+        def relay_block(global_end_index: int, turn: str) -> list[Step]:
             common = dict(
                 current_turn=turn,
                 end_number=self._end_in_series(global_end_index),
@@ -112,20 +111,28 @@ class IndoorMode(ShootingMode):
                 target_image=cfg.target_image_recurve,
                 target_image_2=cfg.target_image_compound,
             )
-            block: List[Step] = []
+            block: list[Step] = []
             if cfg.prep_time > 0:
-                block.append(Step(phase=Phase.RED, duration=cfg.prep_time,
-                                   sound_event="prep_start", **common))
-            block.append(Step(
-                phase=Phase.GREEN, duration=cfg.shoot_time,
-                sound_event="shoot_start",
-                orange_threshold=cfg.orange_warning_time if cfg.orange_warning_time > 0 else None,
-                orange_sound_event="warning_orange",
-                **common,
-            ))
+                block.append(
+                    Step(
+                        phase=Phase.RED, duration=cfg.prep_time, sound_event="prep_start", **common
+                    )
+                )
+            block.append(
+                Step(
+                    phase=Phase.GREEN,
+                    duration=cfg.shoot_time,
+                    sound_event="shoot_start",
+                    orange_threshold=(
+                        cfg.orange_warning_time if cfg.orange_warning_time > 0 else None
+                    ),
+                    orange_sound_event="warning_orange",
+                    **common,
+                )
+            )
             return block
 
-        steps: List[Step] = []
+        steps: list[Step] = []
         for global_end_index in range(1, total_global_ends + 1):
             for turn in self._relays_for(global_end_index):
                 # Le relais suivant (s'il y en a un) commence par son propre
@@ -142,14 +149,17 @@ class IndoorMode(ShootingMode):
                 # pendant le ramassage est déjà celle de la volée suivante.
                 next_index = global_end_index + 1
                 next_relays = self._relays_for(next_index)
-                steps.append(Step(
-                    phase=Phase.PAUSE, duration=None,
-                    current_turn=next_relays[0],
-                    end_number=self._end_in_series(next_index),
-                    total_ends=cfg.ends_per_series,
-                    unit_number=self._series_index(next_index),
-                    distance_label=cfg.distance_label,
-                    target_image=cfg.target_image_recurve,
-                    target_image_2=cfg.target_image_compound,
-                ))
+                steps.append(
+                    Step(
+                        phase=Phase.PAUSE,
+                        duration=None,
+                        current_turn=next_relays[0],
+                        end_number=self._end_in_series(next_index),
+                        total_ends=cfg.ends_per_series,
+                        unit_number=self._series_index(next_index),
+                        distance_label=cfg.distance_label,
+                        target_image=cfg.target_image_recurve,
+                        target_image_2=cfg.target_image_compound,
+                    )
+                )
         return steps

@@ -46,12 +46,12 @@ class MatchState:
     time_left: float = 0.0
 
     # sequencing / display context
-    current_turn: str = ""            # e.g. "A-B", "C-D", "" if not applicable
-    end_number: int = 0                # 1-indexed end/volée within the unit
-    total_ends: int = 0                # total ends in the unit (incl. walk-up end)
-    unit_number: int = 1               # for Flint: which "unité standard" (1..n)
-    arrow_in_end: int = 0              # for walk-up ends: which arrow (1-indexed)
-    total_arrows_in_end: int = 0       # for walk-up ends: arrows in this end
+    current_turn: str = ""  # e.g. "A-B", "C-D", "" if not applicable
+    end_number: int = 0  # 1-indexed end/volée within the unit
+    total_ends: int = 0  # total ends in the unit (incl. walk-up end)
+    unit_number: int = 1  # for Flint: which "unité standard" (1..n)
+    arrow_in_end: int = 0  # for walk-up ends: which arrow (1-indexed)
+    total_arrows_in_end: int = 0  # for walk-up ends: arrows in this end
 
     distance_label: str = ""
     target_image: str = ""

@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import asdict, replace
-from typing import Dict, Optional, Set
 
 from fletchtime.engine import (
     FlintMode,
@@ -34,16 +33,16 @@ def _state_to_dict(state: MatchState) -> dict:
 
 class MatchServer:
     def __init__(self) -> None:
-        self.engine: Optional[MatchEngine] = None
-        self.clients: Set = set()
+        self.engine: MatchEngine | None = None
+        self.clients: set = set()
         self._lock = asyncio.Lock()
         # Message global (toutes les lanes) -- indépendant de l'engine sur
         # le principe : un message ("Retard de 15 minutes...") doit rester
         # affichable même avant un match, entre deux matchs, ou après la fin.
-        self._message: Optional[str] = None
+        self._message: str | None = None
         # Messages ciblés sur une seule lane -- prennent le pas sur le
         # message global pour cette lane précise si les deux sont définis.
-        self._lane_messages: Dict[str, str] = {}
+        self._lane_messages: dict[str, str] = {}
         # Langue de diffusion pour les écrans -- choisie par le DOS, envoyée
         # à tous les clients (control + display) pour que les libellés
         # statiques (phase, série/volée, etc.) s'affichent dans la bonne langue.
@@ -51,16 +50,16 @@ class MatchServer:
         # Titre de l'événement (ex. "Concours FFTL Indoor -- Février 2026"),
         # choisi par le DOS, affiché en permanence sur les écrans -- persiste
         # à travers les matchs, contrairement au message ponctuel.
-        self._event_title: Optional[str] = None
+        self._event_title: str | None = None
         # Lane déclarée par chaque écran d'affichage à la connexion (voir
         # action "register_display") -- absent pour les postes de contrôle,
         # qui ne s'enregistrent jamais comme lane.
-        self._display_lanes: Dict[object, str] = {}
+        self._display_lanes: dict[object, str] = {}
         # Mode ("indoor"/"flint") du match actuellement chargé dans
         # self.engine, quel que soit son état (actif, pause, urgence) --
         # sert uniquement à bloquer la modification de la config de ce mode
         # tant qu'un match de ce type est en cours (voir _handle_config_action).
-        self._current_mode_kind: Optional[str] = None
+        self._current_mode_kind: str | None = None
         # Pack de sons actif, diffusé à tous les écrans (ex. "classic") --
         # chargé une fois au démarrage, mis à jour via save_config("app", ...).
         self._sound_pack: str = config_store.load_app_config()["sound_pack"]
@@ -178,18 +177,22 @@ class MatchServer:
             if action == "get_config":
                 if websocket is not None:
                     try:
-                        await websocket.send(json.dumps({
-                            "type": "config",
-                            "indoor": asdict(config_store.load_indoor_config()),
-                            "flint": asdict(config_store.load_flint_config()),
-                            "app": config_store.load_app_config(),
-                        }))
+                        await websocket.send(
+                            json.dumps(
+                                {
+                                    "type": "config",
+                                    "indoor": asdict(config_store.load_indoor_config()),
+                                    "flint": asdict(config_store.load_flint_config()),
+                                    "app": config_store.load_app_config(),
+                                }
+                            )
+                        )
                     except Exception:
                         pass
             elif action == "save_config":
                 mode = data.get("mode")
                 values = data.get("values") or {}
-                reply: Dict[str, object] = {"type": "config_saved", "mode": mode}
+                reply: dict[str, object] = {"type": "config_saved", "mode": mode}
                 if self._mode_in_progress(mode):
                     reply["ok"] = False
                     reply["error"] = "match_in_progress"
@@ -276,7 +279,10 @@ class MatchServer:
     def _payload_for(self, websocket) -> dict:
         state_dict = _state_to_dict(self.engine.current_state) if self.engine is not None else None
         lane = self._display_lanes.get(websocket)
-        message = self._lane_messages.get(lane) if lane and lane in self._lane_messages else self._message
+        message = (
+            self._lane_messages.get(lane) if lane and lane in self._lane_messages else self._message
+        )
+
         def _lane_sort_key(lane: str):
             return (0, int(lane)) if lane.isdigit() else (1, lane)
 
@@ -286,8 +292,10 @@ class MatchServer:
         )
         match_in_progress = self.engine is not None and not self.engine.current_state.finished
         return {
-            "type": "state", "state": state_dict,
-            "message": message, "language": self._language,
+            "type": "state",
+            "state": state_dict,
+            "message": message,
+            "language": self._language,
             "event_title": self._event_title,
             "connected_lanes": connected_lanes,
             "active_mode": self._current_mode_kind if match_in_progress else None,
