@@ -20,6 +20,7 @@ Deux notions de dossier bien distinctes ici, à ne pas confondre :
 from __future__ import annotations
 
 import asyncio
+import shutil
 import socket
 import sys
 import threading
@@ -32,23 +33,32 @@ from fletchtime.server.ws_server import run_ws_server
 HTTP_PORT = 8000
 WS_PORT = 8765
 
-BOOTSTRAP_ASSET_DIRS = {
+# Dossiers créés vides (juste un README expliquant la convention) -- aucun
+# contenu par défaut fourni, entièrement propre à chaque club.
+BOOTSTRAP_EMPTY_DIRS = {
     "club": (
         "Dépose ici le logo de ton club (ex. logo.jpg) pour qu'il\n"
-        "apparaisse sur l'écran neutre entre les phases de tir.\n"
+        "apparaisse sur l'écran neutre entre les phases de tir. Tant que\n"
+        "ce dossier est vide, l'écran neutre affiche le logo FletchTime\n"
+        "à la place.\n"
     ),
     "banners": (
         "Dépose ici les images de bannières sponsors (.jpg/.png/...) --\n"
         "elles défilent automatiquement sur l'écran neutre.\n"
     ),
-    "targets": (
-        "Dépose ici les images de blasons utilisées par l'Indoor et le\n"
-        "Flint (voir config.html pour les noms de fichiers attendus).\n"
-    ),
     "sounds/packs/_custom": (
         "Gabarit pour créer un pack de sons personnalisé -- voir le\n"
         "README à côté de ce fichier pour la convention de nommage.\n"
     ),
+}
+
+# Dossiers pré-remplis avec un contenu par défaut fourni avec FletchTime
+# (copié une seule fois, au tout premier lancement -- jamais écrasé
+# ensuite, donc une personnalisation du club est toujours préservée même
+# après une mise à jour du paquet).
+BOOTSTRAP_DEFAULT_DIRS = {
+    "targets": "_defaults/targets",
+    "sounds/packs/classic": "_defaults/sounds/packs/classic",
 }
 
 
@@ -66,17 +76,33 @@ def _data_root() -> Path:
     return Path.cwd()
 
 
-def ensure_directories(data_root: Path) -> None:
-    """Crée les dossiers attendus s'ils manquent -- idempotent, sans danger
-    à chaque redémarrage. Nécessaire pour qu'un premier lancement (paquet
-    tout juste installé, ou exécutable tout juste décompressé) fonctionne
-    du premier coup."""
-    for rel, readme_text in BOOTSTRAP_ASSET_DIRS.items():
+def ensure_directories(data_root: Path, app_web_dir: Path) -> None:
+    """Crée les dossiers attendus s'ils manquent, et copie le contenu par
+    défaut fourni avec FletchTime (images de blasons, pack de sons
+    "classic") au tout premier lancement -- idempotent, sans danger à
+    chaque redémarrage, et ne touche jamais à un dossier déjà existant
+    (donc ne casse ni n'écrase jamais une personnalisation faite par le
+    club, y compris après une mise à jour)."""
+    for rel, readme_text in BOOTSTRAP_EMPTY_DIRS.items():
         directory = data_root / "web" / "assets" / rel
         if directory.exists():
             continue
         directory.mkdir(parents=True, exist_ok=True)
         (directory / "README.txt").write_text(readme_text, encoding="utf-8")
+
+    for rel, default_rel in BOOTSTRAP_DEFAULT_DIRS.items():
+        directory = data_root / "web" / "assets" / rel
+        if directory.exists():
+            continue
+        source = app_web_dir / default_rel
+        if source.is_dir():
+            shutil.copytree(source, directory)
+        else:
+            # ancien build sans _defaults (ou chemin inattendu) -- pas de
+            # contenu par défaut à copier, mais ne doit jamais planter
+            # le démarrage pour autant.
+            directory.mkdir(parents=True, exist_ok=True)
+
     (data_root / "config").mkdir(parents=True, exist_ok=True)
 
 
@@ -96,8 +122,8 @@ def local_ip() -> str:
 
 def main() -> None:
     data_root = _data_root()
-    ensure_directories(data_root)
     app_web_dir = _app_web_dir()
+    ensure_directories(data_root, app_web_dir)
     assets_dir = data_root / "web" / "assets"
 
     ip = local_ip()

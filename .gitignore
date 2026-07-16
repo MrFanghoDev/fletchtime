@@ -21,9 +21,10 @@ docs/_build/
 # dépôt public partagé avec la FFTL, voir docs/architecture.md.
 web/assets/club/
 
-# Images de cibles -- à fournir par chaque club depuis une source dont il
-# possède les droits (catalogue fournisseur, document FFTL/IFAA officiel...);
-# pas incluses dans le dépôt public par prudence sur les droits d'auteur.
+# Images de cibles et pack de sons "classic" : les vrais fichiers par
+# défaut vivent maintenant dans src/fletchtime/web/_defaults/ (inclus dans
+# le paquet, committé normalement) et sont copiés ici au premier lancement
+# -- ce dossier-ci n'est donc plus qu'une sortie générée, jamais committée.
 web/assets/targets/
 
 # Bannières publicitaires / sponsors -- propres à chaque club, jamais
@@ -31,11 +32,10 @@ web/assets/targets/
 web/assets/banners/*
 !web/assets/banners/README.md
 
-# Packs de sons : seul "classic" (généré par synthèse, libre de droits) est
-# suivi par Git. N'importe quel autre dossier sous packs/ -- quel que soit
-# son nom -- est un pack propre à un club et reste local, jamais versionné.
+# Packs de sons : "classic" est maintenant copié depuis
+# src/fletchtime/web/_defaults/ au premier lancement (voir plus haut) --
+# n'importe quel dossier sous packs/ reste local, jamais versionné ici.
 web/assets/sounds/packs/*
-!web/assets/sounds/packs/classic/
 !web/assets/sounds/packs/_custom/
 web/assets/sounds/packs/_custom/*
 !web/assets/sounds/packs/_custom/README.md

@@ -23,7 +23,11 @@ where = ["src"]
 include = ["fletchtime*"]
 
 [tool.setuptools.package-data]
-"fletchtime.web" = ["*.html", "*.js", "*.svg"]
+"fletchtime.web" = [
+    "*.html", "*.js", "*.svg",
+    "_defaults/targets/*.jpg",
+    "_defaults/sounds/packs/classic/*.wav",
+]
 
 [tool.black]
 line-length = 100

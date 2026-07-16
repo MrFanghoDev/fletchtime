@@ -15,7 +15,8 @@ import wave
 from pathlib import Path
 
 SAMPLE_RATE = 44100
-OUTPUT_DIR = Path(__file__).resolve().parents[1] / "web" / "assets" / "sounds" / "packs" / "classic"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_DIR = PROJECT_ROOT / "src" / "fletchtime" / "web" / "_defaults" / "sounds" / "packs" / "classic"
 
 
 def _envelope(i: int, total: int, fade_samples: int) -> float:
@@ -72,7 +73,7 @@ def _write_wav(name: str, samples: list[float]) -> None:
             for s in samples
         )
         f.writeframes(frames)
-    print(f"  {path.relative_to(OUTPUT_DIR.parents[3])}")
+    print(f"  {path.relative_to(PROJECT_ROOT)}")
 
 
 SOUNDS = {

@@ -65,8 +65,7 @@
     <div id="turn"></div>
     <div id="dist"></div>
     <div id="idle">
-      <img id="idle-logo" src="assets/club/logo.jpg" alt="Logo du club"
-        onerror="this.style.display='none'; this.dataset.failed='1';">
+      <img id="idle-logo" alt="Logo du club">
       <div id="idle-date"></div>
       <div id="idle-clock"></div>
       <div id="idle-caption"></div>
@@ -93,6 +92,23 @@
   const idleClockEl = document.getElementById("idle-clock");
   const idleCaptionEl = document.getElementById("idle-caption");
   const idleLogoEl = document.getElementById("idle-logo");
+
+  // Essaie quelques noms/extensions courants pour le logo du club ; si
+  // aucun n'existe, retombe sur le logo FletchTime lui-même plutôt que de
+  // laisser un espace vide sur l'écran neutre (utile notamment juste après
+  // une première installation, avant que le club n'ait déposé son logo).
+  const CLUB_LOGO_CANDIDATES = ["assets/club/logo.jpg", "assets/club/logo.png", "assets/club/logo.svg"];
+  function tryClubLogo(index) {
+    if (index >= CLUB_LOGO_CANDIDATES.length) {
+      idleLogoEl.onerror = null;
+      idleLogoEl.src = "logo.svg";
+      idleLogoEl.alt = "FletchTime";
+      return;
+    }
+    idleLogoEl.onerror = () => tryClubLogo(index + 1);
+    idleLogoEl.src = CLUB_LOGO_CANDIDATES[index];
+  }
+  tryClubLogo(0);
   const idleBannerEl = document.getElementById("idle-banner");
   const eventTitleBannerEl = document.getElementById("event-title-banner");
   const targetImage1El = document.getElementById("target-image-1");
@@ -156,7 +172,7 @@
 
   function showSlideshowStep() {
     const isBannerSlide = slideshowStep > 0 && slideshowStep <= bannerImages.length;
-    idleLogoEl.style.display = isBannerSlide ? "none" : (idleLogoEl.dataset.failed ? "none" : "");
+    idleLogoEl.style.display = isBannerSlide ? "none" : "";
     idleDateEl.style.display = isBannerSlide ? "none" : "";
     idleClockEl.style.display = isBannerSlide ? "none" : "";
     idleCaptionEl.style.display = isBannerSlide ? "none" : "";
