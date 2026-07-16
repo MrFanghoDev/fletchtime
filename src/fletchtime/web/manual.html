@@ -48,12 +48,23 @@
 
   article.manual-section { margin-top: 2rem; }
   article.manual-section h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+  article.manual-section h3 { font-size: 0.95rem; margin: 1.25rem 0 0.4rem; color: var(--gold); }
   article.manual-section p { line-height: 1.6; font-size: 0.92rem; color: var(--text); }
   article.manual-section ul, article.manual-section ol {
     line-height: 1.8; font-size: 0.92rem; padding-left: 1.3rem;
   }
   dl.faq dt { font-weight: 600; margin-top: 1rem; font-size: 0.92rem; }
   dl.faq dd { margin: 0.25rem 0 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+
+  figure.manual-shot {
+    margin: 1rem 0 0; border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; background: var(--surface);
+  }
+  figure.manual-shot img { display: block; width: 100%; height: auto; }
+  figure.manual-shot figcaption {
+    padding: 0.5rem 0.9rem; font-size: 0.78rem; color: var(--text-faint);
+    border-top: 1px solid var(--border);
+  }
 
   .top-controls {
     position: fixed; top: 1rem; right: 1rem; display: flex; gap: 0.5rem; z-index: 10;
@@ -97,7 +108,7 @@
     <nav class="toc">
       <div data-i18n="manualTocLabel">Sommaire</div>
       <ul>
-        <li><a href="#s1" data-i18n="manualS1Title">Premier lancement (sur Pydroid)</a></li>
+        <li><a href="#s1" data-i18n="manualS1Title">Premier lancement</a></li>
         <li><a href="#s2" data-i18n="manualS2Title">La page d'accueil</a></li>
         <li><a href="#s3" data-i18n="manualS3Title">Configurer un concours</a></li>
         <li><a href="#s4" data-i18n="manualS4Title">Démarrer et piloter un match</a></li>
@@ -111,19 +122,37 @@
     </nav>
 
     <article class="manual-section" id="s1">
-      <h2 data-i18n="manualS1Title">Premier lancement (sur Pydroid)</h2>
+      <h2 data-i18n="manualS1Title">Premier lancement</h2>
+      <p data-i18n="manualS1Intro">Trois façons de lancer FletchTime, selon ton appareil -- choisis celle qui te convient :</p>
+
+      <h3 data-i18n="manualS1ExeTitle">PC (Windows ou Linux), sans rien installer</h3>
       <ol>
-        <li data-i18n="manualS1Li1">Installe le paquet <code>websockets</code> : menu ☰ → Pip → chercher "websockets" → Installer.</li>
-        <li data-i18n="manualS1Li2">Ouvre le fichier <code>run_server.py</code> à la racine du projet.</li>
-        <li data-i18n="manualS1Li3">Appuie sur ▶️ Run.</li>
-        <li data-i18n="manualS1Li4">La console affiche l'adresse à utiliser (ex. http://192.168.1.42:8000/) — garde Pydroid ouvert pour la relire au besoin.</li>
-        <li data-i18n="manualS1Li5">Ouvre cette adresse dans un navigateur : tu arrives sur la page d'accueil de FletchTime.</li>
+        <li data-i18n="manualS1ExeLi1">Télécharge l'archive correspondant à ton système depuis la page "Releases" du <a href="https://github.com/MrFanghoDev/fletchtime/releases">projet GitHub</a>.</li>
+        <li data-i18n="manualS1ExeLi2">Décompresse l'archive, puis lance <code>FletchTime.exe</code> (Windows) ou <code>./FletchTime</code> (Linux).</li>
       </ol>
+
+      <h3 data-i18n="manualS1PipTitle">Avec Python déjà installé (PC, Android via Pydroid 3, ...)</h3>
+      <ol>
+        <li data-i18n="manualS1PipLi1">Installe le paquet : <code>pip install fletchtime</code> (dans Pydroid 3 : menu ☰ → Pip → chercher "fletchtime" → Installer).</li>
+        <li data-i18n="manualS1PipLi2">Lance la commande <code>fletchtime</code> (ou <code>python -m fletchtime</code>).</li>
+      </ol>
+
+      <h3 data-i18n="manualS1DevTitle">Depuis un clone du dépôt (pour un développeur)</h3>
+      <ol>
+        <li data-i18n="manualS1DevLi1">Installe la dépendance : <code>pip install websockets</code>.</li>
+        <li data-i18n="manualS1DevLi2">Ouvre le fichier <code>run_server.py</code> à la racine du projet et lance-le (ou dans Pydroid 3 : appuie sur ▶️ Run).</li>
+      </ol>
+
+      <p data-i18n="manualS1Common">Dans tous les cas, la console affiche l'adresse à utiliser (ex. http://192.168.1.42:8000/) -- garde-la sous les yeux, ou relance la commande pour la revoir. Ouvre cette adresse dans un navigateur : tu arrives sur la page d'accueil de FletchTime.</p>
     </article>
 
     <article class="manual-section" id="s2">
       <h2 data-i18n="manualS2Title">La page d'accueil</h2>
-      <p data-i18n="manualS2Text">Trois raccourcis : Poste de contrôle (pour toi, le DOS), Écran d'affichage (à ouvrir sur chaque tablette de pas de tir, en choisissant son numéro), et ce manuel.</p>
+      <p data-i18n="manualS2Text">Trois raccourcis : Poste de contrôle (pour toi, le responsable du chronométrage), Écran d'affichage (à ouvrir sur chaque tablette de pas de tir, en choisissant son numéro), et ce manuel.</p>
+      <figure class="manual-shot">
+        <img src="screenshots/index.png" alt="Page d'accueil de FletchTime">
+        <figcaption data-i18n="manualShotHome">La page d'accueil</figcaption>
+      </figure>
     </article>
 
     <article class="manual-section" id="s3">
@@ -136,6 +165,10 @@
         <li data-i18n="manualS3Li4">Un mot de passe optionnel pour protéger le contrôle et la configuration (section "Sécurité")</li>
       </ul>
       <p data-i18n="manualS3Text2">Ces réglages sont enregistrés dans des fichiers texte -- pas besoin de les rouvrir à chaque concours, ils restent en place. Impossible de les modifier pendant qu'un match de ce mode est en cours.</p>
+      <figure class="manual-shot">
+        <img src="screenshots/config.png" alt="Page de configuration de FletchTime">
+        <figcaption data-i18n="manualShotConfig">La page Configuration (sections repliées)</figcaption>
+      </figure>
     </article>
 
     <article class="manual-section" id="s4">
@@ -148,11 +181,19 @@
         <li data-i18n="manualS4Li4">Arrêt pour terminer le match, Recommencer pour relancer depuis le début.</li>
         <li data-i18n="manualS4Li5">Aller à... permet de sauter directement à une volée précise (utile après une correction ou un incident).</li>
       </ul>
+      <figure class="manual-shot">
+        <img src="screenshots/control.png" alt="Poste de contrôle de FletchTime">
+        <figcaption data-i18n="manualShotControl">Le poste de contrôle</figcaption>
+      </figure>
     </article>
 
     <article class="manual-section" id="s5">
       <h2 data-i18n="manualS5Title">Connecter les écrans d'affichage</h2>
       <p data-i18n="manualS5Text">Sur chaque tablette/PC de pas de tir : ouvre la page d'accueil, entre le numéro du pas de tir, clique "Ouvrir". L'écran affiche alors le chrono en direct, synchronisé avec les autres. Le poste de contrôle affiche la liste des écrans réellement connectés.</p>
+      <figure class="manual-shot">
+        <img src="screenshots/display.png" alt="Illustration de l'écran d'affichage pendant un tir">
+        <figcaption data-i18n="manualShotDisplay">Illustration -- l'écran d'affichage pendant une phase de tir (les valeurs réelles dépendent du match en cours)</figcaption>
+      </figure>
     </article>
 
     <article class="manual-section" id="s6">
@@ -181,9 +222,11 @@
         <dt data-i18n="manualFaqQ1">L'écran affiche juste le logo et l'heure, c'est normal ?</dt>
         <dd data-i18n="manualFaqA1">Oui, c'est l'écran neutre -- il redevient actif dès qu'un match démarre.</dd>
         <dt data-i18n="manualFaqQ2">Un écran de pas de tir ne se met pas à jour, que faire ?</dt>
-        <dd data-i18n="manualFaqA2">Vérifie qu'il est bien connecté au même réseau WiFi que le téléphone-serveur.</dd>
+        <dd data-i18n="manualFaqA2">Vérifie qu'il est bien connecté au même réseau WiFi que l'appareil qui fait tourner le serveur.</dd>
         <dt data-i18n="manualFaqQ3">Je veux tester avant le concours, comment faire ?</dt>
         <dd data-i18n="manualFaqA3">Lance un match Indoor ou Flint en configuration réduite (peu de volées) pour vérifier que tout s'enchaîne correctement.</dd>
+        <dt data-i18n="manualFaqQ4">Sous Windows, les autres appareils n'arrivent pas à se connecter, que faire ?</dt>
+        <dd data-i18n="manualFaqA4">C'est presque toujours le pare-feu Windows qui bloque les connexions entrantes -- vérifie que FletchTime a bien été autorisé pour les réseaux privés (Paramètres → Confidentialité et sécurité → Pare-feu Windows Defender → Autoriser une application). L'appareil qui héberge le serveur y accède quand même normalement lui-même, seuls les autres écrans sont bloqués.</dd>
         <dt data-i18n="manualFaqQ4">J'ai oublié le mot de passe du contrôle, comment faire ?</dt>
         <dd data-i18n="manualFaqA4">Supprime le fichier config/auth.toml (à côté de config/indoor.toml) puis relance le serveur -- la protection est retirée, tu peux en redéfinir un nouveau.</dd>
       </dl>
@@ -192,6 +235,7 @@
     <section id="dev">
       <h2 data-i18n="manualDevTitle">Projet GitHub</h2>
       <p><a href="https://github.com/MrFanghoDev/fletchtime">https://github.com/MrFanghoDev/fletchtime</a></p>
+      <p><span data-i18n="manualDocsLine">Documentation technique (architecture, guide développeur) :</span> <a href="https://mrfanghodev.github.io/fletchtime/">mrfanghodev.github.io/fletchtime</a></p>
     </section>
   </div>
 

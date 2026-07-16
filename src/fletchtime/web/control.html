@@ -48,6 +48,7 @@
   html, body {
     margin: 0; background: var(--bg); color: var(--text);
     font-family: var(--font-ui); -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
   }
   body { padding: 0 0 3rem; }
 
@@ -118,10 +119,12 @@
   .preview-wrapper {
     width: 100%; max-width: 480px; aspect-ratio: 960 / 540;
     overflow: hidden; border-radius: 4px; position: relative; background: #000;
+    contain: strict;
   }
   .preview-frame {
     width: 960px; height: 540px; border: none;
     transform-origin: top left; pointer-events: none;
+    position: absolute; top: 0; left: 0;
   }
   .monitor-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
 
@@ -163,6 +166,7 @@
 
   .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
   .field-group { display: flex; flex-direction: column; gap: 0.3rem; }
+  .event-title-group { padding-top: 0.75rem; border-top: 1px solid var(--border); }
   .field-group label.mini {
     font-size: 0.72rem; color: var(--text-muted);
   }
@@ -250,7 +254,7 @@
   <div class="auth-overlay" id="auth-overlay">
     <div class="auth-box">
       <h2 data-i18n="authTitle">Mot de passe requis</h2>
-      <p data-i18n="authDesc">Ce poste de contrôle est protégé -- demande le mot de passe au DOS.</p>
+      <p data-i18n="authDesc">Ce poste de contrôle est protégé -- demande le mot de passe au responsable du chronométrage.</p>
       <input type="password" id="auth-password-input" data-i18n-placeholder="authPlaceholder" placeholder="Mot de passe" autocomplete="off">
       <button onclick="submitAuthPassword()" data-i18n="authSubmit">Se connecter</button>
       <div class="auth-error" id="auth-error"></div>
@@ -293,22 +297,21 @@
       <div class="monitor-actions">
         <div id="connected-lanes-line"></div>
       </div>
+      <div class="field-group event-title-group">
+        <label class="mini" for="event-title" data-i18n="eventTitleLabel">Titre de l'événement (affiché en permanence sur les écrans) :</label>
+        <input type="text" id="event-title" data-i18n-placeholder="eventTitlePlaceholder"
+          placeholder="Ex. Concours FFTL Indoor -- Février 2026">
+        <div class="btn-row">
+          <button class="btn-quiet" data-i18n="send" onclick="sendEventTitle()">Envoyer</button>
+          <button class="btn-quiet" data-i18n="clear" onclick="send({action:'set_event_title', value:null})">Effacer</button>
+        </div>
+      </div>
     </div>
 
     <!-- Configuration / démarrage -->
     <details class="panel" data-accent="setup" id="panel-setup" open>
       <summary><span class="accent-bar"></span><span data-i18n="panelSetupTitle">Démarrage</span><span class="chevron">▶</span></summary>
       <div class="panel-body">
-        <div class="field-group">
-          <label class="mini" data-i18n="eventTitleLabel">Titre de l'événement (affiché en permanence sur les écrans) :</label>
-          <input type="text" id="event-title" data-i18n-placeholder="eventTitlePlaceholder"
-            placeholder="Ex. Concours FFTL Indoor -- Février 2026">
-          <div class="btn-row">
-            <button class="btn-quiet" data-i18n="send" onclick="sendEventTitle()">Envoyer</button>
-            <button class="btn-quiet" data-i18n="clear" onclick="send({action:'set_event_title', value:null})">Effacer</button>
-          </div>
-        </div>
-
         <div class="two-col">
           <div class="field-group">
             <button class="btn-start" id="start-indoor-btn" data-i18n="startIndoor"
@@ -505,6 +508,7 @@
   }
   scalePreviewFrame();
   window.addEventListener("resize", scalePreviewFrame);
+  window.addEventListener("load", scalePreviewFrame);
 
   let hasSyncedLanguageFromServer = false;
   let previousMatchIsRunning = false;
@@ -548,7 +552,7 @@
         if (data.auth_required && !isAuthenticated) {
           document.getElementById("auth-overlay").classList.add("visible");
         } else if (!data.auth_required) {
-          isAuthenticated = false;  // le DOS a retiré le mot de passe entre-temps
+          isAuthenticated = false;  // le responsable du chronométrage a retiré le mot de passe entre-temps
           document.getElementById("auth-overlay").classList.remove("visible");
         }
 
@@ -565,7 +569,7 @@
         }
 
         // Garde le champ à jour si un autre poste de contrôle a changé le
-        // titre -- sauf si le DOS est justement en train d'y taper.
+        // titre -- sauf si le responsable du chronométrage est justement en train d'y taper.
         const eventTitleInput = document.getElementById("event-title");
         if (document.activeElement !== eventTitleInput) {
           eventTitleInput.value = data.event_title || "";
@@ -611,7 +615,7 @@
 
         // Ouvre/ferme automatiquement les bons panneaux au démarrage et à
         // l'arrêt d'un match -- seulement au changement d'état, pas à
-        // chaque mise à jour, pour ne pas gêner si le DOS les a repliés
+        // chaque mise à jour, pour ne pas gêner si le responsable du chronométrage les a repliés
         // manuellement entre-temps.
         if (matchIsRunning !== previousMatchIsRunning) {
           previousMatchIsRunning = matchIsRunning;

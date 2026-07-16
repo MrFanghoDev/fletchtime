@@ -8,10 +8,13 @@ name: Exécutables autoporteurs (release)
 # Déclenchement : push d'un tag de version (ex. v0.1.0), ou manuellement
 # depuis l'onglet Actions. Les deux archives sont jointes à une Release
 # GitHub créée automatiquement.
-
+permissions:
+  contents: write
+  
 on:
   push:
-    tags: ["v*.*.*"]
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
 
 jobs:
@@ -20,12 +23,13 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            archive_format: zip
-            archive_name: FletchTime-windows.zip
+            archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-windows.zip
+
           - os: ubuntu-latest
-            archive_format: gztar
-            archive_name: FletchTime-linux.tar.gz
+            archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-linux.tar.gz
+
     runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -33,25 +37,36 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Installer les dépendances de build
-        run: pip install pyinstaller websockets
+      - name: Installer les dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller websockets
 
       - name: Construire l'exécutable
-        run: pyinstaller fletchtime.spec
+        run: |
+          pyinstaller fletchtime.spec
 
-      - name: Créer l'archive (${{ matrix.archive_format }})
+      - name: Vérifier le contenu de dist
+        shell: bash
+        run: |
+          echo "Runner : $RUNNER_OS"
+          pwd
+          ls -R dist
+
+      - name: Créer l'archive Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+         Compress-Archive `
+           -Path dist/FletchTime/* `
+           -DestinationPath dist/${{ matrix.archive_name }}
+
+      - name: Créer l'archive Linux
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           cd dist
-          python3 -c "
-          import shutil
-          shutil.make_archive('FletchTime', '${{ matrix.archive_format }}', '.', 'FletchTime')
-          "
-          # renomme vers le nom final attendu (make_archive ajoute son
-          # extension automatiquement, ex. FletchTime.zip / FletchTime.tar.gz)
-          for f in FletchTime.zip FletchTime.tar.gz; do
-            [ -f "$f" ] && mv "$f" "${{ matrix.archive_name }}"
-          done
+          tar -czf ${{ matrix.archive_name }} FletchTime
 
       - uses: actions/upload-artifact@v4
         with:
@@ -60,8 +75,11 @@ jobs:
 
   release:
     needs: build
+
     if: startsWith(github.ref, 'refs/tags/v')
+
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/download-artifact@v4
         with:
