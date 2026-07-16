@@ -226,9 +226,9 @@
         <dt data-i18n="manualFaqQ3">Je veux tester avant le concours, comment faire ?</dt>
         <dd data-i18n="manualFaqA3">Lance un match Indoor ou Flint en configuration réduite (peu de volées) pour vérifier que tout s'enchaîne correctement.</dd>
         <dt data-i18n="manualFaqQ4">Sous Windows, les autres appareils n'arrivent pas à se connecter, que faire ?</dt>
-        <dd data-i18n="manualFaqA4">C'est presque toujours le pare-feu Windows qui bloque les connexions entrantes -- vérifie que FletchTime a bien été autorisé pour les réseaux privés (Paramètres → Confidentialité et sécurité → Pare-feu Windows Defender → Autoriser une application). L'appareil qui héberge le serveur y accède quand même normalement lui-même, seuls les autres écrans sont bloqués.</dd>
-        <dt data-i18n="manualFaqQ4">J'ai oublié le mot de passe du contrôle, comment faire ?</dt>
-        <dd data-i18n="manualFaqA4">Supprime le fichier config/auth.toml (à côté de config/indoor.toml) puis relance le serveur -- la protection est retirée, tu peux en redéfinir un nouveau.</dd>
+        <dd data-i18n="manualFaqA4">Si 127.0.0.1 fonctionne sur l'appareil qui héberge le serveur mais pas les autres : c'est presque toujours le pare-feu Windows qui bloque les connexions entrantes -- vérifie que FletchTime a bien été autorisé pour les réseaux privés (Paramètres → Confidentialité et sécurité → Pare-feu Windows Defender → Autoriser une application). Si en revanche même 127.0.0.1 ne fonctionne pas sur cet appareil, et que la page affiche un simple listing de dossier avec juste "assets" dedans : mets à jour FletchTime vers la version 0.1.2 ou plus récente (bug d'empaquetage corrigé, sans lien avec le réseau).</dd>
+        <dt data-i18n="manualFaqQ5">J'ai oublié le mot de passe du contrôle, comment faire ?</dt>
+        <dd data-i18n="manualFaqA5">Supprime le fichier config/auth.toml (à côté de config/indoor.toml) puis relance le serveur -- la protection est retirée, tu peux en redéfinir un nouveau.</dd>
       </dl>
     </article>
 

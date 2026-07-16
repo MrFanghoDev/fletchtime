@@ -139,6 +139,21 @@ tests pour tout changement de comportement dans `src/`.
   formulaire d'upload, sans perdre en fonctionnalité pour l'usage réel du
   club.
 
+```{warning}
+**Piège PyInstaller 6.0+** : depuis cette version, un build `--onedir`
+place par défaut tout son contenu (hors l'exécutable) dans un sous-dossier
+`_internal/`, plutôt que directement à côté de l'exe comme avant. Notre
+code (`fletchtime.__main__._app_web_dir`) suppose l'ancien layout plat --
+`fletchtime.spec` restaure ce comportement via `contents_directory="."`
+sur l'appel à `EXE(...)`. Si ce paramètre disparaît un jour d'une
+réécriture du spec, le symptôme est trompeur : le serveur démarre, la
+console affiche l'adresse normalement, mais naviguer vers cette adresse
+n'affiche qu'un listing de répertoire avec juste `assets/` dedans (le
+dossier bootstrapé), sans les pages de l'appli -- **et ça touche même
+127.0.0.1 sur la machine qui héberge le serveur**, donc ce n'est pas un
+problème de pare-feu/réseau si ce symptôme précis apparaît.
+```
+
 ```{note}
 La publication automatique de cette doc sur GitHub Pages est déjà en place
 (`.github/workflows/docs.yml`) -- voir le README à la racine du dépôt pour

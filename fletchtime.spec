@@ -48,6 +48,16 @@ exe = EXE(
     debug=False,
     console=True,  # fenêtre console visible -- affiche l'adresse IP à ouvrir
     upx=False,
+    # Depuis PyInstaller 6.0, un build --onedir place par défaut tout son
+    # contenu (hors l'exécutable lui-même) dans un sous-dossier _internal/,
+    # au lieu de le mettre directement à côté de l'exe comme avant. Notre
+    # code (fletchtime.__main__._app_web_dir, ensure_directories) suppose
+    # le layout historique (web/ et config/ directement à côté de l'exe) --
+    # sans ce paramètre, le serveur ne trouve pas les pages de l'appli une
+    # fois empaqueté et ne sert que ce qu'il a lui-même créé (le dossier
+    # assets/ du bootstrap), d'où un serveur qui tourne mais ne sert rien
+    # d'utile. "." restaure explicitement l'ancien comportement.
+    contents_directory=".",
 )
 
 coll = COLLECT(

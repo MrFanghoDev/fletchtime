@@ -4,7 +4,7 @@
 project = "FletchTime"
 copyright = "2026, [Nom du club]"
 author = "[Nom du club]"
-release = "0.1.1"
+release = "0.1.2"
 
 # -- General configuration ---------------------------------------------------
 
