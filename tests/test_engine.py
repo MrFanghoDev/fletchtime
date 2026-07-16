@@ -231,14 +231,8 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
         self.assertEqual(engine.pop_pending_events(), [])
 
     def test_countdown_tick_seconds_is_configurable(self) -> None:
-        cfg = IndoorConfig(
-            series=1,
-            ends_per_series=2,
-            prep_time=10,
-            shoot_time=120,
-            orange_warning_time=0,
-            turn_mode="ab_only",
-        )
+        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
+                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
         engine = MatchEngine(IndoorMode(cfg), countdown_tick_seconds=3)
         engine.tick(10)  # enter GREEN(120)
         engine.pop_pending_events()
@@ -254,14 +248,8 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
         self.assertEqual(events.count("countdown_tick"), 2)  # 2s et 1s -- pas de tick à 0
 
     def test_countdown_tick_seconds_zero_disables_it_entirely(self) -> None:
-        cfg = IndoorConfig(
-            series=1,
-            ends_per_series=2,
-            prep_time=10,
-            shoot_time=120,
-            orange_warning_time=0,
-            turn_mode="ab_only",
-        )
+        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
+                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
         engine = MatchEngine(IndoorMode(cfg), countdown_tick_seconds=0)
         engine.tick(10)
         engine.pop_pending_events()

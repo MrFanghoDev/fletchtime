@@ -34,12 +34,24 @@ python run_server.py       # raccourci équivalent à `python -m fletchtime`
 
 ### 2. Exécutable autoporteur (Windows / Linux) -- PC dédié, sans Python
 
-Télécharge `FletchTime-windows.zip` ou `FletchTime-linux.tar.gz` depuis les
-[Releases GitHub](https://github.com/MrFanghoDev/fletchtime/releases),
+Télécharge `FletchTime-<version>-windows.zip` ou
+`FletchTime-<version>-linux.tar.gz` (ex. `FletchTime-v0.1.1-windows.zip`)
+depuis les [Releases GitHub](https://github.com/MrFanghoDev/fletchtime/releases),
 décompresse, lance `FletchTime.exe` (Windows) ou `./FletchTime` (Linux).
 Aucune installation de Python nécessaire. Les dossiers `web/assets/...` et
 `config/` sont créés automatiquement à côté de l'exécutable au premier
 lancement s'ils manquent.
+
+**Windows -- pare-feu** : au premier lancement, Windows affiche une alerte
+"Le Pare-feu Windows Defender a bloqué certaines fonctionnalités de cette
+application" -- coche au moins **Réseaux privés** puis clique **Autoriser
+l'accès**. Sans ça, le serveur démarre normalement et fonctionne depuis
+l'appareil qui l'héberge, mais reste **injoignable depuis les autres
+appareils** (tablettes/PC de pas de tir) sur le même réseau WiFi. Si
+l'alerte a été fermée par erreur ou n'est jamais apparue : *Paramètres
+Windows → Confidentialité et sécurité → Pare-feu Windows Defender →
+Autoriser une application via le pare-feu* -- coche `FletchTime.exe` pour
+les réseaux privés.
 
 Pour construire ces exécutables toi-même (ou ajouter macOS à la matrice) :
 voir `.github/workflows/release.yml` et `fletchtime.spec` (PyInstaller). Un

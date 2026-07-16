@@ -23,10 +23,10 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            archive_name: FletchTime-windows.zip
+            archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-windows.zip
 
           - os: ubuntu-latest
-            archive_name: FletchTime-linux.tar.gz
+            archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-linux.tar.gz
 
     runs-on: ${{ matrix.os }}
 
@@ -59,14 +59,14 @@ jobs:
         run: |
          Compress-Archive `
            -Path dist/FletchTime/* `
-           -DestinationPath dist/FletchTime-windows.zip
+           -DestinationPath dist/${{ matrix.archive_name }}
 
       - name: Créer l'archive Linux
         if: runner.os == 'Linux'
         shell: bash
         run: |
           cd dist
-          tar -czf FletchTime-linux.tar.gz FletchTime
+          tar -czf ${{ matrix.archive_name }} FletchTime
 
       - uses: actions/upload-artifact@v4
         with:

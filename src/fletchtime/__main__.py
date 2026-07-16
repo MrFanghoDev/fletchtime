@@ -121,16 +121,32 @@ def main() -> None:
     ip = local_ip()
     print("=" * 60)
     print("  FletchTime -- serveur de contrôle et d'affichage")
+    print("  FletchTime -- control and display server")
     print("=" * 60)
-    print(f"  Accueil   : http://{ip}:{HTTP_PORT}/")
-    print(f"  Contrôle  : http://{ip}:{HTTP_PORT}/control.html")
-    print(f"  Affichage : http://{ip}:{HTTP_PORT}/display.html?lane=1")
+    print(f"  Accueil / Home      : http://{ip}:{HTTP_PORT}/")
+    print(f"  Contrôle / Control  : http://{ip}:{HTTP_PORT}/control.html")
+    print(f"  Affichage / Display : http://{ip}:{HTTP_PORT}/display.html?lane=1")
     print()
-    print("  Depuis CE téléphone, remplace l'IP par 127.0.0.1 si besoin.")
-    print("  Depuis une tablette/PC sur le même WiFi, utilise l'IP ci-dessus.")
-    print("  (si l'IP semble fausse : vérifie-la dans les réglages WiFi du téléphone)")
-    print(f"  Données du club (logo, sons, config...) : {data_root}")
+    print("  Depuis CET appareil, remplace l'IP par 127.0.0.1 si besoin.")
+    print("  From THIS device, replace the IP with 127.0.0.1 if needed.")
+    print()
+    print("  Depuis un autre appareil sur le même réseau WiFi, utilise l'IP ci-dessus.")
+    print("  From another device on the same WiFi network, use the IP above.")
+    print()
+    print("  (si l'IP semble fausse, vérifie-la dans les réglages réseau)")
+    print("  (if the IP looks wrong, check it in your network settings)")
+    print()
+    print(f"  Données du club (logo, sons, config...) / Club data: {data_root}")
     print("=" * 60)
+    if sys.platform == "win32":
+        print("  Windows : si un autre appareil n'arrive pas à se connecter,")
+        print("  autorise FletchTime dans le pare-feu Windows (Autoriser une")
+        print("  application... -- coche réseaux privés) quand la fenêtre")
+        print("  d'alerte apparaît, ou vérifie-le dans les paramètres.")
+        print("  Windows: if another device can't connect, allow FletchTime")
+        print("  through Windows Firewall (Allow an app... -- check private")
+        print("  networks) when the alert pops up, or check it in settings.")
+        print("=" * 60)
 
     http_thread = threading.Thread(
         target=start_http_server,
@@ -142,7 +158,7 @@ def main() -> None:
     try:
         asyncio.run(run_ws_server(WS_PORT))
     except KeyboardInterrupt:
-        print("Arrêt du serveur.")
+        print("Arrêt du serveur. / Server stopped.")
 
 
 if __name__ == "__main__":

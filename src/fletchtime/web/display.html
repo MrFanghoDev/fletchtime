@@ -34,7 +34,7 @@
   }
   /* Écran neutre (avant le concours ou après sa fin) -- diaporama qui
      alterne entre logo+horloge et les bannières sponsors déposées par le
-     DOS dans assets/banners/. */
+     le club dans assets/banners/. */
   #idle { display:none; flex-direction:column; align-items:center; }
   #idle-logo { max-height:32vh; max-width:70vw; object-fit:contain; margin-bottom:1.5rem; }
   #idle-wordmark {
@@ -86,7 +86,6 @@
   const params = new URLSearchParams(location.search);
   const lane = params.get("lane") || "?";
   let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
-  let lastEventTitle = "";
   document.getElementById("lane").textContent = t(currentLanguage, "lane") + " " + lane;
 
   const root = document.getElementById("root");
@@ -159,7 +158,7 @@
   setInterval(updateIdleClock, 1000);
 
   // Diaporama de l'écran neutre : alterne logo+horloge et les bannières
-  // sponsors déposées par le DOS dans assets/banners/. Découverte
+  // sponsors déposées par le le club dans assets/banners/. Découverte
   // automatique via le listing de répertoire du serveur HTTP -- pas besoin
   // d'un système d'upload, juste déposer les fichiers dans le dossier.
   const SLIDE_DURATION_MS = 8000;
@@ -331,8 +330,7 @@
       document.getElementById("lane").textContent = t(currentLanguage, "lane") + " " + lane;
     }
 
-    eventTitleBannerEl.textContent = payload.event_title || lastEventTitle;
-    lastEventTitle = payload.event_title || lastEventTitle;
+    eventTitleBannerEl.textContent = payload.event_title || "";
 
     if (payload.sound_pack && payload.sound_pack !== currentSoundPack) {
       currentSoundPack = payload.sound_pack;
