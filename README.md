@@ -1,4 +1,4 @@
-<img src="src/fletchtime/web/logo.svg" width="80" height="80" alt="FletchTime logo">
+<img src="https://mrfanghodev.github.io/fletchtime/_static/logo.svg" width="80" height="80" alt="FletchTime logo">
 
 # FletchTime
 

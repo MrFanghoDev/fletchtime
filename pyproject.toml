@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fletchtime"
-version = "0.1.0"
+version = "0.1.1"
 description = "Chronométrage de compétitions d'archerie FFTL (Indoor, Flint) -- serveur + interfaces web incluses"
 readme = "README.md"
 requires-python = ">=3.11"
