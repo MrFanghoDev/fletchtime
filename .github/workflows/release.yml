@@ -53,6 +53,47 @@ jobs:
           pwd
           ls -R dist
 
+      - name: Test de fumée -- l'exécutable démarre et sert la vraie page d'accueil (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cd dist/FletchTime
+          ./FletchTime &
+          SERVER_PID=$!
+          sleep 3
+          RESPONSE=$(curl -sf http://127.0.0.1:8000/)
+          kill $SERVER_PID 2>/dev/null || true
+          echo "$RESPONSE" | grep -q "FletchTime" || {
+            echo "ÉCHEC : la page d'accueil ne contient pas 'FletchTime' -- probablement le"
+            echo "dossier web/ introuvable (ex. régression du contenu de PyInstaller _internal/)."
+            echo "--- Réponse reçue ---"
+            echo "$RESPONSE"
+            exit 1
+          }
+          echo "OK -- la page d'accueil répond correctement."
+
+      - name: Test de fumée -- l'exécutable démarre et sert la vraie page d'accueil (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Push-Location dist/FletchTime
+          Start-Process -FilePath ".\FletchTime.exe" -WindowStyle Hidden
+          Start-Sleep -Seconds 3
+          try {
+            $response = Invoke-WebRequest -Uri "http://127.0.0.1:8000/" -UseBasicParsing
+          } finally {
+            Stop-Process -Name "FletchTime" -Force -ErrorAction SilentlyContinue
+          }
+          Pop-Location
+          if ($response.Content -notmatch "FletchTime") {
+            Write-Host "ÉCHEC : la page d'accueil ne contient pas 'FletchTime' -- probablement le"
+            Write-Host "dossier web/ introuvable (ex. régression du contenu de PyInstaller _internal/)."
+            Write-Host "--- Réponse reçue ---"
+            Write-Host $response.Content
+            exit 1
+          }
+          Write-Host "OK -- la page d'accueil répond correctement."
+
       - name: Créer l'archive Windows
         if: runner.os == 'Windows'
         shell: pwsh

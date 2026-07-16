@@ -134,7 +134,8 @@ def save_app_config(overrides: dict[str, Any]) -> dict[str, Any]:
     merged.update({k: v for k, v in overrides.items() if k in DEFAULT_APP_CONFIG})
     if merged["countdown_tick_seconds"] < 0:
         raise ValueError(
-            "countdown_tick_seconds must be >= 0, got " f"{merged['countdown_tick_seconds']}"
+            "countdown_tick_seconds must be >= 0, got "
+            f"{merged['countdown_tick_seconds']}"
         )
     _write_toml(APP_TOML, merged, APP_COMMENTS)
     return merged
