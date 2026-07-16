@@ -1,6 +1,6 @@
 import unittest
 
-from fletchtime_engine import (
+from fletchtime.engine import (
     FlintConfig,
     FlintMode,
     IndoorConfig,

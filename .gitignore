@@ -5,6 +5,11 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
+# Artefacts de build (wheel, PyInstaller) -- jamais versionnés, régénérés à
+# la demande via `python -m build`, `pip wheel .`, ou `pyinstaller fletchtime.spec`.
+build/
+dist/
+
 # Environnements virtuels
 .venv/
 venv/

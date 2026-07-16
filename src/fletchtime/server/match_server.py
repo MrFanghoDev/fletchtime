@@ -14,7 +14,7 @@ import json
 from dataclasses import asdict, replace
 from typing import Dict, Optional, Set
 
-from fletchtime_engine import (
+from fletchtime.engine import (
     FlintMode,
     IndoorMode,
     MatchEngine,

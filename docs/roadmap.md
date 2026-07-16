@@ -63,19 +63,15 @@ valider le comportement avant d'ajouter le réseau.*
   gravité tant que le réseau du concours est fermé/dédié, mais à documenter
   clairement (voire à durcir, ex. mot de passe simple sur `/control`) avant un
   partage plus large ou un usage sur un réseau moins maîtrisé.
-- **Exécutable autoporteur** : livrer FletchTime en `.exe`/binaire autonome
-  (Windows/macOS/Linux), en plus du parcours Pydroid actuel, pour les clubs
-  qui préfèrent un PC dédié sans installer Python. Implique :
-  - empaqueter `run_server.py` + `src/` + `web/` dans un seul exécutable
-    (voir recommandation ci-dessous) ;
-  - au premier lancement, créer automatiquement les dossiers/fichiers
-    attendus chez l'utilisateur s'ils n'existent pas (`web/assets/club/`,
-    `web/assets/banners/`, `web/assets/targets/`, `sounds/packs/_custom/`)
-    -- aujourd'hui ces dossiers sont gitignorés et n'existent que si le club
-    les a créés manuellement en suivant la doc ; un exécutable autoporteur ne
-    doit pas dépendre de ça ;
-  - documenter ce nouveau mode de déploiement dans le manuel utilisateur
-    (étape 6), en plus du parcours Pydroid déjà couvert.
+- ~~**Exécutable autoporteur**~~ -- fait : `fletchtime.spec` (PyInstaller) +
+  `.github/workflows/release.yml` construisent automatiquement un `.zip`
+  Windows et un `.tar.gz` Linux à chaque tag de version (`git tag v0.1.0 &&
+  git push --tags`), publiés en Release GitHub. `fletchtime/__main__.py`
+  détecte le mode empaqueté (`sys.frozen`) et crée automatiquement au
+  premier lancement les dossiers attendus (`web/assets/club/`, `banners/`,
+  `targets/`, `sounds/packs/_custom/`) s'ils manquent. macOS non testé (pas
+  de machine disponible) mais devrait fonctionner de la même façon via un
+  runner `macos-latest` à ajouter à la matrice si besoin.
 - **Web app côté client (PWA)** : transformer `control.html`/`display.html`
   (voire `index.html`) en Progressive Web App -- `manifest.json` + service
   worker + icônes. Permettrait d'"installer" l'app sur l'écran d'accueil

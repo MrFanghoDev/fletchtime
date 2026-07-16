@@ -12,15 +12,25 @@ maison, largement suffisant pour les types simples qu'on manipule ici
 
 from __future__ import annotations
 
+import sys
 import tomllib
 from dataclasses import fields
 from pathlib import Path
 from typing import Any, Dict
 
-from fletchtime_engine import FlintConfig, IndoorConfig
+from fletchtime.engine import FlintConfig, IndoorConfig
 
-# .../src/fletchtime_server/config_store.py -> remonte à la racine du projet
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# FletchTime opère sur le répertoire courant, comme la plupart des outils en
+# ligne de commande (jekyll, hugo...) : `config/` vit à côté d'où la
+# commande est lancée -- que ce soit un clone du dépôt (le dev lance
+# généralement les commandes depuis la racine) ou un `pip install
+# fletchtime` lancé depuis le dossier de travail du club. Empaqueté par
+# PyInstaller, on repart de l'exécutable lui-même à la place (voir
+# fletchtime/__main__.py, même logique).
+if getattr(sys, "frozen", False):
+    PROJECT_ROOT = Path(sys.executable).resolve().parent
+else:
+    PROJECT_ROOT = Path.cwd()
 CONFIG_DIR = PROJECT_ROOT / "config"
 INDOOR_TOML = CONFIG_DIR / "indoor.toml"
 FLINT_TOML = CONFIG_DIR / "flint.toml"

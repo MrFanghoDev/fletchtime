@@ -3,8 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fletchtime_server import config_store
-from fletchtime_server.match_server import MatchServer
+from fletchtime.server import config_store
+from fletchtime.server.match_server import MatchServer
 
 
 class FakeWebSocket:

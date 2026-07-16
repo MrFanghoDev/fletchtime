@@ -1,0 +1,64 @@
+name: Publier sur PyPI
+
+# Publie le paquet fletchtime (serveur + moteur + pages web -- tout le
+# nécessaire pour lancer `python -m fletchtime`) sur PyPI, via "Trusted
+# Publishing" (authentification par OIDC, sans jeton API à stocker en secret).
+#
+# Configuration ponctuelle nécessaire (une seule fois, sur PyPI) :
+#   1. Crée un compte sur https://pypi.org si besoin.
+#   2. Publie une première fois à la main (voir docs/dev-guide/index.md)
+#      OU crée le projet vide sur PyPI puis configure directement un
+#      "trusted publisher" : https://pypi.org/manage/account/publishing/
+#      - PyPI Project Name: fletchtime
+#      - Owner: MrFanghoDev
+#      - Repository name: fletchtime
+#      - Workflow name: pypi.yml
+#      - Environment name: pypi (doit correspondre à l'environment ci-dessous)
+#
+# Déclenchement : à la publication d'une Release GitHub (voir release.yml,
+# qui en crée une automatiquement à chaque tag v*.*.*), ou manuellement.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les outils de build
+        run: pip install build
+
+      - name: Construire la distribution (sdist + wheel)
+        run: python -m build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/fletchtime/
+    permissions:
+      id-token: write  # requis pour le Trusted Publishing (OIDC), pas de jeton secret
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1

@@ -3,7 +3,7 @@
 (stable across recent library versions), deliberately avoiding the
 combined HTTP+WS-on-one-port trick whose API has shifted between
 ``websockets`` releases -- see docs/architecture.md for why HTTP (static
-pages) is served separately by ``fletchtime_server.http_static``.
+pages) is served separately by ``fletchtime.server.http_static``.
 """
 
 from __future__ import annotations

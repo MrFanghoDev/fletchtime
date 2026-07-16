@@ -36,7 +36,7 @@ python3 run_tests.py
 
 Tous les tests sont en `unittest` (stdlib), aucune dépendance de test à
 installer. Le paquet `websockets` n'est pas nécessaire pour lancer les
-tests : la logique serveur (`fletchtime_server.match_server`) est testée via
+tests : la logique serveur (`fletchtime.server.match_server`) est testée via
 un faux client WebSocket (`FakeWebSocket` dans `tests/test_match_server.py`),
 justement pour rester testable dans un environnement qui n'a pas accès au
 réseau.
@@ -45,18 +45,29 @@ réseau.
 
 Voir {doc}`../architecture` pour le détail complet. En résumé :
 
-- `src/fletchtime_engine/` : le moteur de séquencement, pur Python, aucune
+- `src/fletchtime/engine/` : le moteur de séquencement, pur Python, aucune
   dépendance. C'est la partie la plus testée et la plus stable du projet.
-- `src/fletchtime_server/` : le serveur (WebSocket + HTTP statique + config
+  Publiable seul (`from fletchtime.engine import ...`) sans le reste.
+- `src/fletchtime/server/` : le serveur (WebSocket + HTTP statique + config
   TOML), construit par-dessus le moteur sans jamais le modifier.
-- `web/` : les pages HTML/CSS/JS servies telles quelles (pas de build, pas de
-  framework front-end).
-- `config/` : fichiers TOML lus/écrits par `config_store.py`.
+- `src/fletchtime/web/` : les pages HTML/CSS/JS de l'application
+  elles-mêmes (control.html, display.html...), incluses dans le paquet
+  installé comme *package data* -- servies en lecture seule, jamais
+  modifiées par un club.
+- `src/fletchtime/__main__.py` : point d'entrée (`python -m fletchtime`),
+  résout où vivent les pages de l'appli (dans le paquet) et où vivent les
+  données du club (répertoire courant, ou à côté de l'exécutable si
+  PyInstaller) -- voir sa docstring pour le détail de cette distinction.
+- `web/assets/` (à la racine du dépôt, **pas** dans `src/`) : les données
+  propres à un club (logo, bannières, images de cible, packs de sons) --
+  doivent rester modifiables, jamais embarquées dans le paquet lui-même.
+- `config/` : fichiers TOML lus/écrits par `config_store.py`, même logique
+  que `web/assets/` (répertoire courant, pas dans le paquet).
 - `docs/` : cette documentation (Sphinx + MyST).
 
 ## Comment ajouter un nouveau mode de tir (`ShootingMode`)
 
-1. Crée `src/fletchtime_engine/modes/ton_mode.py`, avec une classe qui hérite
+1. Crée `src/fletchtime/engine/modes/ton_mode.py`, avec une classe qui hérite
    de `ShootingMode` (voir `modes/base.py`) et implémente
    `build_sequence() -> List[Step]`. Regarde `indoor.py`/`flint.py` comme
    modèles -- la logique de ton mode n'a besoin de rien connaître du réseau,
@@ -70,12 +81,12 @@ Voir {doc}`../architecture` pour le détail complet. En résumé :
    liste de `Step` produite par `build_sequence()`, pas besoin de faire
    tourner de minuteur ni de serveur pour ça (voir `test_indoor_mode.py`,
    `test_flint_mode.py`).
-4. Câble ton mode dans `src/fletchtime_server/match_server.py` (actions
+4. Câble ton mode dans `src/fletchtime/server/match_server.py` (actions
    `start_<ton_mode>` dans `handle_command`, plus `load_<ton_mode>_config`/
    `save_<ton_mode>_config` dans `config_store.py` si tu veux qu'il soit
    configurable via `config.html`).
-5. Ajoute les boutons/champs correspondants dans `web/control.html` et
-   `web/config.html`.
+5. Ajoute les boutons/champs correspondants dans `src/fletchtime/web/control.html`
+   et `src/fletchtime/web/config.html`.
 
 **Pièges à éviter** :
 - Ne mets aucun état mutable dans la classe `ShootingMode` elle-même --

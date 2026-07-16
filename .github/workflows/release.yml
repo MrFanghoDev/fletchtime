@@ -1,0 +1,73 @@
+name: Exécutables autoporteurs (release)
+
+# Construit un exécutable autoporteur pour Windows (.zip) et Linux (.tar.gz)
+# via PyInstaller, sur les runners natifs de GitHub Actions (PyInstaller ne
+# fait pas de cross-compilation : le binaire Windows est produit par un
+# runner Windows, le binaire Linux par un runner Linux).
+#
+# Déclenchement : push d'un tag de version (ex. v0.1.0), ou manuellement
+# depuis l'onglet Actions. Les deux archives sont jointes à une Release
+# GitHub créée automatiquement.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            archive_format: zip
+            archive_name: FletchTime-windows.zip
+          - os: ubuntu-latest
+            archive_format: gztar
+            archive_name: FletchTime-linux.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances de build
+        run: pip install pyinstaller websockets
+
+      - name: Construire l'exécutable
+        run: pyinstaller fletchtime.spec
+
+      - name: Créer l'archive (${{ matrix.archive_format }})
+        shell: bash
+        run: |
+          cd dist
+          python3 -c "
+          import shutil
+          shutil.make_archive('FletchTime', '${{ matrix.archive_format }}', '.', 'FletchTime')
+          "
+          # renomme vers le nom final attendu (make_archive ajoute son
+          # extension automatiquement, ex. FletchTime.zip / FletchTime.tar.gz)
+          for f in FletchTime.zip FletchTime.tar.gz; do
+            [ -f "$f" ] && mv "$f" "${{ matrix.archive_name }}"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive_name }}
+          path: dist/${{ matrix.archive_name }}
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publier la Release GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*/*

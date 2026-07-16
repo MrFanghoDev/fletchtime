@@ -1,6 +1,6 @@
 import unittest
 
-from fletchtime_engine import IndoorConfig, IndoorMode, Phase
+from fletchtime.engine import IndoorConfig, IndoorMode, Phase
 
 
 class TestIndoorMode(unittest.TestCase):

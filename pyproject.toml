@@ -3,16 +3,23 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fletchtime-engine"
+name = "fletchtime"
 version = "0.1.0"
-description = "Moteur de séquencement pour compétitions d'archerie FFTL (Indoor, Flint)"
+description = "Chronométrage de compétitions d'archerie FFTL (Indoor, Flint) -- serveur + interfaces web incluses"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "GPL-3.0-or-later" }
-dependencies = []
+dependencies = ["websockets>=12.0"]
 
 [project.optional-dependencies]
 docs = ["sphinx>=7.0", "myst-parser>=2.0", "furo>=2024.1.29"]
 
+[project.scripts]
+fletchtime = "fletchtime.__main__:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["fletchtime*"]
+
+[tool.setuptools.package-data]
+"fletchtime.web" = ["*.html", "*.js", "*.svg"]

@@ -1,6 +1,6 @@
 import unittest
 
-from fletchtime_engine import FlintConfig, FlintMode, Phase
+from fletchtime.engine import FlintConfig, FlintMode, Phase
 
 
 class TestFlintMode(unittest.TestCase):

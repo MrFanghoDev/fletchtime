@@ -19,7 +19,7 @@ class ShootingMode(ABC):
     """Builds the full ordered list of :class:`Step` for one competition
     round. Modes are stateless sequence generators; all runtime state
     (current position, elapsed time, pause/emergency) lives in
-    :class:`fletchtime_engine.engine.MatchEngine`.
+    :class:`fletchtime.engine.engine.MatchEngine`.
     """
 
     @abstractmethod

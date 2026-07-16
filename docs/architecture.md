@@ -39,7 +39,8 @@ installation logicielle sur les tablettes d'affichage.
 | Frontend | HTML/CSS/JS vanilla | Pas de build, une tablette ouvre juste une URL. |
 | Config des modes (Indoor/Flint) | Fichiers **TOML** (`config/*.toml`) | Lu via `tomllib`, stdlib depuis Python 3.11 (donc Pydroid) -- zéro dépendance. Écriture via un petit sérialiseur maison (pas de support d'écriture en stdlib). |
 | Assets (logo, bannières, cibles, sons) | Dépôt de fichiers dans `web/assets/...`, découverte par listing de répertoire HTTP | Pas de formulaire d'upload à construire ni maintenir. |
-| Déploiement | Développé et testé sur Pydroid 3 (Android) ; lancement via un script Python unique (`run_server.py`) | Contrainte du club : développement mobile-only, pas de PC. |
+| Paquetage | Un seul paquet `fletchtime` (PyPI), sous-paquets `fletchtime.engine`/`fletchtime.server`, pages web incluses comme *package data* dans `fletchtime.web` | `pip install fletchtime` + `python -m fletchtime` (ou juste `fletchtime`) suffit partout -- Pydroid compris. Les données propres au club (logo, sons, config) restent hors du paquet installé, bootstrapées dans le répertoire courant au premier lancement. |
+| Déploiement | Pydroid 3 (Android), pip/PyPI, ou exécutable autoporteur (PyInstaller) | Contrainte du club à l'origine : développement mobile-only, pas de PC -- le paquet PyPI et l'exécutable ont été ajoutés ensuite pour élargir l'usage à d'autres clubs. |
 
 ## Modèle d'état
 
@@ -140,7 +141,7 @@ existants (voir {doc}`dev-guide/index`).
 
 ## Configuration (TOML)
 
-`src/fletchtime_server/config_store.py` charge/sauvegarde trois fichiers :
+`src/fletchtime/server/config_store.py` charge/sauvegarde trois fichiers :
 
 - `config/indoor.toml`, `config/flint.toml` : tous les réglages de chaque
   mode (temps, distances, nombre de volées/flèches, images de cible, ordre

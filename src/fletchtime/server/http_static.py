@@ -1,0 +1,60 @@
+"""Serves the static pages (control.html, display.html) over plain HTTP,
+stdlib only -- no risk of incompatible native dependencies on Pydroid.
+
+Kept on a separate port from the WebSocket server on purpose: combining
+HTTP + WS on a single port requires APIs that have shifted across
+``websockets`` releases, while two plain servers on two ports is boring
+and guaranteed to work everywhere, including on a phone.
+"""
+
+from __future__ import annotations
+
+import functools
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Optional
+
+
+class _DualRootHandler(SimpleHTTPRequestHandler):
+    """Serves the app's own static pages (control.html, i18n.js, logo.svg...)
+    from ``directory`` as usual, but reroutes any ``/assets/...`` request to
+    a separate ``assets_dir`` instead.
+
+    This matters once FletchTime is a proper installed package: the app
+    pages live read-only inside the installed package, while club-specific
+    data (logo, banners, target images, sound packs) must stay writable and
+    outside of it -- see ``fletchtime.__main__``. When running as a
+    PyInstaller executable or straight from a git clone, ``assets_dir`` is
+    simply ``directory / "assets"``, so this is a no-op in practice (same
+    behaviour as before this existed).
+    """
+
+    def __init__(self, *args, directory: str, assets_dir: str, **kwargs) -> None:
+        self._assets_dir = assets_dir
+        super().__init__(*args, directory=directory, **kwargs)
+
+    def translate_path(self, path: str) -> str:
+        if path == "/assets" or path.startswith("/assets/"):
+            rel = path[len("/assets"):].lstrip("/")
+            # reproduit la logique de nettoyage de chemin de la classe de
+            # base (retire la query string, etc.) en la réappliquant à un
+            # chemin de base différent
+            original_directory = self.directory
+            try:
+                self.directory = self._assets_dir
+                return super().translate_path("/" + rel)
+            finally:
+                self.directory = original_directory
+        return super().translate_path(path)
+
+
+def start_http_server(directory: str, port: int, assets_dir: Optional[str] = None) -> None:
+    """``assets_dir`` defaults to ``<directory>/assets`` when not given,
+    matching the historical single-root behaviour (dev checkout, or a
+    PyInstaller build where everything sits together next to the exe)."""
+    resolved_assets_dir = assets_dir or str(Path(directory) / "assets")
+    handler = functools.partial(
+        _DualRootHandler, directory=directory, assets_dir=resolved_assets_dir
+    )
+    httpd = ThreadingHTTPServer(("0.0.0.0", port), handler)
+    httpd.serve_forever()

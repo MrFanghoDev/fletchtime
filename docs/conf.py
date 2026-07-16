@@ -26,7 +26,6 @@ myst_enable_extensions = [
     "tasklist",
 ]
 
-templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 language = "fr"
