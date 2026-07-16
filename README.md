@@ -56,6 +56,23 @@ from fletchtime.engine import IndoorMode, IndoorConfig, MatchEngine
 engine = MatchEngine(IndoorMode(IndoorConfig()))
 ```
 
+## Qualité continue
+
+Chaque push et pull request déclenche `.github/workflows/ci.yml` :
+formatage/lint (Black + Ruff -- corrigés et recommités automatiquement sur
+un push direct, juste vérifiés sur une pull request) puis la suite de
+tests complète. Aucune dépendance externe nécessaire pour les tests,
+`websockets` compris (voir `docs/dev-guide/index.md`).
+
+En local :
+
+```bash
+pip install -e ".[dev]"
+black src tests demo.py run_server.py run_tests.py
+ruff check --fix src tests demo.py run_server.py run_tests.py
+python -m unittest discover -s tests -v
+```
+
 ## Publication (pour les mainteneurs)
 
 - **PyPI** (`pip install fletchtime`) : publication automatique via

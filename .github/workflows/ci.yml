@@ -1,0 +1,82 @@
+name: CI (lint + tests)
+
+# Qualité continue : formatage/lint (Black + Ruff) puis suite de tests, à
+# chaque push et pull request.
+#
+# - Sur un push direct (main/master) : Black et Ruff corrigent
+#   automatiquement, et la correction est recommitée si besoin -- pratique
+#   pour un projet à un seul mainteneur qui n'a pas toujours lancé les
+#   formatteurs en local avant de pousser.
+# - Sur une pull request : Black/Ruff tournent en mode vérification
+#   seulement (`--check`) et font échouer le job si le code n'est pas
+#   conforme, plutôt que de commiter directement sur la branche de la PR.
+#
+# Les tests ne nécessitent aucune dépendance externe, `websockets` compris :
+# la logique serveur est testée via un faux client WebSocket, voir
+# tests/test_match_server.py.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  LINT_PATHS: src tests demo.py run_server.py run_tests.py
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer Black et Ruff
+        run: pip install black ruff
+
+      - name: Black -- correction automatique (push direct)
+        if: github.event_name == 'push'
+        run: black ${{ env.LINT_PATHS }}
+
+      - name: Ruff -- correction automatique (push direct)
+        if: github.event_name == 'push'
+        run: ruff check --fix ${{ env.LINT_PATHS }}
+
+      - name: Commit des corrections automatiques, si nécessaire
+        if: github.event_name == 'push'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: corrections automatiques (black + ruff)"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+
+      - name: Black -- vérification seule (pull request)
+        if: github.event_name == 'pull_request'
+        run: black --check --diff ${{ env.LINT_PATHS }}
+
+      - name: Ruff -- vérification seule (pull request)
+        if: github.event_name == 'pull_request'
+        run: ruff check ${{ env.LINT_PATHS }}
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Lancer la suite de tests
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
