@@ -686,5 +686,166 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(reply["ok"])
 
 
+class TestMatchServerAuth(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self) -> None:
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._originals = {
+            "INDOOR_TOML": config_store.INDOOR_TOML,
+            "FLINT_TOML": config_store.FLINT_TOML,
+            "APP_TOML": config_store.APP_TOML,
+            "AUTH_TOML": config_store.AUTH_TOML,
+        }
+        config_store.INDOOR_TOML = Path(self._tmpdir.name) / "indoor.toml"
+        config_store.FLINT_TOML = Path(self._tmpdir.name) / "flint.toml"
+        config_store.APP_TOML = Path(self._tmpdir.name) / "app.toml"
+        config_store.AUTH_TOML = Path(self._tmpdir.name) / "auth.toml"
+
+        self.server = MatchServer()
+        self.control = FakeWebSocket()
+        await self.server.register(self.control)
+
+    async def asyncTearDown(self) -> None:
+        config_store.INDOOR_TOML = self._originals["INDOOR_TOML"]
+        config_store.FLINT_TOML = self._originals["FLINT_TOML"]
+        config_store.APP_TOML = self._originals["APP_TOML"]
+        config_store.AUTH_TOML = self._originals["AUTH_TOML"]
+        self._tmpdir.cleanup()
+
+    def _last(self):
+        return json.loads(self.control.sent[-1])
+
+    async def test_no_password_by_default_everything_works(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        self.assertIsNotNone(self.control.last_state())
+
+    async def test_auth_required_flag_false_by_default(self) -> None:
+        self.assertFalse(self._last()["auth_required"])
+
+    async def test_setting_the_first_password_needs_no_prior_auth(self) -> None:
+        await self.server.handle_command(
+            json.dumps({"action": "save_config", "mode": "auth", "values": {"password": "secret"}}),
+            self.control,
+        )
+        reply = self.control.last_config_saved_reply()
+        self.assertTrue(reply["ok"])
+        self.assertEqual(reply["values"], {"password_set": True})  # jamais le mot de passe en clair
+
+    async def test_protected_action_blocked_once_password_is_set(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}), self.control)
+        self.assertEqual(self._last()["type"], "auth_required")
+
+    async def test_auth_required_flag_becomes_true_once_password_is_set(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        await self.server.broadcast_state()
+        self.assertTrue(self._last()["auth_required"])
+
+    async def test_wrong_password_is_rejected(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        await self.server.handle_command(
+            json.dumps({"action": "authenticate", "password": "wrong"}), self.control
+        )
+        reply = self._last()
+        self.assertEqual(reply["type"], "auth_result")
+        self.assertFalse(reply["ok"])
+
+    async def test_correct_password_authenticates_and_unblocks_actions(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        await self.server.handle_command(
+            json.dumps({"action": "authenticate", "password": "secret"}), self.control
+        )
+        self.assertTrue(self._last()["ok"])
+
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}), self.control)
+        self.assertIsNotNone(self.control.last_state())  # a bien démarré, pas rejeté
+
+    async def test_get_config_reports_password_set_without_leaking_it(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        await self.server.handle_command(json.dumps({"action": "get_config"}), self.control)
+        payload = self._last()
+        self.assertEqual(payload["auth"], {"password_set": True})
+        self.assertNotIn("secret", json.dumps(payload))  # le mot de passe ne transite jamais
+
+    async def test_changing_password_requires_current_authentication(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        # nouvelle connexion, pas encore authentifiée
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "autre"},
+        }), self.control)
+        reply = self.control.last_config_saved_reply()
+        self.assertFalse(reply["ok"])
+        self.assertEqual(reply["error"], "auth_required")
+
+    async def test_indoor_and_flint_config_also_blocked_without_auth(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
+        }), self.control)
+        reply = self.control.last_config_saved_reply()
+        self.assertFalse(reply["ok"])
+        self.assertEqual(reply["error"], "auth_required")
+
+    async def test_get_config_and_register_display_never_need_auth(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        await self.server.handle_command(json.dumps({"action": "get_config"}), self.control)
+        self.assertEqual(self._last()["type"], "config")
+
+        display = FakeWebSocket()
+        await self.server.register(display)
+        await self.server.handle_command(
+            json.dumps({"action": "register_display", "lane": "1"}), display
+        )
+        self.assertIn("1", json.loads(self.control.sent[-1])["connected_lanes"])
+
+    async def test_unregistering_clears_authentication(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        await self.server.handle_command(
+            json.dumps({"action": "authenticate", "password": "secret"}), self.control
+        )
+        self.assertTrue(self._last()["ok"])
+
+        await self.server.unregister(self.control)
+        await self.server.register(self.control)  # reconnexion (nouvelle "session")
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}), self.control)
+        self.assertEqual(self._last()["type"], "auth_required")
+
+    async def test_empty_password_disables_protection_again(self) -> None:
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
+        }))
+        await self.server.handle_command(
+            json.dumps({"action": "authenticate", "password": "secret"}), self.control
+        )
+        await self.server.handle_command(json.dumps({
+            "action": "save_config", "mode": "auth", "values": {"password": ""},
+        }), self.control)
+        reply = self.control.last_config_saved_reply()
+        self.assertTrue(reply["ok"])
+
+        # une connexion toute neuve, jamais authentifiée, doit maintenant passer
+        fresh = FakeWebSocket()
+        await self.server.register(fresh)
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}), fresh)
+        self.assertIsNotNone(fresh.last_state())
+
+
 if __name__ == "__main__":
     unittest.main()

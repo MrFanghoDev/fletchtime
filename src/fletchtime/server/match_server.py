@@ -24,6 +24,30 @@ from . import config_store
 
 TICK_INTERVAL = 0.2  # seconds between engine ticks / broadcasts
 
+# Actions qui changent l'état du match ou son affichage -- protégées par mot
+# de passe si un mot de passe est configuré (voir _auth_required). Tout le
+# reste (get_config, register_display, authenticate) reste toujours
+# accessible sans authentification, y compris save_config (mode "app" pour
+# changer le mot de passe lui-même doit rester joignable pour le définir la
+# première fois -- voir _handle_config_action pour sa propre garde dédiée).
+PROTECTED_ACTIONS = frozenset(
+    {
+        "start_indoor",
+        "start_flint",
+        "next",
+        "stop",
+        "restart",
+        "goto",
+        "emergency",
+        "resume",
+        "pause",
+        "play",
+        "message",
+        "set_language",
+        "set_event_title",
+    }
+)
+
 
 def _state_to_dict(state: MatchState) -> dict:
     data = asdict(state)
@@ -66,6 +90,15 @@ class MatchServer:
         _app_config = config_store.load_app_config()
         self._sound_pack: str = _app_config["sound_pack"]
         self._countdown_tick_seconds: int = _app_config["countdown_tick_seconds"]
+        # Mot de passe protégeant les actions de contrôle et la
+        # configuration -- vide = aucune protection (comportement historique
+        # inchangé). Chargé une fois au démarrage, mis à jour via
+        # save_config("auth", ...).
+        self._password: str = config_store.load_auth_config()["password"]
+        # Connexions ayant fourni le bon mot de passe (voir action
+        # "authenticate") -- par connexion, pas persistant : rouvrir la page
+        # (nouvelle connexion WebSocket) redemande le mot de passe.
+        self._authenticated_connections: set = set()
 
     # -- connection lifecycle ---------------------------------------------
 
@@ -76,6 +109,32 @@ class MatchServer:
     async def unregister(self, websocket) -> None:
         self.clients.discard(websocket)
         self._display_lanes.pop(websocket, None)
+        self._authenticated_connections.discard(websocket)
+
+    # -- authentication -------------------------------------------------------
+
+    def _auth_required(self, websocket) -> bool:
+        """True if this connection still needs to authenticate before being
+        allowed to perform a protected action -- always False if no
+        password is configured at all (default, fully open behaviour)."""
+        return bool(self._password) and websocket not in self._authenticated_connections
+
+    async def _reject_unauthenticated(self, websocket) -> None:
+        if websocket is not None:
+            try:
+                await websocket.send(json.dumps({"type": "auth_required"}))
+            except Exception:
+                pass
+
+    async def _handle_authenticate(self, data: dict, websocket) -> None:
+        ok = (not self._password) or (data.get("password") == self._password)
+        if ok and websocket is not None:
+            self._authenticated_connections.add(websocket)
+        if websocket is not None:
+            try:
+                await websocket.send(json.dumps({"type": "auth_result", "ok": ok}))
+            except Exception:
+                pass
 
     # -- commands from /control ---------------------------------------------
 
@@ -86,8 +145,16 @@ class MatchServer:
             return
         action = data.get("action")
 
+        if action == "authenticate":
+            await self._handle_authenticate(data, websocket)
+            return
+
         if action in ("get_config", "save_config"):
             await self._handle_config_action(action, data, websocket)
+            return
+
+        if action in PROTECTED_ACTIONS and self._auth_required(websocket):
+            await self._reject_unauthenticated(websocket)
             return
 
         async with self._lock:
@@ -191,6 +258,7 @@ class MatchServer:
                                     "indoor": asdict(config_store.load_indoor_config()),
                                     "flint": asdict(config_store.load_flint_config()),
                                     "app": config_store.load_app_config(),
+                                    "auth": {"password_set": bool(self._password)},
                                 }
                             )
                         )
@@ -200,7 +268,10 @@ class MatchServer:
                 mode = data.get("mode")
                 values = data.get("values") or {}
                 reply: dict[str, object] = {"type": "config_saved", "mode": mode}
-                if self._mode_in_progress(mode):
+                if self._auth_required(websocket):
+                    reply["ok"] = False
+                    reply["error"] = "auth_required"
+                elif self._mode_in_progress(mode):
                     reply["ok"] = False
                     reply["error"] = "match_in_progress"
                 else:
@@ -219,6 +290,12 @@ class MatchServer:
                             self._countdown_tick_seconds = saved["countdown_tick_seconds"]
                             reply["ok"] = True
                             reply["values"] = saved
+                        elif mode == "auth":
+                            saved = config_store.save_auth_config(values)
+                            self._password = saved["password"]
+                            reply["ok"] = True
+                            # Ne jamais renvoyer le mot de passe en clair au client.
+                            reply["values"] = {"password_set": bool(saved["password"])}
                         else:
                             reply["ok"] = False
                             reply["error"] = f"unknown mode {mode!r}"
@@ -276,6 +353,7 @@ class MatchServer:
             except Exception:
                 self.clients.discard(ws)
                 self._display_lanes.pop(ws, None)
+                self._authenticated_connections.discard(ws)
 
     async def _send_state_to(self, websocket) -> None:
         try:
@@ -283,6 +361,7 @@ class MatchServer:
         except Exception:
             self.clients.discard(websocket)
             self._display_lanes.pop(websocket, None)
+            self._authenticated_connections.discard(websocket)
 
     def _payload_for(self, websocket) -> dict:
         state_dict = _state_to_dict(self.engine.current_state) if self.engine is not None else None
@@ -308,6 +387,7 @@ class MatchServer:
             "connected_lanes": connected_lanes,
             "active_mode": self._current_mode_kind if match_in_progress else None,
             "sound_pack": self._sound_pack,
+            "auth_required": self._auth_required(websocket),
         }
 
     async def _broadcast(self, payload: dict) -> None:
@@ -320,3 +400,4 @@ class MatchServer:
             except Exception:
                 self.clients.discard(ws)
                 self._display_lanes.pop(ws, None)
+                self._authenticated_connections.discard(ws)

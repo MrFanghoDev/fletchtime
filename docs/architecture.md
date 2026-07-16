@@ -223,6 +223,35 @@ racine du dépôt n'est qu'une sortie générée au premier lancement,
 entièrement ignorée par `.gitignore` -- y compris ses copies de `_defaults/`.
 ```
 
+## Authentification (optionnelle)
+
+Un mot de passe optionnel (`config/auth.toml`, vide par défaut -- jamais
+versionné, contrairement à `app.toml`/`indoor.toml`/`flint.toml` qui sont
+des réglages partageables sans risque) protège les actions qui changent
+l'état du match ou la configuration (`PROTECTED_ACTIONS` dans
+`match_server.py`). `display.html` (lecture seule) n'est jamais concerné.
+
+Mécanisme par **session de connexion WebSocket**, pas par mot de passe
+persistant sur l'appareil : une action `authenticate` marque la connexion
+en cours comme authentifiée (`self._authenticated_connections`, un
+ensemble de connexions, remis à zéro à la déconnexion) ; rouvrir la page
+(nouvelle connexion) redemande le mot de passe. Le mot de passe lui-même
+n'est jamais renvoyé en clair au client -- seul un booléen `password_set`
+circule.
+
+Tant qu'aucun mot de passe n'est défini, `_auth_required()` retourne
+toujours `False` : comportement strictement identique à avant l'ajout de
+ce mécanisme, y compris pour définir le tout premier mot de passe (pas de
+poule-et-l'œuf). Une fois un mot de passe actif, le changer ou le
+supprimer nécessite d'être déjà authentifié avec l'ancien.
+
+```{important}
+Reste du HTTP simple, non chiffré : quelqu'un capturant le trafic réseau
+sur le même WiFi pourrait intercepter le mot de passe. Adapté à un réseau
+de concours dédié/fermé, pas à un réseau partagé avec le grand public
+(voir `docs/roadmap.md`, backlog sécurité).
+```
+
 ## Multi-écrans et ciblage
 
 Chaque écran se connecte au WebSocket et s'enregistre avec son numéro de lane

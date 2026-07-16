@@ -10,9 +10,9 @@ localement par FletchTime lui-même comme les autres pages
 (`control.html`, `display.html`) -- pas de sens à le dupliquer dans cette
 documentation technique, qui elle est plutôt destinée aux développeurs.
 
-**Pour le consulter** : lance le serveur (`run_server.py`), ouvre la page
-d'accueil, puis clique sur "Manuel utilisateur" -- ou ouvre directement
-`web/manual.html` dans un navigateur.
+**Pour le consulter** : lance le serveur (`fletchtime`, ou `run_server.py`
+sur Pydroid), ouvre la page d'accueil, puis clique sur "Manuel
+utilisateur".
 
 Cette doc technique (`docs/`) est réservée aux sujets qui concernent le
 fonctionnement interne du logiciel : voir {doc}`../specifications`,

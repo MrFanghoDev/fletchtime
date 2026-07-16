@@ -13,14 +13,17 @@ class TestConfigStore(unittest.TestCase):
         self._original_indoor = config_store.INDOOR_TOML
         self._original_flint = config_store.FLINT_TOML
         self._original_app = config_store.APP_TOML
+        self._original_auth = config_store.AUTH_TOML
         config_store.INDOOR_TOML = Path(self._tmpdir.name) / "indoor.toml"
         config_store.FLINT_TOML = Path(self._tmpdir.name) / "flint.toml"
         config_store.APP_TOML = Path(self._tmpdir.name) / "app.toml"
+        config_store.AUTH_TOML = Path(self._tmpdir.name) / "auth.toml"
 
     def tearDown(self) -> None:
         config_store.INDOOR_TOML = self._original_indoor
         config_store.FLINT_TOML = self._original_flint
         config_store.APP_TOML = self._original_app
+        config_store.AUTH_TOML = self._original_auth
         self._tmpdir.cleanup()
 
     def test_missing_file_falls_back_to_dataclass_defaults(self) -> None:
@@ -88,6 +91,18 @@ class TestConfigStore(unittest.TestCase):
     def test_app_config_negative_countdown_tick_seconds_raises(self) -> None:
         with self.assertRaises(ValueError):
             config_store.save_app_config({"countdown_tick_seconds": -1})
+
+    def test_auth_config_default_password_is_empty(self) -> None:
+        self.assertEqual(config_store.load_auth_config()["password"], "")
+
+    def test_auth_config_save_and_reload(self) -> None:
+        config_store.save_auth_config({"password": "secret"})
+        self.assertEqual(config_store.load_auth_config()["password"], "secret")
+
+    def test_auth_config_can_be_cleared_back_to_empty(self) -> None:
+        config_store.save_auth_config({"password": "secret"})
+        config_store.save_auth_config({"password": ""})
+        self.assertEqual(config_store.load_auth_config()["password"], "")
 
     def test_app_config_save_and_reload(self) -> None:
         config_store.save_app_config({"sound_pack": "mon_club"})

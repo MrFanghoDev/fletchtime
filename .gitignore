@@ -17,6 +17,11 @@ venv/
 # Sphinx
 docs/_build/
 
+# Mot de passe de contrôle -- contrairement à config/app.toml, indoor.toml,
+# flint.toml (réglages partageables sans risque), ce fichier contient un
+# vrai secret et ne doit jamais être versionné.
+config/auth.toml
+
 # Assets propres à un club (logo, banderoles) -- jamais versionnés dans le
 # dépôt public partagé avec la FFTL, voir docs/architecture.md. Le README
 # explicatif est copié depuis src/fletchtime/web/_defaults/ au premier

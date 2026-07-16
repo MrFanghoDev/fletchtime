@@ -3,7 +3,7 @@
 Approche incrémentale : chaque étape est utilisable seule, testable, et ne dépend
 pas des étapes suivantes pour fonctionner en conditions réelles minimales.
 
-## Étape 1 — Moteur de séquencement (Python pur, sans UI)
+## ✅ Étape 1 — Moteur de séquencement (Python pur, sans UI)
 
 - Modélisation `MatchState`, `ShootingMode`.
 - Implémentation `IndoorMode` (2 séries de 6 volées de 5 flèches).
@@ -14,7 +14,7 @@ pas des étapes suivantes pour fonctionner en conditions réelles minimales.
 *Livrable : bibliothèque Python testée, utilisable en ligne de commande pour
 valider le comportement avant d'ajouter le réseau.*
 
-## Étape 2 — Serveur FastAPI + WebSocket
+## ✅ Étape 2 — Serveur temps réel
 
 - Endpoint `/control` (contrôle basique : next/stop/urgence).
 - Endpoint `/display?lane=n` (affichage brut, sans habillage).
@@ -22,32 +22,41 @@ valider le comportement avant d'ajouter le réseau.*
 
 *Livrable : chrono fonctionnel multi-écrans sur le réseau local, sans logo/pub/son.*
 
-## Étape 3 — Écran d'affichage complet
+```{note}
+Construit avec le paquet `websockets` (asyncio) + `http.server` stdlib, **pas
+FastAPI** comme envisagé au tout début de ce plan -- FastAPI/Pydantic
+dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
+{doc}`../architecture`.
+```
+
+## ✅ Étape 3 — Écran d'affichage complet
 
 - Affichage soigné (couleurs, typographie lisible à distance).
 - Image de cible selon la distance/manche.
 - Affichage ligne A-B/C-D.
 - Overlay logo club / date-heure en phase neutre.
 
-## Étape 4 — Interface de contrôle complète
+## ✅ Étape 4 — Interface de contrôle complète
 
 - Presets de mode sélectionnables (Indoor, Flint) sans édition de fichier.
 - Envoi de messages ponctuels (ciblés ou globaux).
-- Upload logo / banderoles.
+- Logo / banderoles (dépôt de fichier + découverte automatique, pas de
+  formulaire d'upload -- plus simple à construire et maintenir).
 
-## Étape 5 — Son
+## ✅ Étape 5 — Son
 
 - Packs de sons interchangeables.
-- Sélecteur de pack + import de pack personnalisé via l'UI.
+- Sélecteur de pack + pack "classic" fourni par défaut.
 
-## Étape 6 — Documentation et packaging
+## ✅ Étape 6 — Documentation et packaging
 
-- Manuel utilisateur (ce dépôt Sphinx/MyST), guide "premier concours" pas à pas.
-- Guide développeur : comment ajouter un mode de tir.
-- Script de lancement simplifié (voire exécutable packagé) pour un déploiement
-  sans compétences techniques.
+- Manuel utilisateur (dans l'appli) + doc technique Sphinx/MyST (specs,
+  architecture, guide développeur), publiée sur GitHub Pages.
+- Script de lancement simplifié **et** bien au-delà : paquet PyPI
+  (`pip install fletchtime` + commande `fletchtime`), exécutables
+  autoporteurs Windows/Linux, CI (lint + tests à chaque push).
 
-## Étape 7 — Partage FFTL
+## ⬜ Étape 7 — Partage FFTL
 
 - Nettoyage, licence open source claire, README d'accueil.
 - Contact fédération pour retour d'expérience / adoption éventuelle par d'autres
@@ -57,12 +66,14 @@ valider le comportement avant d'ajouter le réseau.*
 
 - ~~**Revamping du logo**~~ -- fait : nouveau logo cadran/flèche noir-or-blanc,
   wordmark "FletchTime" bicolore Fletch/Time, cohérent avec le thème clair/sombre.
-- **Sécurisation cyber** : le serveur WebSocket n'a actuellement aucune
-  authentification -- n'importe qui sur le même réseau WiFi local peut se
-  connecter et envoyer des commandes de contrôle (stop, urgence, etc.). Sans
-  gravité tant que le réseau du concours est fermé/dédié, mais à documenter
-  clairement (voire à durcir, ex. mot de passe simple sur `/control`) avant un
-  partage plus large ou un usage sur un réseau moins maîtrisé.
+- ~~**Sécurisation cyber**~~ -- en partie fait : mot de passe optionnel
+  (vide par défaut = comportement historique inchangé) protégeant les
+  actions de contrôle et la sauvegarde de configuration, réglable dans
+  `config.html` → section "Sécurité". Reste en HTTP simple, non chiffré
+  (voir {doc}`../architecture`) -- suffisant pour un réseau de concours
+  dédié/fermé, mais pas pour un réseau partagé avec le grand public. Pas de
+  liste blanche d'IP ni de HTTPS envisagés pour l'instant (complexité jugée
+  disproportionnée par rapport au risque réel pour ce projet).
 - ~~**Exécutable autoporteur**~~ -- fait : `fletchtime.spec` (PyInstaller) +
   `.github/workflows/release.yml` construisent automatiquement un `.zip`
   Windows et un `.tar.gz` Linux à chaque tag de version (`git tag v0.1.0 &&

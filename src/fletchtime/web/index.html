@@ -143,7 +143,7 @@
       <div class="icon">🎛️</div>
       <h2 data-i18n="homeControlTitle">Poste de contrôle</h2>
       <p data-i18n="homeControlDesc">Démarrer un match, piloter le chrono, envoyer des messages et gérer les urgences.</p>
-      <a class="button" href="control.html" data-i18n="homeControlButton">Ouvrir le contrôle</a>
+      <a class="button" href="control.html" target="_blank" data-i18n="homeControlButton">Ouvrir le contrôle</a>
     </div>
 
     <div class="card display">
@@ -151,7 +151,9 @@
       <h2 data-i18n="homeDisplayTitle">Écran d'affichage</h2>
       <p data-i18n="homeDisplayDesc">À ouvrir sur chaque tablette/PC de pas de tir. Indique le numéro du pas de tir.</p>
       <div class="lane-row">
-        <input type="number" id="lane-input" min="1" value="1" data-i18n-aria-label="laneInputLabel" aria-label="Numéro de pas de tir">
+        <input type="text" id="lane-input" value="1" maxlength="20"
+          data-i18n-placeholder="laneInputPlaceholder" placeholder="1, A, Nord..."
+          data-i18n-aria-label="laneInputLabel" aria-label="Numéro ou nom du pas de tir">
         <button onclick="openDisplay()" data-i18n="homeDisplayButton">Ouvrir</button>
       </div>
     </div>
@@ -160,7 +162,7 @@
       <div class="icon">📖</div>
       <h2 data-i18n="homeManualTitle">Manuel utilisateur</h2>
       <p data-i18n="homeManualDesc">Guide d'utilisation pour le directeur de tir et les bénévoles du club.</p>
-      <a class="button" href="manual.html" data-i18n="homeManualButton">Consulter le manuel</a>
+      <a class="button" href="manual.html" target="_blank" data-i18n="homeManualButton">Consulter le manuel</a>
     </div>
   </div>
 
@@ -177,6 +179,9 @@
   function applyTranslations() {
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       el.textContent = t(currentLanguage, el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      el.placeholder = t(currentLanguage, el.getAttribute("data-i18n-placeholder"));
     });
     document.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
       el.setAttribute("aria-label", t(currentLanguage, el.getAttribute("data-i18n-aria-label")));
@@ -195,8 +200,8 @@
   applyTranslations();
 
   function openDisplay() {
-    const lane = document.getElementById("lane-input").value || "1";
-    window.location.href = "display.html?lane=" + encodeURIComponent(lane);
+    const lane = document.getElementById("lane-input").value.trim() || "1";
+    window.open("display.html?lane=" + encodeURIComponent(lane), "_blank");
   }
   document.getElementById("lane-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") openDisplay();

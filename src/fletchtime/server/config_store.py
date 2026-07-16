@@ -35,12 +35,24 @@ CONFIG_DIR = PROJECT_ROOT / "config"
 INDOOR_TOML = CONFIG_DIR / "indoor.toml"
 FLINT_TOML = CONFIG_DIR / "flint.toml"
 APP_TOML = CONFIG_DIR / "app.toml"
+# Fichier séparé de app.toml exprès : il contient un vrai secret (le mot de
+# passe), jamais versionné (voir .gitignore) -- contrairement à app.toml,
+# indoor.toml, flint.toml qui sont des réglages partageables sans risque.
+AUTH_TOML = CONFIG_DIR / "auth.toml"
 
 APP_COMMENTS: dict[str, str] = {
     "sound_pack": "Nom du dossier dans web/assets/sounds/packs/ à utiliser (ex. classic)",
     "countdown_tick_seconds": "Nombre de secondes avant la fin d'un décompte où countdown_tick est émis (0 = désactivé)",
 }
 DEFAULT_APP_CONFIG: dict[str, Any] = {"sound_pack": "classic", "countdown_tick_seconds": 5}
+
+AUTH_COMMENTS: dict[str, str] = {
+    "password": (
+        "Mot de passe requis pour piloter le match et modifier la "
+        "configuration -- vide = aucune protection (comportement actuel)"
+    ),
+}
+DEFAULT_AUTH_CONFIG: dict[str, Any] = {"password": ""}
 
 INDOOR_COMMENTS: dict[str, str] = {
     "series": "Nombre de séries",
@@ -126,6 +138,22 @@ def save_app_config(overrides: dict[str, Any]) -> dict[str, Any]:
             f"{merged['countdown_tick_seconds']}"
         )
     _write_toml(APP_TOML, merged, APP_COMMENTS)
+    return merged
+
+
+def load_auth_config() -> dict[str, Any]:
+    data = _load_toml(AUTH_TOML)
+    merged = dict(DEFAULT_AUTH_CONFIG)
+    merged.update({k: v for k, v in data.items() if k in DEFAULT_AUTH_CONFIG})
+    merged["password"] = str(merged["password"])
+    return merged
+
+
+def save_auth_config(overrides: dict[str, Any]) -> dict[str, Any]:
+    merged = load_auth_config()
+    merged.update({k: v for k, v in overrides.items() if k in DEFAULT_AUTH_CONFIG})
+    merged["password"] = str(merged["password"])
+    _write_toml(AUTH_TOML, merged, AUTH_COMMENTS)
     return merged
 
 

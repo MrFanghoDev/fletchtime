@@ -110,8 +110,9 @@ explicite).
 - Un événement sans fichier correspondant retombe automatiquement sur un bip
   générique — pas besoin de fournir tous les sons d'un coup.
 - 10 événements distincts : début de mise en place, début de tir, passage à
-  l'orange, décompte des 5 dernières secondes, fin de volée, pause/reprise
-  manuelle du DOS, urgence/fin d'urgence, fin de match.
+  l'orange, décompte des dernières secondes (nombre de secondes
+  configurable, 5 par défaut, 0 pour désactiver), fin de volée,
+  pause/reprise manuelle du DOS, urgence/fin d'urgence, fin de match.
 - Réglage global (pas par mode) : un seul pack actif à la fois pour toute
   l'application, changement pris en compte immédiatement sur tous les écrans
   déjà connectés.
@@ -130,6 +131,9 @@ explicite).
   `web/assets/targets/`), détection automatique par le serveur (listing de
   répertoire), sans upload à construire.
 - Utilisable par une personne non-développeuse (bénévole du club, arbitre).
+- Mot de passe optionnel pour protéger le contrôle et la configuration sur
+  un réseau partagé (vide par défaut = aucune protection, comme avant
+  l'ajout de cette fonctionnalité).
 
 ### Multi-écrans
 
