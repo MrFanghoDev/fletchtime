@@ -164,24 +164,48 @@ pause, ou en urgence) -- vérifié côté serveur (autoritaire), avec un signal
 `active_mode` diffusé en continu pour que `config.html` grise le bouton
 correspondant de façon proactive.
 
-## Packs de sons
+## Données du club (assets bootstrapés)
+
+Les fichiers réellement fournis avec FletchTime vivent dans le paquet
+lui-même (`src/fletchtime/web/_defaults/`), pas dans `web/assets/` à la
+racine du dépôt -- ce dernier n'est qu'une sortie générée au premier
+lancement (voir `fletchtime.__main__.ensure_directories`), jamais
+committée, et identique que FletchTime tourne en paquet pip ou en
+exécutable PyInstaller (même logique de bootstrap dans les deux cas) :
 
 ```{code-block} text
-web/assets/sounds/packs/
-  classic/            # généré par synthèse (scripts/generate_classic_sounds.py),
-    prep_start.wav     # libre de droits, inclus dans le dépôt
-    shoot_start.wav
-    warning_orange.wav
-    countdown_tick.wav
-    emergency_start.wav
-    emergency_end.wav
-    end_of_volee.wav
-    pause_start.wav
-    pause_end.wav
-    end_of_match.wav
-  _custom/            # dossier gabarit (README uniquement, gitignored sinon)
-  <pack_du_club>/     # n'importe quel autre nom -- jamais versionné
+src/fletchtime/web/_defaults/       # fourni avec le paquet, committé
+  club/README.md        # explique comment ajouter le logo du club
+  banners/README.md      # explique comment ajouter des bannières sponsors
+  targets/                # images de blasons par défaut (Indoor + Flint)
+  sounds/packs/
+    classic/              # généré par synthèse (scripts/generate_classic_sounds.py),
+      prep_start.wav       # libre de droits, inclus dans le paquet
+      shoot_start.wav
+      warning_orange.wav
+      countdown_tick.wav
+      emergency_start.wav
+      emergency_end.wav
+      end_of_volee.wav
+      pause_start.wav
+      pause_end.wav
+      end_of_match.wav
+    README.md             # explique comment créer un pack personnalisé
+
+web/assets/                          # généré au 1er lancement, jamais committé
+  club/README.md          # copié depuis _defaults/ une seule fois
+  banners/README.md        # idem
+  targets/                  # idem
+  sounds/packs/
+    classic/                # idem
+    README.md               # idem
+    <pack_du_club>/          # n'importe quel autre nom -- jamais copié ni versionné
 ```
+
+Cette copie ne se fait qu'**une seule fois par fichier/dossier** (si la
+destination n'existe pas déjà) : une personnalisation du club (logo ajouté,
+packs ajoutés, fichiers du pack `classic` modifiés ou supprimés) est donc
+toujours préservée, même après une mise à jour du paquet FletchTime.
 
 Le serveur diffuse un **identifiant d'événement** (10 au total, voir
 `docs/specifications.md`) plus le nom du pack actif (`sound_pack`) ; chaque
@@ -193,9 +217,10 @@ synthétisé. Aucun flux audio ne transite par le serveur -- chaque écran joue
 son propre fichier localement.
 
 ```{important}
-Seul le pack "classic" (généré par synthèse, donc libre de droits) est suivi
-par Git. N'importe quel autre dossier sous `packs/` -- quel que soit son nom --
-est ignoré par `.gitignore` et reste local à chaque club.
+Seul `src/fletchtime/web/_defaults/` (et son contenu : README, images de
+blasons, pack "classic") est suivi par Git. Le dossier `web/assets/` à la
+racine du dépôt n'est qu'une sortie générée au premier lancement,
+entièrement ignorée par `.gitignore` -- y compris ses copies de `_defaults/`.
 ```
 
 ## Multi-écrans et ciblage

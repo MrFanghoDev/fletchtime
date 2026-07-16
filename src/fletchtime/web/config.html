@@ -153,6 +153,11 @@
           <select id="app-sound_pack"></select>
           <span class="hint" data-i18n="configSoundHint">Dépose un nouveau dossier dans web/assets/sounds/packs/ pour qu'il apparaisse ici.</span>
         </div>
+        <div class="field">
+          <label for="app-countdown_tick_seconds" data-i18n="cfg_countdown_tick_seconds">Décompte des dernières secondes</label>
+          <input type="number" id="app-countdown_tick_seconds" min="0" step="1">
+          <span class="hint" data-i18n="configCountdownHint">Nombre de secondes avant la fin d'un décompte où un bip est émis à chaque seconde (0 pour désactiver). S'applique au prochain match démarré.</span>
+        </div>
         <div class="panel-footer">
           <button class="btn-save" onclick="saveConfig('app')" data-i18n="configSave">Enregistrer</button>
           <span class="save-status" id="app-status"></span>
@@ -314,8 +319,7 @@
       const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(m => decodeURIComponent(m[1]));
       const packs = hrefs
         .filter(href => href.endsWith("/") && !href.startsWith(".."))
-        .map(href => href.replace(/\/$/, ""))
-        .filter(name => name !== "_custom");  // dossier gabarit/instructions, pas un vrai pack à sélectionner
+        .map(href => href.replace(/\/$/, ""));
       select.innerHTML = "";
       packs.forEach((name) => {
         const opt = document.createElement("option");
@@ -342,6 +346,7 @@
             select.appendChild(opt);
           }
           select.value = data.app.sound_pack;
+          document.getElementById("app-countdown_tick_seconds").value = data.app.countdown_tick_seconds;
         }
       } else if (data.type === "state") {
         const activeMode = data.active_mode;
@@ -366,6 +371,7 @@
           statusEl.className = "save-status ok";
           if (data.values && data.mode === "app") {
             document.getElementById("app-sound_pack").value = data.values.sound_pack;
+            document.getElementById("app-countdown_tick_seconds").value = data.values.countdown_tick_seconds;
           } else if (data.values) {
             fillForm(data.mode, data.mode === "indoor" ? INDOOR_FIELDS : FLINT_FIELDS, data.values);
           }
@@ -390,7 +396,10 @@
   function saveConfig(mode) {
     if (mode === "app") {
       send({action: "save_config", mode: "app",
-            values: {sound_pack: document.getElementById("app-sound_pack").value}});
+            values: {
+              sound_pack: document.getElementById("app-sound_pack").value,
+              countdown_tick_seconds: parseInt(document.getElementById("app-countdown_tick_seconds").value || "5", 10),
+            }});
       return;
     }
     const values = collectForm(mode, mode === "indoor" ? INDOOR_FIELDS : FLINT_FIELDS);

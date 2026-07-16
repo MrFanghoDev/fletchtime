@@ -230,6 +230,38 @@ class TestMatchEngineSoundEvents(unittest.TestCase):
         engine.tick(5)  # still under threshold, must not re-fire
         self.assertEqual(engine.pop_pending_events(), [])
 
+    def test_countdown_tick_seconds_is_configurable(self) -> None:
+        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
+                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
+        engine = MatchEngine(IndoorMode(cfg), countdown_tick_seconds=3)
+        engine.tick(10)  # enter GREEN(120)
+        engine.pop_pending_events()
+
+        engine.tick(117)  # 120 - 117 = 3s left, crosses the (now 3s) threshold
+        events = engine.pop_pending_events()
+        self.assertEqual(events.count("countdown_tick"), 1)
+
+        events = []
+        for _ in range(3):  # 3,2,1,0 : encore 3 ticks, pas 5 (valeur par défaut)
+            engine.tick(1)
+            events.extend(engine.pop_pending_events())
+        self.assertEqual(events.count("countdown_tick"), 2)  # 2s et 1s -- pas de tick à 0
+
+    def test_countdown_tick_seconds_zero_disables_it_entirely(self) -> None:
+        cfg = IndoorConfig(series=1, ends_per_series=2, prep_time=10,
+                            shoot_time=120, orange_warning_time=0, turn_mode="ab_only")
+        engine = MatchEngine(IndoorMode(cfg), countdown_tick_seconds=0)
+        engine.tick(10)
+        engine.pop_pending_events()
+        engine.tick(120)  # va jusqu'à la fin de la volée
+        events = engine.pop_pending_events()
+        self.assertNotIn("countdown_tick", events)
+
+    def test_negative_countdown_tick_seconds_raises(self) -> None:
+        cfg = IndoorConfig(series=1, ends_per_series=1)
+        with self.assertRaises(ValueError):
+            MatchEngine(IndoorMode(cfg), countdown_tick_seconds=-1)
+
     def test_pause_and_play_fire_distinct_sounds(self) -> None:
         engine = simple_indoor_engine()
         engine.pop_pending_events()

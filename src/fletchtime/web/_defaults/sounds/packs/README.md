@@ -1,12 +1,8 @@
-# `_custom/` — dossier gabarit, pas un pack à sélectionner
+# Packs de sons — comment en créer un
 
-Ce dossier `_custom/` n'est **pas destiné à être utilisé tel quel** : il
-n'apparaît volontairement pas dans la liste des packs de `config.html`.
-C'est juste un aide-mémoire pour la convention de nommage.
+## Pour créer un pack utilisable
 
-## Pour créer un vrai pack utilisable
-
-1. Crée un **nouveau dossier** à côté de celui-ci, directement dans
+1. Crée un **nouveau dossier** ici, directement dans
    `web/assets/sounds/packs/` — donne-lui le nom que tu veux
    (ex. `mon_club`, `concours_fevrier`, peu importe).
 2. Mets-y des fichiers portant **exactement** ces noms (extension `.mp3`,
@@ -15,7 +11,8 @@ C'est juste un aide-mémoire pour la convention de nommage.
    - `prep_start` — début de la mise en place (rouge)
    - `shoot_start` — début du tir (vert)
    - `warning_orange` — passage à l'orange
-   - `countdown_tick` — chaque seconde des 5 dernières secondes
+   - `countdown_tick` — chaque seconde des dernières secondes du décompte
+     (nombre configurable dans `config.html` → section "Son")
    - `emergency_start` — déclenchement de l'urgence
    - `emergency_end` — reprise après urgence
    - `end_of_volee` — fin de volée (récupération des flèches)
@@ -27,7 +24,7 @@ C'est juste un aide-mémoire pour la convention de nommage.
    "Son" → liste déroulante. Sélectionne-le et enregistre.
 
 Un événement sans fichier correspondant retombe automatiquement sur un bip
-générique -- pas besoin de fournir les 8 sons d'un coup.
+générique -- pas besoin de fournir les 10 sons d'un coup.
 
 ## Un seul pack par dossier
 
@@ -38,8 +35,14 @@ le Flint plus franche), crée **plusieurs dossiers** distincts
 l'autre dans `config.html` selon le concours -- il n'y a qu'un seul pack
 actif à la fois pour toute l'application.
 
-## Rien de tout ça n'est versionné
+## Le pack "classic"
 
-Seul le pack `classic` (fourni avec FletchTime, généré par synthèse) est
-suivi par Git. N'importe quel autre dossier que tu crées ici reste
-uniquement sur ton appareil, jamais poussé vers le dépôt partagé.
+Fourni avec FletchTime (généré par synthèse, donc libre de droits) --
+regarde son contenu (`packs/classic/`) comme exemple si tu veux t'en
+inspirer pour créer le tien.
+
+## Rien de personnalisé n'est versionné
+
+Seuls `classic/` et ce README sont fournis avec FletchTime. N'importe quel
+autre dossier que tu crées ici reste uniquement sur ton appareil, jamais
+poussé vers le dépôt partagé.

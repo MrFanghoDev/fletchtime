@@ -18,7 +18,9 @@ venv/
 docs/_build/
 
 # Assets propres à un club (logo, banderoles) -- jamais versionnés dans le
-# dépôt public partagé avec la FFTL, voir docs/architecture.md.
+# dépôt public partagé avec la FFTL, voir docs/architecture.md. Le README
+# explicatif est copié depuis src/fletchtime/web/_defaults/ au premier
+# lancement (même mécanisme que pour les sons/cibles).
 web/assets/club/
 
 # Images de cibles et pack de sons "classic" : les vrais fichiers par
@@ -28,17 +30,15 @@ web/assets/club/
 web/assets/targets/
 
 # Bannières publicitaires / sponsors -- propres à chaque club, jamais
-# versionnées (on garde uniquement le README qui explique leur usage).
-web/assets/banners/*
-!web/assets/banners/README.md
+# versionnées ; le README explicatif est copié depuis src/fletchtime/web/
+# _defaults/ au premier lancement (même mécanisme que pour les sons/cibles).
+web/assets/banners/
 
-# Packs de sons : "classic" est maintenant copié depuis
+# Packs de sons : "classic" et le README sont maintenant copiés depuis
 # src/fletchtime/web/_defaults/ au premier lancement (voir plus haut) --
 # n'importe quel dossier sous packs/ reste local, jamais versionné ici.
 web/assets/sounds/packs/*
-!web/assets/sounds/packs/_custom/
-web/assets/sounds/packs/_custom/*
-!web/assets/sounds/packs/_custom/README.md
+!web/assets/sounds/packs/README.md
 
 # OS / éditeurs
 .DS_Store

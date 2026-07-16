@@ -33,25 +33,6 @@ from fletchtime.server.ws_server import run_ws_server
 HTTP_PORT = 8000
 WS_PORT = 8765
 
-# Dossiers créés vides (juste un README expliquant la convention) -- aucun
-# contenu par défaut fourni, entièrement propre à chaque club.
-BOOTSTRAP_EMPTY_DIRS = {
-    "club": (
-        "Dépose ici le logo de ton club (ex. logo.jpg) pour qu'il\n"
-        "apparaisse sur l'écran neutre entre les phases de tir. Tant que\n"
-        "ce dossier est vide, l'écran neutre affiche le logo FletchTime\n"
-        "à la place.\n"
-    ),
-    "banners": (
-        "Dépose ici les images de bannières sponsors (.jpg/.png/...) --\n"
-        "elles défilent automatiquement sur l'écran neutre.\n"
-    ),
-    "sounds/packs/_custom": (
-        "Gabarit pour créer un pack de sons personnalisé -- voir le\n"
-        "README à côté de ce fichier pour la convention de nommage.\n"
-    ),
-}
-
 # Dossiers pré-remplis avec un contenu par défaut fourni avec FletchTime
 # (copié une seule fois, au tout premier lancement -- jamais écrasé
 # ensuite, donc une personnalisation du club est toujours préservée même
@@ -59,6 +40,15 @@ BOOTSTRAP_EMPTY_DIRS = {
 BOOTSTRAP_DEFAULT_DIRS = {
     "targets": "_defaults/targets",
     "sounds/packs/classic": "_defaults/sounds/packs/classic",
+}
+
+# Fichiers isolés copiés une seule fois (même logique que ci-dessus, mais
+# pour un seul fichier plutôt qu'un dossier entier) -- des README qui
+# expliquent la convention à suivre pour chaque type de donnée du club.
+BOOTSTRAP_DEFAULT_FILES = {
+    "club/README.md": "_defaults/club/README.md",
+    "banners/README.md": "_defaults/banners/README.md",
+    "sounds/packs/README.md": "_defaults/sounds/packs/README.md",
 }
 
 
@@ -78,18 +68,11 @@ def _data_root() -> Path:
 
 def ensure_directories(data_root: Path, app_web_dir: Path) -> None:
     """Crée les dossiers attendus s'ils manquent, et copie le contenu par
-    défaut fourni avec FletchTime (images de blasons, pack de sons
-    "classic") au tout premier lancement -- idempotent, sans danger à
-    chaque redémarrage, et ne touche jamais à un dossier déjà existant
-    (donc ne casse ni n'écrase jamais une personnalisation faite par le
-    club, y compris après une mise à jour)."""
-    for rel, readme_text in BOOTSTRAP_EMPTY_DIRS.items():
-        directory = data_root / "web" / "assets" / rel
-        if directory.exists():
-            continue
-        directory.mkdir(parents=True, exist_ok=True)
-        (directory / "README.txt").write_text(readme_text, encoding="utf-8")
-
+    défaut fourni avec FletchTime (README explicatifs, images de blasons,
+    pack de sons "classic") au tout premier lancement -- idempotent, sans
+    danger à chaque redémarrage, et ne touche jamais à un fichier/dossier
+    déjà existant (donc ne casse ni n'écrase jamais une personnalisation
+    faite par le club, y compris après une mise à jour)."""
     for rel, default_rel in BOOTSTRAP_DEFAULT_DIRS.items():
         directory = data_root / "web" / "assets" / rel
         if directory.exists():
@@ -102,6 +85,15 @@ def ensure_directories(data_root: Path, app_web_dir: Path) -> None:
             # contenu par défaut à copier, mais ne doit jamais planter
             # le démarrage pour autant.
             directory.mkdir(parents=True, exist_ok=True)
+
+    for rel, default_rel in BOOTSTRAP_DEFAULT_FILES.items():
+        dest = data_root / "web" / "assets" / rel
+        if dest.exists():
+            continue
+        source = app_web_dir / default_rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if source.is_file():
+            shutil.copy2(source, dest)
 
     (data_root / "config").mkdir(parents=True, exist_ok=True)
 

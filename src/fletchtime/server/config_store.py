@@ -38,8 +38,9 @@ APP_TOML = CONFIG_DIR / "app.toml"
 
 APP_COMMENTS: dict[str, str] = {
     "sound_pack": "Nom du dossier dans web/assets/sounds/packs/ à utiliser (ex. classic)",
+    "countdown_tick_seconds": "Nombre de secondes avant la fin d'un décompte où countdown_tick est émis (0 = désactivé)",
 }
-DEFAULT_APP_CONFIG: dict[str, Any] = {"sound_pack": "classic"}
+DEFAULT_APP_CONFIG: dict[str, Any] = {"sound_pack": "classic", "countdown_tick_seconds": 5}
 
 INDOOR_COMMENTS: dict[str, str] = {
     "series": "Nombre de séries",
@@ -119,6 +120,11 @@ def load_app_config() -> dict[str, Any]:
 def save_app_config(overrides: dict[str, Any]) -> dict[str, Any]:
     merged = load_app_config()
     merged.update({k: v for k, v in overrides.items() if k in DEFAULT_APP_CONFIG})
+    if merged["countdown_tick_seconds"] < 0:
+        raise ValueError(
+            "countdown_tick_seconds must be >= 0, got "
+            f"{merged['countdown_tick_seconds']}"
+        )
     _write_toml(APP_TOML, merged, APP_COMMENTS)
     return merged
 

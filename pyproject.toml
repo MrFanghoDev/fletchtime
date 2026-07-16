@@ -27,6 +27,9 @@ include = ["fletchtime*"]
     "*.html", "*.js", "*.svg",
     "_defaults/targets/*.jpg",
     "_defaults/sounds/packs/classic/*.wav",
+    "_defaults/sounds/packs/README.md",
+    "_defaults/club/README.md",
+    "_defaults/banners/README.md",
 ]
 
 [tool.black]

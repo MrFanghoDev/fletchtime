@@ -16,9 +16,13 @@ from .sequence import Step
 
 
 class MatchEngine:
-    _COUNTDOWN_TICK_SECONDS = (5, 4, 3, 2, 1)
+    def __init__(self, mode: ShootingMode, countdown_tick_seconds: int = 5) -> None:
+        if countdown_tick_seconds < 0:
+            raise ValueError(
+                f"countdown_tick_seconds must be >= 0, got {countdown_tick_seconds}"
+            )
+        self._countdown_tick_seconds = countdown_tick_seconds
 
-    def __init__(self, mode: ShootingMode) -> None:
         self._steps: list[Step] = mode.build_sequence()
         if not self._steps:
             raise ValueError("A shooting mode must produce at least one step")
@@ -220,14 +224,15 @@ class MatchEngine:
                 self._pending_events.append(step.orange_sound_event)
 
     def _maybe_emit_countdown_ticks(self) -> None:
-        """Fire one "countdown_tick" event for each of the last 5 seconds
-        (5, 4, 3, 2, 1) of the current step's countdown, once each -- e.g.
-        a beep every second on the final stretch of a volée or a walk-up
-        arrow. Works for any timed step (RED prep or GREEN shoot); frozen
-        during emergency/pause since :meth:`tick` doesn't run at all then."""
-        if self._finished or self._time_left is None:
+        """Fire one "countdown_tick" event for each of the last
+        ``self._countdown_tick_seconds`` seconds of the current step's
+        countdown, once each -- e.g. a beep every second on the final
+        stretch of a volée or a walk-up arrow. Works for any timed step
+        (RED prep or GREEN shoot); frozen during emergency/pause since
+        :meth:`tick` doesn't run at all then."""
+        if self._finished or self._time_left is None or self._countdown_tick_seconds == 0:
             return
-        for seconds in self._COUNTDOWN_TICK_SECONDS:
+        for seconds in range(self._countdown_tick_seconds, 0, -1):
             if seconds not in self._countdown_ticks_fired and self._time_left <= seconds:
                 self._countdown_ticks_fired.add(seconds)
                 self._pending_events.append("countdown_tick")

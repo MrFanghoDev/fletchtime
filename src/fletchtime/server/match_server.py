@@ -60,9 +60,12 @@ class MatchServer:
         # sert uniquement à bloquer la modification de la config de ce mode
         # tant qu'un match de ce type est en cours (voir _handle_config_action).
         self._current_mode_kind: str | None = None
-        # Pack de sons actif, diffusé à tous les écrans (ex. "classic") --
-        # chargé une fois au démarrage, mis à jour via save_config("app", ...).
-        self._sound_pack: str = config_store.load_app_config()["sound_pack"]
+        # Pack de sons actif + nombre de secondes du décompte final, tous
+        # deux diffusés à tous les écrans -- chargés une fois au démarrage,
+        # mis à jour via save_config("app", ...).
+        _app_config = config_store.load_app_config()
+        self._sound_pack: str = _app_config["sound_pack"]
+        self._countdown_tick_seconds: int = _app_config["countdown_tick_seconds"]
 
     # -- connection lifecycle ---------------------------------------------
 
@@ -97,7 +100,9 @@ class MatchServer:
                     if "alternate" in data:
                         overrides["alternate_relay_order_each_series"] = bool(data["alternate"])
                     cfg = replace(base, **overrides) if overrides else base
-                    self.engine = MatchEngine(IndoorMode(cfg))
+                    self.engine = MatchEngine(
+                        IndoorMode(cfg), countdown_tick_seconds=self._countdown_tick_seconds
+                    )
                     self._current_mode_kind = "indoor"
                 except ValueError:
                     pass  # invalid turn_mode from a malformed command -- ignore
@@ -110,7 +115,9 @@ class MatchServer:
                     if "alternate" in data:
                         overrides["alternate_relay_order_each_unit"] = bool(data["alternate"])
                     cfg = replace(base, **overrides) if overrides else base
-                    self.engine = MatchEngine(FlintMode(cfg))
+                    self.engine = MatchEngine(
+                        FlintMode(cfg), countdown_tick_seconds=self._countdown_tick_seconds
+                    )
                     self._current_mode_kind = "flint"
                 except ValueError:
                     pass  # invalid turn_mode from a malformed command -- ignore
@@ -209,6 +216,7 @@ class MatchServer:
                         elif mode == "app":
                             saved = config_store.save_app_config(values)
                             self._sound_pack = saved["sound_pack"]
+                            self._countdown_tick_seconds = saved["countdown_tick_seconds"]
                             reply["ok"] = True
                             reply["values"] = saved
                         else:

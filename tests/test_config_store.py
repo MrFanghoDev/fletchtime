@@ -76,6 +76,19 @@ class TestConfigStore(unittest.TestCase):
         app = config_store.load_app_config()
         self.assertEqual(app["sound_pack"], "classic")
 
+    def test_app_config_default_countdown_tick_seconds_is_5(self) -> None:
+        app = config_store.load_app_config()
+        self.assertEqual(app["countdown_tick_seconds"], 5)
+
+    def test_app_config_countdown_tick_seconds_save_and_reload(self) -> None:
+        config_store.save_app_config({"countdown_tick_seconds": 8})
+        app = config_store.load_app_config()
+        self.assertEqual(app["countdown_tick_seconds"], 8)
+
+    def test_app_config_negative_countdown_tick_seconds_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            config_store.save_app_config({"countdown_tick_seconds": -1})
+
     def test_app_config_save_and_reload(self) -> None:
         config_store.save_app_config({"sound_pack": "mon_club"})
         app = config_store.load_app_config()

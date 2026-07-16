@@ -10,6 +10,10 @@
 # de sons, réglages TOML...), pas enfouis dans une archive à extraire à
 # chaque lancement comme le ferait --onefile.
 #
+# Les données propres à un club (logo, bannières, cibles, sons) ne sont PAS
+# embarquées ici : elles sont bootstrapées au premier lancement, exactement
+# comme pour une installation pip -- voir fletchtime.__main__.
+#
 # Le résultat est spécifique à l'OS sur lequel tourne PyInstaller : lancer
 # ce spec sous Windows produit un .exe Windows, sous Linux un binaire Linux
 # -- voir .github/workflows/release.yml qui construit les deux séparément
@@ -25,7 +29,6 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(project_root / "src" / "fletchtime" / "web"), "web"),
-        (str(project_root / "web" / "assets"), "web/assets"),
         (str(project_root / "config"), "config"),
     ],
     hiddenimports=["websockets"],
