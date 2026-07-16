@@ -492,16 +492,24 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
 
     async def test_starting_a_match_uses_the_saved_countdown_tick_seconds(self) -> None:
         await self.server.handle_command(
-            json.dumps({
-                "action": "save_config", "mode": "app",
-                "values": {"countdown_tick_seconds": 3},
-            }),
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "app",
+                    "values": {"countdown_tick_seconds": 3},
+                }
+            ),
             self.control,
         )
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor",
-            "values": {"shoot_time": 120.0, "orange_warning_time": 0.0},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 120.0, "orange_warning_time": 0.0},
+                }
+            )
+        )
         await self.server.handle_command(json.dumps({"action": "start_indoor"}))
         self.server.engine.tick(10)  # RED(10) -> GREEN(120)
         self.server.engine.pop_pending_events()
