@@ -97,16 +97,21 @@
   // aucun n'existe, retombe sur le logo FletchTime lui-même plutôt que de
   // laisser un espace vide sur l'écran neutre (utile notamment juste après
   // une première installation, avant que le club n'ait déposé son logo).
+  // Paramètre anti-cache : sans ça, un navigateur qui a déjà visité cette
+  // même URL (même IP/port) sur un précédent lancement du serveur -- avec
+  // un dossier de travail différent -- afficherait l'ancienne image mise
+  // en cache plutôt que de revérifier auprès de ce nouveau serveur.
   const CLUB_LOGO_CANDIDATES = ["assets/club/logo.jpg", "assets/club/logo.png", "assets/club/logo.svg"];
+  const cacheBuster = "?_=" + Date.now();
   function tryClubLogo(index) {
     if (index >= CLUB_LOGO_CANDIDATES.length) {
       idleLogoEl.onerror = null;
-      idleLogoEl.src = "logo.svg";
+      idleLogoEl.src = "logo.svg" + cacheBuster;
       idleLogoEl.alt = "FletchTime";
       return;
     }
     idleLogoEl.onerror = () => tryClubLogo(index + 1);
-    idleLogoEl.src = CLUB_LOGO_CANDIDATES[index];
+    idleLogoEl.src = CLUB_LOGO_CANDIDATES[index] + cacheBuster;
   }
   tryClubLogo(0);
   const idleBannerEl = document.getElementById("idle-banner");
