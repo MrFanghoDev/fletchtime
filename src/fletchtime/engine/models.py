@@ -8,10 +8,10 @@ reused without pulling in FastAPI/websockets: the engine only produces
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class Phase(str, Enum):
+class Phase(StrEnum):
     """Visual/safety phase of the current step.
 
     WAIT      -- before the match starts, or between matches. No countdown.

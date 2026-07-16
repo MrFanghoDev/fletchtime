@@ -281,7 +281,7 @@ class MatchServer:
             return (0, int(lane)) if lane.isdigit() else (1, lane)
 
         connected_lanes = sorted(
-            {l for l in self._display_lanes.values() if l != "apercu"},
+            {lane for lane in self._display_lanes.values() if lane != "apercu"},
             key=_lane_sort_key,
         )
         match_in_progress = self.engine is not None and not self.engine.current_state.finished
