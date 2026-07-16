@@ -75,11 +75,35 @@ python -m unittest discover -s tests -v
 
 ## Publication (pour les mainteneurs)
 
+- **TestPyPI** (essai avant publication réelle) : publication automatique
+  via `.github/workflows/testpypi.yml` à chaque push sur `main`/`master` qui
+  touche au code. Génère un numéro de version unique à chaque fois
+  (`0.1.0.devN`) pour ne jamais entrer en conflit. Configuration ponctuelle
+  sur [test.pypi.org/manage/account/publishing](https://test.pypi.org/manage/account/publishing/)
+  -- **compte séparé de pypi.org**, à créer indépendamment sur
+  [test.pypi.org](https://test.pypi.org).
+
+  Pour installer une version publiée sur TestPyPI et vérifier qu'elle
+  fonctionne avant de publier pour de vrai :
+
+  ```bash
+  pip install --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple/ \
+              fletchtime
+  ```
+
+  Le `--extra-index-url` vers le vrai PyPI est nécessaire : TestPyPI ne
+  contient que les paquets qu'on y a explicitement publiés, pas leurs
+  dépendances (ici, `websockets`) -- sans ça, l'installation échouerait en
+  cherchant `websockets` sur TestPyPI où il n'existe pas.
+
 - **PyPI** (`pip install fletchtime`) : publication automatique via
   `.github/workflows/pypi.yml` (Trusted Publishing OIDC, sans jeton API) à
   chaque Release GitHub. Configuration ponctuelle nécessaire sur
   [pypi.org/manage/account/publishing](https://pypi.org/manage/account/publishing/)
-  -- voir les commentaires du fichier de workflow.
+  -- voir les commentaires du fichier de workflow. À faire une fois que les
+  essais sur TestPyPI sont concluants : contrairement à TestPyPI, un numéro
+  de version publié sur PyPI ne peut plus jamais être réutilisé ni supprimé.
 - **Exécutables** : voir section 2 ci-dessus.
 
 ## Documentation
