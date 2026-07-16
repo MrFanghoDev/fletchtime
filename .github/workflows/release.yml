@@ -53,10 +53,11 @@ jobs:
 
       - name: Créer l'archive Windows
         if: runner.os == 'Windows'
-        shell: bash
+        shell: pwsh
         run: |
-          cd dist
-          zip -r FletchTime-windows.zip FletchTime
+         Compress-Archive `
+           -Path dist/FletchTime/* `
+           -DestinationPath dist/FletchTime-windows.zip
 
       - name: Créer l'archive Linux
         if: runner.os == 'Linux'
