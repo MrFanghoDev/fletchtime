@@ -37,6 +37,12 @@
      DOS dans assets/banners/. */
   #idle { display:none; flex-direction:column; align-items:center; }
   #idle-logo { max-height:32vh; max-width:70vw; object-fit:contain; margin-bottom:1.5rem; }
+  #idle-wordmark {
+    display: none; font-size: 3vw; font-weight: 700; letter-spacing: 0.01em;
+    margin: -1rem 0 1.5rem;
+  }
+  #idle-wordmark .fletch { color: #e8ebf1; }
+  #idle-wordmark .time { color: #d1a13d; }
   #idle-date { font-size:4vw; opacity:0.85; }
   #idle-clock { font-size:9vw; font-weight:bold; font-variant-numeric: tabular-nums; margin-top:0.2em; }
   #idle-caption { font-size:3vw; opacity:0.6; margin-top:1.2rem; }
@@ -66,6 +72,7 @@
     <div id="dist"></div>
     <div id="idle">
       <img id="idle-logo" alt="Logo du club">
+      <div id="idle-wordmark"><span class="fletch">Fletch</span><span class="time">Time</span></div>
       <div id="idle-date"></div>
       <div id="idle-clock"></div>
       <div id="idle-caption"></div>
@@ -103,11 +110,13 @@
   // en cache plutôt que de revérifier auprès de ce nouveau serveur.
   const CLUB_LOGO_CANDIDATES = ["assets/club/logo.jpg", "assets/club/logo.png", "assets/club/logo.svg"];
   const cacheBuster = "?_=" + Date.now();
+  const idleWordmarkEl = document.getElementById("idle-wordmark");
   function tryClubLogo(index) {
     if (index >= CLUB_LOGO_CANDIDATES.length) {
       idleLogoEl.onerror = null;
       idleLogoEl.src = "logo.svg" + cacheBuster;
       idleLogoEl.alt = "FletchTime";
+      idleWordmarkEl.style.display = "block";
       return;
     }
     idleLogoEl.onerror = () => tryClubLogo(index + 1);
@@ -178,6 +187,8 @@
   function showSlideshowStep() {
     const isBannerSlide = slideshowStep > 0 && slideshowStep <= bannerImages.length;
     idleLogoEl.style.display = isBannerSlide ? "none" : "";
+    if (isBannerSlide) idleWordmarkEl.style.display = "none";
+    else if (idleLogoEl.alt === "FletchTime") idleWordmarkEl.style.display = "block";
     idleDateEl.style.display = isBannerSlide ? "none" : "";
     idleClockEl.style.display = isBannerSlide ? "none" : "";
     idleCaptionEl.style.display = isBannerSlide ? "none" : "";
