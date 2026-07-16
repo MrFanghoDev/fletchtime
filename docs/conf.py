@@ -1,7 +1,8 @@
 # Configuration file for the Sphinx documentation builder.
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 
 project = "FletchTime"
 copyright = "2026, [Nom du club]"
@@ -11,7 +12,7 @@ try:
     # lue depuis le paquet installé, jamais codée en dur ici. Nécessite que
     # `pip install -e .` (ou équivalent) ait été fait avant de construire
     # cette doc, ce que fait déjà .github/workflows/docs.yml.
-    release = version("fletchtime")
+    release = _pkg_version("fletchtime")
 except PackageNotFoundError:
     release = "dev"
 

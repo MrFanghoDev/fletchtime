@@ -9,7 +9,7 @@ name: Publier sur TestPyPI
 # pyproject.toml, ou manuellement. La version est dérivée automatiquement du
 # tag git le plus proche par setuptools_scm (voir pyproject.toml) : sur un
 # commit qui n'est pas exactement un tag, elle inclut le nombre de commits
-# depuis ce tag (ex. "0.1.3.dev4+g1a2b3c4"), donc jamais de conflit de
+# depuis ce tag (ex. "0.1.3.dev4"), donc jamais de conflit de
 # version sur TestPyPI, sans bricolage manuel.
 #
 # Configuration ponctuelle nécessaire (une seule fois, sur TestPyPI) :

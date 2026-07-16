@@ -52,7 +52,7 @@ est dérivée automatiquement du tag git le plus proche par
   `0.1.2`.
 - Sur un commit quelconque entre deux tags : version de développement
   conforme PEP 440 incluant le nombre de commits depuis le dernier tag
-  (ex. `0.1.3.dev4+g1a2b3c4`) -- jamais en conflit avec une version déjà
+  (ex. `0.1.3.dev4`) -- jamais en conflit avec une version déjà
   publiée sur PyPI/TestPyPI, sans bricolage manuel.
 
 **Pour publier une nouvelle version** : il suffit de taguer et pousser --
