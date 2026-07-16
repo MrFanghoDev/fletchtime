@@ -41,6 +41,37 @@ un faux client WebSocket (`FakeWebSocket` dans `tests/test_match_server.py`),
 justement pour rester testable dans un environnement qui n'a pas accès au
 réseau.
 
+## Gestion de version (automatique depuis les tags git)
+
+Aucune ligne `version = "..."` à maintenir dans `pyproject.toml` : la version
+est dérivée automatiquement du tag git le plus proche par
+[`setuptools_scm`](https://github.com/pypa/setuptools_scm) (voir la section
+`[tool.setuptools_scm]` de `pyproject.toml`).
+
+- Sur un commit qui correspond exactement à un tag (`v0.1.2`) : version
+  `0.1.2`.
+- Sur un commit quelconque entre deux tags : version de développement
+  conforme PEP 440 incluant le nombre de commits depuis le dernier tag
+  (ex. `0.1.3.dev4+g1a2b3c4`) -- jamais en conflit avec une version déjà
+  publiée sur PyPI/TestPyPI, sans bricolage manuel.
+
+**Pour publier une nouvelle version** : il suffit de taguer et pousser --
+```bash
+git tag v0.1.3
+git push --tags
+```
+`release.yml` et `pypi.yml` s'occupent du reste (voir `README.md`, section
+"Publication").
+
+**Piège à connaître** : `setuptools_scm` a besoin de l'historique complet du
+dépôt (tags compris) pour fonctionner -- un clone superficiel
+(`actions/checkout` sans `fetch-depth: 0`) ne verrait aucun tag et
+produirait une version de secours (`0.0.0`, voir `fallback_version` dans
+`pyproject.toml`). Tous les workflows qui construisent le paquet
+(`docs.yml`, `pypi.yml`, `release.yml`, `testpypi.yml`) ont donc
+`fetch-depth: 0` sur leur étape de checkout -- à ne pas retirer en pensant
+que c'est superflu.
+
 ## Architecture générale
 
 Voir {doc}`../architecture` pour le détail complet. En résumé :

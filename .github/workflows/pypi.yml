@@ -31,6 +31,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historique complet (tags compris) -- nécessaire à
+                           # setuptools_scm pour déterminer la version
 
       - uses: actions/setup-python@v5
         with:

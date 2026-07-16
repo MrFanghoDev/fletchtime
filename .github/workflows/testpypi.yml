@@ -6,11 +6,11 @@ name: Publier sur TestPyPI
 # ou supprimer un numéro de version une fois publié).
 #
 # Se déclenche à chaque push sur main/master qui touche au code ou à
-# pyproject.toml, ou manuellement. Génère un numéro de version unique à
-# chaque fois (`0.1.0.devN`) pour ne jamais se heurter à un conflit de
-# version sur TestPyPI -- la version "propre" (`0.1.0`) reste réservée à la
-# vraie publication PyPI, déclenchée séparément par une Release GitHub
-# (voir pypi.yml).
+# pyproject.toml, ou manuellement. La version est dérivée automatiquement du
+# tag git le plus proche par setuptools_scm (voir pyproject.toml) : sur un
+# commit qui n'est pas exactement un tag, elle inclut le nombre de commits
+# depuis ce tag (ex. "0.1.3.dev4+g1a2b3c4"), donc jamais de conflit de
+# version sur TestPyPI, sans bricolage manuel.
 #
 # Configuration ponctuelle nécessaire (une seule fois, sur TestPyPI) :
 #   1. Crée un compte sur https://test.pypi.org -- INDÉPENDANT de ton
@@ -45,17 +45,13 @@ jobs:
       id-token: write  # requis pour le Trusted Publishing (OIDC), pas de jeton secret
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historique complet (tags compris) -- nécessaire à
+                           # setuptools_scm pour déterminer la version
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Donner un numéro de version unique (évite les conflits sur TestPyPI)
-        run: |
-          BASE_VERSION=$(grep -m1 '^version' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
-          DEV_VERSION="${BASE_VERSION}.dev${{ github.run_number }}"
-          sed -i "s/^version = \".*\"/version = \"${DEV_VERSION}\"/" pyproject.toml
-          echo "Version publiée sur TestPyPI : ${DEV_VERSION}"
 
       - name: Installer les outils de build
         run: pip install build

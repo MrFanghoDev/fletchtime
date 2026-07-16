@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "fletchtime"
-version = "0.1.2"
+dynamic = ["version"]
 description = "Chronométrage de compétitions d'archerie FFTL (Indoor, Flint) -- serveur + interfaces web incluses"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -32,6 +32,16 @@ include = ["fletchtime*"]
     "_defaults/club/README.md",
     "_defaults/banners/README.md",
 ]
+
+[tool.setuptools_scm]
+# La version vient désormais du tag git le plus proche (ex. tag "v0.1.2"
+# -> version "0.1.2"), plus aucune ligne "version = ..." à maintenir à la
+# main. Sur un commit qui n'est pas exactement un tag, produit une version
+# de développement PEP 440 valide (ex. "0.1.3.dev4+g1a2b3c4") reflétant le
+# nombre de commits depuis le dernier tag -- ce qui, par construction, ne
+# rentre jamais en conflit avec une version déjà publiée sur PyPI/TestPyPI.
+# Nécessite un dépôt git avec au moins un tag ; voir docs/dev-guide/index.md.
+fallback_version = "0.0.0"  # utilisé seulement si aucun tag n'existe encore du tout
 
 [tool.black]
 line-length = 100
