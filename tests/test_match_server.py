@@ -739,23 +739,41 @@ class TestMatchServerAuth(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(reply["values"], {"password_set": True})  # jamais le mot de passe en clair
 
     async def test_protected_action_blocked_once_password_is_set(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
         await self.server.handle_command(json.dumps({"action": "start_indoor"}), self.control)
         self.assertEqual(self._last()["type"], "auth_required")
 
     async def test_auth_required_flag_becomes_true_once_password_is_set(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
         await self.server.broadcast_state()
         self.assertTrue(self._last()["auth_required"])
 
     async def test_wrong_password_is_rejected(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
         await self.server.handle_command(
             json.dumps({"action": "authenticate", "password": "wrong"}), self.control
         )
@@ -764,9 +782,15 @@ class TestMatchServerAuth(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(reply["ok"])
 
     async def test_correct_password_authenticates_and_unblocks_actions(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
         await self.server.handle_command(
             json.dumps({"action": "authenticate", "password": "secret"}), self.control
         )
@@ -776,41 +800,79 @@ class TestMatchServerAuth(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(self.control.last_state())  # a bien démarré, pas rejeté
 
     async def test_get_config_reports_password_set_without_leaking_it(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
         await self.server.handle_command(json.dumps({"action": "get_config"}), self.control)
         payload = self._last()
         self.assertEqual(payload["auth"], {"password_set": True})
         self.assertNotIn("secret", json.dumps(payload))  # le mot de passe ne transite jamais
 
     async def test_changing_password_requires_current_authentication(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
         # nouvelle connexion, pas encore authentifiée
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "autre"},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "autre"},
+                }
+            ),
+            self.control,
+        )
         reply = self.control.last_config_saved_reply()
         self.assertFalse(reply["ok"])
         self.assertEqual(reply["error"], "auth_required")
 
     async def test_indoor_and_flint_config_also_blocked_without_auth(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "indoor", "values": {"shoot_time": 111.0},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 111.0},
+                }
+            ),
+            self.control,
+        )
         reply = self.control.last_config_saved_reply()
         self.assertFalse(reply["ok"])
         self.assertEqual(reply["error"], "auth_required")
 
     async def test_get_config_and_register_display_never_need_auth(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
         await self.server.handle_command(json.dumps({"action": "get_config"}), self.control)
         self.assertEqual(self._last()["type"], "config")
 
@@ -822,9 +884,15 @@ class TestMatchServerAuth(unittest.IsolatedAsyncioTestCase):
         self.assertIn("1", json.loads(self.control.sent[-1])["connected_lanes"])
 
     async def test_unregistering_clears_authentication(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
         await self.server.handle_command(
             json.dumps({"action": "authenticate", "password": "secret"}), self.control
         )
@@ -836,15 +904,28 @@ class TestMatchServerAuth(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self._last()["type"], "auth_required")
 
     async def test_empty_password_disables_protection_again(self) -> None:
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": "secret"},
-        }))
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": "secret"},
+                }
+            )
+        )
         await self.server.handle_command(
             json.dumps({"action": "authenticate", "password": "secret"}), self.control
         )
-        await self.server.handle_command(json.dumps({
-            "action": "save_config", "mode": "auth", "values": {"password": ""},
-        }), self.control)
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "auth",
+                    "values": {"password": ""},
+                }
+            ),
+            self.control,
+        )
         reply = self.control.last_config_saved_reply()
         self.assertTrue(reply["ok"])
 
