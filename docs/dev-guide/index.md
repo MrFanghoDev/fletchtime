@@ -207,6 +207,18 @@ de considérer le changement fiable -- l'exécution de `ci.yml` ne le
 détecterait pas (ni GitHub Actions, dont les runners n'ont pas
 d'affichage graphique, ce qui est justement pourquoi `main()` propose un
 mode `--headless`, utilisé par les tests de fumée de `release.yml`).
+
+**Confirmé en conditions réelles** : Pydroid 3 refuse catégoriquement
+d'ouvrir une fenêtre Tk quand le script est lancé depuis son **Terminal**
+("GUI applications cannot be ran from terminal... Use IDE to run these
+applications") -- l'échec se produit à la construction de `CTk()`
+elle-même (`AttributeError` sur `createcommand`), pas à l'import de
+`customtkinter`. `main()` intercepte donc une exception large (pas
+seulement `ImportError`) autour de tout `run_gui()`, et
+`fletchtime.gui.run_gui` arrête proprement tout serveur déjà démarré avant
+de la laisser remonter -- sans ça, le repli en mode terminal se heurterait
+à un port déjà occupé. Sur Pydroid, seul le bouton ▶️ Run de l'éditeur
+(pas le Terminal) permet réellement d'ouvrir la fenêtre graphique.
 ```
 
 ```{note}

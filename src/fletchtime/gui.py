@@ -145,9 +145,9 @@ class FletchTimeApp(ctk.CTk):
         header = ctk.CTkFrame(self, corner_radius=0)
         header.pack(fill="x")
 
-        ctk.CTkLabel(header, text="FletchTime", font=ctk.CTkFont(size=22, weight="bold")).pack(
-            side="left", padx=(16, 4), pady=12
-        )
+        ctk.CTkLabel(
+            header, text="FletchTime", font=ctk.CTkFont(size=22, weight="bold")
+        ).pack(side="left", padx=(16, 4), pady=12)
 
         ctk.CTkLabel(
             header,
@@ -298,8 +298,22 @@ class FletchTimeApp(ctk.CTk):
 
 def run_gui() -> None:
     _hide_console_on_windows()
-    app = FletchTimeApp()
-    app.mainloop()
+    app = None
+    try:
+        app = FletchTimeApp()
+        app.mainloop()
+    except Exception:
+        # Si la construction de la fenêtre échoue après que le serveur ait
+        # déjà démarré (voir FletchTimeApp.__init__, qui appelle
+        # _start_server() en toute fin de construction), l'arrêter ici
+        # évite qu'un appelant qui retombe sur le mode terminal (voir
+        # fletchtime.__main__.main) ne se heurte à un port déjà occupé.
+        if app is not None:
+            try:
+                app.runtime.stop()
+            except Exception:
+                pass
+        raise
 
 
 def _hide_console_on_windows() -> None:

@@ -178,13 +178,20 @@ def main() -> None:
 
     try:
         from fletchtime.gui import run_gui
-    except ImportError as exc:
+
+        run_gui()
+    except Exception as exc:
+        # Couvre à la fois un import qui échoue (ex. customtkinter absent)
+        # ET un échec plus tardif à la construction de la fenêtre elle-même
+        # -- notamment sur Pydroid, qui refuse catégoriquement d'ouvrir une
+        # fenêtre Tk quand le script est lancé depuis son terminal plutôt
+        # que via le bouton ▶️ Run de l'éditeur ("GUI applications cannot
+        # be ran from terminal"). run_gui() se charge d'arrêter proprement
+        # tout serveur qu'elle aurait déjà démarré avant l'échec, donc ce
+        # repli ne risque pas un conflit de port avec _run_headless().
         print(f"Interface graphique indisponible ({exc}) -- mode terminal.")
         print(f"Graphical interface unavailable ({exc}) -- terminal mode.")
         _run_headless()
-        return
-
-    run_gui()
 
 
 if __name__ == "__main__":
