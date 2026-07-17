@@ -231,6 +231,8 @@
         <dd data-i18n="manualFaqA5">Supprime le fichier config/auth.toml (à côté de config/indoor.toml) puis relance le serveur -- la protection est retirée, tu peux en redéfinir un nouveau.</dd>
         <dt data-i18n="manualFaqQ6">Sur Pydroid 3, la fenêtre graphique ne s'ouvre pas, que faire ?</dt>
         <dd data-i18n="manualFaqA6">Normal si tu as lancé FletchTime depuis le Terminal de Pydroid -- il bascule alors automatiquement en mode texte, tout aussi fonctionnel (l'adresse à ouvrir s'affiche en clair). Pour obtenir la fenêtre graphique, ouvre plutôt run_server.py dans l'éditeur de Pydroid et appuie sur ▶️ Run.</dd>
+        <dt data-i18n="manualFaqQ7">Les pages se chargent mais restent bloquées sur "en attente de connexion", pourquoi ?</dt>
+        <dd data-i18n="manualFaqA7">FletchTime utilise deux ports séparés : 8000 en HTTP (les pages) et 8765 en WebSocket (la synchronisation temps réel). Si les pages se chargent mais restent bloquées, c'est presque toujours que seul le 8000 est accessible depuis l'appareil qui affiche la page -- fréquent si le serveur tourne dans un conteneur/VM (Docker, WSL2...) où seul un port a été redirigé. Vérifie que le 8765 est lui aussi redirigé/autorisé.</dd>
       </dl>
     </article>
 

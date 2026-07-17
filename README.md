@@ -59,6 +59,14 @@ Windows → Confidentialité et sécurité → Pare-feu Windows Defender →
 Autoriser une application via le pare-feu* -- coche `FletchTime.exe` pour
 les réseaux privés.
 
+**Ports réseau utilisés** : **8000** en HTTP (pages web) et **8765** en
+WebSocket (synchronisation temps réel) -- deux ports séparés, tous deux
+nécessaires. Si le serveur tourne dans un conteneur/VM (Docker, WSL2...),
+les deux doivent être redirigés vers l'hôte, pas seulement le 8000 : sans
+le 8765, les pages se chargent normalement mais restent bloquées sur "en
+attente de connexion" indéfiniment (la synchronisation temps réel ne peut
+jamais s'établir).
+
 Pour construire ces exécutables toi-même (ou ajouter macOS à la matrice) :
 voir `.github/workflows/release.yml` et `fletchtime.spec` (PyInstaller). Un
 `git tag v0.1.0 && git push --tags` déclenche la construction et publie les

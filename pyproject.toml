@@ -31,6 +31,7 @@ include = ["fletchtime*"]
     "_defaults/sounds/packs/README.md",
     "_defaults/club/README.md",
     "_defaults/banners/README.md",
+    "_defaults/gui/theme.json",
 ]
 
 [tool.setuptools_scm]

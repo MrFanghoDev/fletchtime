@@ -103,13 +103,25 @@ class _QueueWriter:
 
 class FletchTimeApp(ctk.CTk):
     def __init__(self) -> None:
+        # Doit être fait AVANT super().__init__() : customtkinter applique
+        # le thème au moment de la construction de chaque widget, fenêtre
+        # racine comprise -- appelé après, la fenêtre elle-même garderait
+        # le thème par défaut. Mode sombre forcé (pas "system") : reprend
+        # la même palette que les pages web en thème sombre, cohérent
+        # avec display.html qui reste lui aussi toujours sombre par choix
+        # délibéré (voir docs/architecture.md).
+        ctk.set_appearance_mode("dark")
+        app_web_dir = _app_web_dir()
+        theme_path = app_web_dir / "_defaults" / "gui" / "theme.json"
+        ctk.set_default_color_theme(str(theme_path) if theme_path.is_file() else "blue")
+
         super().__init__()
 
         self.language = "fr"
         self.log_queue: queue.Queue[str] = queue.Queue()
 
         self.data_root = _data_root()
-        self.app_web_dir = _app_web_dir()
+        self.app_web_dir = app_web_dir
         ensure_directories(self.data_root, self.app_web_dir)
         self.assets_dir = self.data_root / "web" / "assets"
         self.runtime = ServerRuntime(
@@ -120,9 +132,6 @@ class FletchTimeApp(ctk.CTk):
         # tout print() du reste de l'appli dans le widget de journal.
         sys.stdout = _QueueWriter(sys.stdout, self.log_queue)
         sys.stderr = _QueueWriter(sys.stderr, self.log_queue)
-
-        ctk.set_appearance_mode("system")
-        ctk.set_default_color_theme("blue")
 
         self.title(self._t("title"))
         self.geometry("820x600")
