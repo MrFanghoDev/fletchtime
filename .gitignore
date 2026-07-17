@@ -50,6 +50,15 @@ web/assets/banners/
 web/assets/sounds/packs/*
 !web/assets/sounds/packs/README.md
 
+# Filet de sécurité : les dossiers de données du club ne doivent jamais se
+# retrouver DANS le paquet lui-même (src/fletchtime/web/), seulement à la
+# racine du dépôt (web/assets/, voir plus haut) -- ce chemin ne devrait
+# normalement jamais exister (run_server.py fixe explicitement le
+# répertoire de travail pour l'éviter), mais autant s'en protéger si un
+# lancement particulier (ex. Pydroid dans un état inhabituel) le recréait
+# quand même.
+src/fletchtime/web/assets/
+
 # OS / éditeurs
 .DS_Store
 Thumbs.db
