@@ -267,4 +267,5 @@ class MatchEngine:
             target_image=step.target_image,
             target_image_2=step.target_image_2,
             finished=False,
+            orange_threshold=step.orange_threshold,
         )

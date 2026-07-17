@@ -58,3 +58,10 @@ class MatchState:
     target_image_2: str = ""
 
     finished: bool = False
+
+    # Seuil (en secondes de temps restant) à partir duquel la phase passe
+    # à l'orange -- None si l'étape en cours n'a pas de seuil d'alerte
+    # (ex. pause, urgence). Transmis aux écrans pour qu'ils puissent
+    # reproduire localement le passage à l'orange pendant une coupure
+    # réseau, voir fletchtime.server.match_server et docs/architecture.md.
+    orange_threshold: float | None = None

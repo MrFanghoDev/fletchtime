@@ -12,6 +12,11 @@
     height:100%; transition: background-color 0.3s; position:relative;
   }
   #time { font-size: 22vw; font-weight:bold; line-height:1; font-variant-numeric: tabular-nums; }
+  #offline-indicator {
+    display: none; position: fixed; top: 1rem; right: 1rem;
+    font-size: 1rem; opacity: 0.35; letter-spacing: 0.05em;
+  }
+  #offline-indicator.visible { display: block; }
   #turn { font-size:6vw; margin-top:1rem; min-height:1.2em; }
   #dist { font-size:4vw; opacity:0.85; min-height:1.2em; }
   #target-images {
@@ -68,6 +73,7 @@
       <img id="target-image-2" alt="" onerror="this.style.display='none';">
     </div>
     <div id="time">--</div>
+    <div id="offline-indicator"></div>
     <div id="turn"></div>
     <div id="dist"></div>
     <div id="idle">
@@ -295,7 +301,23 @@
   // Reconnexion automatique : si le WiFi coupe un instant ou que l'écran
   // s'est éteint malgré le wake lock, on retente régulièrement plutôt que
   // de rester bloqué sur un état figé.
+  //
+  // Pendant la coupure, le chrono continue de décompter localement à
+  // partir du dernier état reçu (extrapolation basée sur le temps
+  // réellement écoulé, mesuré via performance.now() -- même principe que
+  // fletchtime.server.match_server.tick_loop côté serveur, voir
+  // docs/architecture.md) : les archers voient un chrono qui continue de
+  // tourner plutôt qu'un écran figé ou vide pendant une coupure brève.
+  // Volontairement limité aux seules phases de décompte actif (rouge/
+  // vert/orange) -- jamais de tentative de deviner la transition vers la
+  // phase suivante (fin de volée, walk-up...) sans confirmation du
+  // serveur, ce qui demanderait de dupliquer toute la logique de
+  // séquencement côté client. Dès la reconnexion, le premier état reçu du
+  // serveur fait autorité et corrige immédiatement toute dérive locale.
   let isConnected = false;
+  let lastPayload = null;
+  let lastReceivedAt = null;
+  let extrapolationTimer = null;
 
   function connect() {
     const ws = new WebSocket("ws://" + location.hostname + ":8765");
@@ -308,7 +330,10 @@
     ws.onmessage = (evt) => {
       const data = JSON.parse(evt.data);
       if (data.type === "state") {
-        render(data);
+        stopExtrapolating();
+        lastPayload = data;
+        lastReceivedAt = performance.now();
+        render(data, false);
       } else if (data.type === "events") {
         data.events.forEach(ev => playEventSound(ev));
       }
@@ -316,14 +341,87 @@
 
     ws.onclose = () => {
       isConnected = false;
-      render({state: null, message: null});
+      startExtrapolating();
       setTimeout(connect, 2000);
     };
     ws.onerror = () => ws.close();
   }
   connect();
 
-  function render(payload) {
+  let extrapolationOrangeFired = false;
+  let extrapolationTicksFired = new Set();
+
+  function startExtrapolating() {
+    stopExtrapolating();
+    extrapolationOrangeFired = false;
+    extrapolationTicksFired = new Set();
+    const state = lastPayload && lastPayload.state;
+    const isCountingDown = state && !state.finished
+      && (state.phase === "red" || state.phase === "green" || state.phase === "orange");
+    if (!isCountingDown) {
+      // Pas de décompte actif à faire "continuer tout seul" (écran neutre,
+      // pause, urgence...) -- se contente d'afficher l'écran neutre comme
+      // avant, aucune extrapolation à risquer.
+      render({state: null, message: null}, false);
+      return;
+    }
+    // Si la coupure survient alors qu'on est déjà orange, pas besoin de
+    // re-déclencher le son -- seulement suivre la transition si elle
+    // arrive PENDANT la coupure.
+    if (state.phase === "orange") extrapolationOrangeFired = true;
+
+    extrapolationTimer = setInterval(() => {
+      const elapsed = (performance.now() - lastReceivedAt) / 1000;
+      const newTimeLeft = Math.max(0, state.time_left - elapsed);
+      const extrapolated = JSON.parse(JSON.stringify(lastPayload));
+      extrapolated.state.time_left = newTimeLeft;
+
+      // Reproduit localement le passage à l'orange, à partir du seuil
+      // transmis par le serveur pour l'étape en cours (même logique que
+      // MatchEngine.current_state côté serveur, voir
+      // docs/architecture.md) -- jamais de tentative de deviner une
+      // transition vers l'étape SUIVANTE, seulement ce changement de
+      // couleur au sein de la même étape.
+      const threshold = state.orange_threshold;
+      const hasCrossedThreshold = threshold !== null && threshold !== undefined
+        && newTimeLeft <= threshold;
+      if (hasCrossedThreshold) {
+        if (!extrapolationOrangeFired) {
+          extrapolationOrangeFired = true;
+          playEventSound("warning_orange");
+        }
+        extrapolated.state.phase = "orange";
+      }
+
+      // Reproduit localement les bips des dernières secondes, à partir du
+      // nombre de secondes transmis par le serveur (réglage global, voir
+      // config.html section Son) -- une seule fois par seconde entière
+      // franchie, même logique que MatchEngine._maybe_emit_countdown_ticks.
+      const tickSeconds = lastPayload.countdown_tick_seconds;
+      if (tickSeconds) {
+        for (let s = tickSeconds; s >= 1; s--) {
+          if (newTimeLeft <= s && !extrapolationTicksFired.has(s)) {
+            extrapolationTicksFired.add(s);
+            playEventSound("countdown_tick");
+          }
+        }
+      }
+
+      render(extrapolated, true);
+    }, 200);
+  }
+
+  function stopExtrapolating() {
+    if (extrapolationTimer) {
+      clearInterval(extrapolationTimer);
+      extrapolationTimer = null;
+    }
+  }
+
+  function render(payload, isExtrapolated) {
+    const offlineIndicatorEl = document.getElementById("offline-indicator");
+    offlineIndicatorEl.classList.toggle("visible", !!isExtrapolated);
+    offlineIndicatorEl.textContent = isExtrapolated ? "⏱" : "";
     if (payload.language && payload.language !== currentLanguage) {
       currentLanguage = payload.language;
       localStorage.setItem("fletchtime_lang", currentLanguage);

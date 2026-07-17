@@ -567,6 +567,40 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
         self.server.engine.tick(3)  # 6 - 3 = 3s left, franchit le seuil (configuré à 3, pas 5)
         self.assertIn("countdown_tick", self.server.engine.pop_pending_events())
 
+    async def test_broadcast_includes_orange_threshold_from_current_step(self) -> None:
+        """Nécessaire pour que l'écran d'affichage puisse reproduire
+        localement le passage à l'orange pendant une coupure réseau (voir
+        docs/architecture.md, section fonctionnement dégradé)."""
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 240.0, "orange_warning_time": 30.0},
+                }
+            )
+        )
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self.server.handle_command(json.dumps({"action": "next"}))  # RED -> GREEN
+        state = self.control.last_state()
+        self.assertEqual(state["orange_threshold"], 30.0)
+
+    async def test_broadcast_includes_countdown_tick_seconds(self) -> None:
+        """Nécessaire pour que l'écran d'affichage puisse reproduire
+        localement les bips des dernières secondes pendant une coupure
+        réseau (voir docs/architecture.md)."""
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "app",
+                    "values": {"countdown_tick_seconds": 7},
+                }
+            ),
+            self.control,
+        )
+        self.assertEqual(json.loads(self.control.sent[-1])["countdown_tick_seconds"], 7)
+
     async def test_bare_start_uses_the_saved_turn_mode_without_override(self) -> None:
         """Le bouton Démarrer simplifié n'envoie plus turn_mode/alternate --
         le match doit utiliser tel quel ce qui est enregistré dans la config,

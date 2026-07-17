@@ -343,6 +343,51 @@ confirmer le rendu et l'ergonomie tactile -- voir aussi le piège
 PyInstaller/`customtkinter` documenté dans {doc}`dev-guide/index`.
 ```
 
+## Fonctionnement dégradé en cas de coupure réseau
+
+`display.html` continue de décompter **localement** pendant une coupure
+WebSocket brève, plutôt que d'afficher un écran figé ou neutre : dès la
+perte de connexion, le temps restant est extrapolé à partir du temps
+réellement écoulé (`performance.now()`, même principe que
+`MatchServer.tick_loop()` côté serveur -- voir plus haut), uniquement
+pendant une phase de décompte actif (rouge/vert/orange).
+
+Deux champs sont diffusés spécifiquement pour permettre cette
+extrapolation de reproduire fidèlement le comportement normal, sans
+deviner quoi que ce soit :
+
+- `MatchState.orange_threshold` (seuil de l'étape en cours) permet de
+  reproduire localement le passage à l'orange, exactement comme
+  `MatchEngine.current_state` le calcule côté serveur.
+- `countdown_tick_seconds` (réglage global, voir `config.html` section
+  Son) permet de reproduire localement les bips des dernières secondes,
+  exactement comme `MatchEngine._maybe_emit_countdown_ticks`.
+
+Chacun de ces deux événements sonores (`warning_orange`, `countdown_tick`)
+ne se déclenche qu'**une seule fois** pendant l'extrapolation, avec le
+même suivi que côté serveur (pas de re-déclenchement si on était déjà
+orange au moment de la coupure, pas de bip répété pour la même seconde).
+
+Volontairement limité à ce qui peut se dériver de l'étape **en cours**
+sans ambiguïté : deviner la transition vers l'étape **suivante** (fin de
+volée, walk-up...) sans confirmation du serveur demanderait de dupliquer
+toute la logique de séquencement côté client, ce qu'on évite -- le chrono
+se fige simplement à zéro en attendant la reconnexion plutôt que de
+risquer d'afficher une transition incorrecte (et donc de jouer les sons
+associés au mauvais moment). Les sons liés à une transition d'étape
+(`shoot_start`, `end_of_volee`, `emergency_start`...) ne jouent donc
+jamais pendant une coupure -- seuls `warning_orange` et `countdown_tick`,
+qui restent des seuils au sein de la même étape, sont reproduits.
+
+Dès qu'un état est de nouveau reçu du serveur, il fait autorité
+immédiatement et corrige toute dérive locale (visuelle et sonore)
+accumulée pendant la coupure. Un petit indicateur discret (⏱, coin
+supérieur droit) signale ce mode sans alarmer les archers.
+
+Le poste de contrôle, à l'inverse, affiche une bannière large et alarmante
+(pas discrète) en cas de coupure -- c'est le responsable du chronométrage
+qui doit être alerté clairement, pas les archers.
+
 ## Multi-écrans et ciblage
 
 Chaque écran se connecte au WebSocket et s'enregistre avec son numéro de lane

@@ -402,6 +402,7 @@ class MatchServer:
             "connected_lanes": connected_lanes,
             "active_mode": self._current_mode_kind if match_in_progress else None,
             "sound_pack": self._sound_pack,
+            "countdown_tick_seconds": self._countdown_tick_seconds,
             "auth_required": self._auth_required(websocket),
         }
 

@@ -233,6 +233,8 @@
         <dd data-i18n="manualFaqA6">Normal si tu as lancé FletchTime depuis le Terminal de Pydroid -- il bascule alors automatiquement en mode texte, tout aussi fonctionnel (l'adresse à ouvrir s'affiche en clair). Pour obtenir la fenêtre graphique, ouvre plutôt run_server.py dans l'éditeur de Pydroid et appuie sur ▶️ Run.</dd>
         <dt data-i18n="manualFaqQ7">Les pages se chargent mais restent bloquées sur "en attente de connexion", pourquoi ?</dt>
         <dd data-i18n="manualFaqA7">FletchTime utilise deux ports séparés : 8000 en HTTP (les pages) et 8765 en WebSocket (la synchronisation temps réel). Si les pages se chargent mais restent bloquées, c'est presque toujours que seul le 8000 est accessible depuis l'appareil qui affiche la page -- fréquent si le serveur tourne dans un conteneur/VM (Docker, WSL2...) où seul un port a été redirigé. Vérifie que le 8765 est lui aussi redirigé/autorisé.</dd>
+        <dt data-i18n="manualFaqQ8">Le serveur a coupé un instant pendant un match, que se passe-t-il ?</dt>
+        <dd data-i18n="manualFaqA8">L'écran d'affichage continue de décompter tout seul pendant une coupure brève (WiFi, redémarrage du serveur...), pour que les archers voient toujours un chrono qui tourne, y compris le passage à l'orange et les bips des dernières secondes. Seuls les sons liés à un changement de volée (fin de tir, urgence...) restent silencieux jusqu'à la reconnexion. Le poste de contrôle, lui, affiche une bannière rouge bien visible en cas de coupure -- surveille-la : si la coupure dure, la reprise de contact avec le serveur corrige automatiquement le temps affiché dès que possible.</dd>
       </dl>
     </article>
 

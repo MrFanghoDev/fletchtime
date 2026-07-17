@@ -84,6 +84,17 @@
   #status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
   #status.connected .dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
   #status.disconnected .dot { background: var(--red); animation: pulse 1s infinite; }
+
+  #disconnect-banner {
+    display: none; align-items: center; justify-content: center; gap: 0.6rem;
+    background: var(--red); color: #fff; font-weight: 600; font-size: 0.92rem;
+    padding: 0.6rem 1rem; text-align: center;
+  }
+  #disconnect-banner.visible { display: flex; }
+  #disconnect-banner .dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #fff;
+    animation: pulse 1s infinite; flex-shrink: 0;
+  }
   @keyframes pulse { 50% { opacity: 0.3; } }
 
   .lang-toggle { display: flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
@@ -291,6 +302,8 @@
     </div>
   </header>
 
+  <div id="disconnect-banner"><span class="dot"></span><span id="disconnect-banner-text"></span></div>
+
   <div class="page">
 
     <!-- Panneau signature : moniteur en direct -->
@@ -474,6 +487,14 @@
     statusEl.appendChild(document.createTextNode(t(currentLanguage, currentStatusKey)));
     statusEl.className = currentStatusKey === "connected" ? "connected"
       : currentStatusKey === "disconnected" ? "disconnected" : "";
+
+    const banner = document.getElementById("disconnect-banner");
+    const isDisconnected = currentStatusKey === "disconnected";
+    banner.classList.toggle("visible", isDisconnected);
+    if (isDisconnected) {
+      document.getElementById("disconnect-banner-text").textContent =
+        t(currentLanguage, "disconnectBannerText");
+    }
   }
 
   function setLanguage(lang) {
