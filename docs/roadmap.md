@@ -76,15 +76,16 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   disproportionnée par rapport au risque réel pour ce projet).
 - ~~**Exécutable autoporteur**~~ -- fait : `fletchtime.spec` (PyInstaller) +
   `.github/workflows/release.yml` construisent automatiquement un `.zip`
-  Windows et un `.tar.gz` Linux à chaque tag de version (`git tag v0.1.0 &&
-  git push --tags`), publiés en Release GitHub. `fletchtime/__main__.py`
-  détecte le mode empaqueté (`sys.frozen`) et crée/pré-remplit
-  automatiquement au premier lancement les dossiers attendus
-  (`web/assets/club/`, `banners/`, `targets/`, `sounds/packs/`) s'ils
-  manquent -- avec un vrai contenu par défaut pour les blasons et le pack
-  de sons "classic". macOS non testé (pas de machine disponible) mais
-  devrait fonctionner de la même façon via un runner `macos-latest` à
-  ajouter à la matrice si besoin.
+  Windows et un `.tar.gz` Linux **et macOS** à chaque tag de version (`git
+  tag v0.1.0 && git push --tags`), publiés en Release GitHub.
+  `fletchtime/__main__.py` détecte le mode empaqueté (`sys.frozen`) et
+  crée/pré-remplit automatiquement au premier lancement les dossiers
+  attendus (`web/assets/club/`, `banners/`, `targets/`, `sounds/packs/`)
+  s'ils manquent -- avec un vrai contenu par défaut pour les blasons et le
+  pack de sons "classic". **macOS jamais vérifié sur une vraie machine**
+  (seul le test de fumée en CI, `--headless`, confirme que ça démarre et
+  sert la page d'accueil) -- voir les limites connues dans
+  {doc}`dev-guide/index`.
 - **Web app côté client (PWA)** : transformer `control.html`/`display.html`
   (voire `index.html`) en Progressive Web App -- `manifest.json` + service
   worker + icônes. Permettrait d'"installer" l'app sur l'écran d'accueil

@@ -38,15 +38,24 @@ pip install websockets     # ou : pip install -e .
 python run_server.py       # raccourci équivalent à `python -m fletchtime`
 ```
 
-### 2. Exécutable autoporteur (Windows / Linux) -- PC dédié, sans Python
+### 2. Exécutable autoporteur (Windows / Linux / macOS) -- PC dédié, sans Python
 
-Télécharge `FletchTime-<version>-windows.zip` ou
-`FletchTime-<version>-linux.tar.gz` (ex. `FletchTime-v0.1.1-windows.zip`)
-depuis les [Releases GitHub](https://github.com/MrFanghoDev/fletchtime/releases),
-décompresse, lance `FletchTime.exe` (Windows) ou `./FletchTime` (Linux).
+Télécharge `FletchTime-<version>-windows.zip`,
+`FletchTime-<version>-linux.tar.gz` ou `FletchTime-<version>-macos.tar.gz`
+(ex. `FletchTime-v0.1.1-windows.zip`) depuis les
+[Releases GitHub](https://github.com/MrFanghoDev/fletchtime/releases),
+décompresse, lance `FletchTime.exe` (Windows) ou `./FletchTime` (Linux/macOS).
 Aucune installation de Python nécessaire. Les dossiers `web/assets/...` et
 `config/` sont créés automatiquement à côté de l'exécutable au premier
 lancement s'ils manquent.
+
+**macOS -- jamais vérifié sur une vraie machine** (contrairement à Windows
+et Linux) : le build passe le test de fumée automatique en CI, mais pas de
+vraie `.app` cliquable (simple dossier avec exécutable, comme Linux) et
+Gatekeeper bloquera probablement au premier lancement faute de
+certificat/notarisation Apple -- passe par *Réglages Système →
+Confidentialité et sécurité → Ouvrir quand même*. Voir
+`docs/dev-guide/index.md` pour le détail des limites connues.
 
 Chaque Release inclut aussi `FletchTime-<version>-docs.tar.gz` : la
 documentation technique (Sphinx) telle qu'elle était pour ce tag précis --

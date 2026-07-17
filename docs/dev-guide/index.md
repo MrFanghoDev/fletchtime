@@ -238,6 +238,31 @@ de la laisser remonter -- sans ça, le repli en mode terminal se heurterait
 ```
 
 ```{note}
+**macOS -- jamais vérifié sur une vraie machine**, contrairement à
+Windows et Linux dont les problèmes réels remontés ont pu être corrigés
+et re-testés. `macos-latest` est dans la matrice de `release.yml` (test
+de fumée `--headless` uniquement -- confirme le démarrage du serveur,
+pas le rendu de la fenêtre) depuis que ce point a été soulevé, mais
+plusieurs limites connues restent non résolues faute de machine
+disponible pour les traiter :
+
+- `fletchtime.spec` ne définit pas de cible `BUNDLE()` -- sans elle,
+  PyInstaller produit un simple dossier avec un exécutable dedans (comme
+  pour Linux), pas une vraie `.app` cliquable avec icône dans le Dock/
+  Applications. Fonctionnerait techniquement, mais pas une expérience
+  aussi soignée que sur Windows/Linux.
+- Gatekeeper (faute de certificat développeur Apple et de notarisation,
+  ni l'un ni l'autre en place ici) bloquera plus agressivement qu'un
+  simple SmartScreen Windows -- passage par *Réglages Système →
+  Confidentialité et sécurité → Ouvrir quand même* à prévoir dans la doc
+  utilisateur le jour où ce point sera traité.
+- Le runner `macos-latest` de GitHub Actions produit un binaire Apple
+  Silicon (ARM64) -- un Mac Intel pourrait nécessiter Rosetta 2 ou un
+  build séparé (`macos-13` reste en Intel au moment où ceci est écrit,
+  à vérifier sur la page officielle des runners GitHub le cas échéant).
+```
+
+```{note}
 La publication automatique de cette doc sur GitHub Pages est déjà en place
 (`.github/workflows/docs.yml`) -- voir le README à la racine du dépôt pour
 l'activer (une seule fois, côté réglages GitHub).

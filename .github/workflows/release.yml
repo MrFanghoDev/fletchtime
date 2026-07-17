@@ -1,9 +1,9 @@
 name: Exécutables autoporteurs (release)
 
-# Construit un exécutable autoporteur pour Windows (.zip) et Linux (.tar.gz)
-# via PyInstaller, sur les runners natifs de GitHub Actions (PyInstaller ne
-# fait pas de cross-compilation : le binaire Windows est produit par un
-# runner Windows, le binaire Linux par un runner Linux). Construit aussi
+# Construit un exécutable autoporteur pour Windows (.zip), Linux et macOS
+# (.tar.gz) via PyInstaller, sur les runners natifs de GitHub Actions
+# (PyInstaller ne fait pas de cross-compilation : chaque binaire est
+# produit par un runner de la plateforme correspondante). Construit aussi
 # une archive de la documentation HTML générée (Sphinx) telle qu'elle
 # était à ce tag précis -- utile pour consulter la doc correspondant
 # exactement à une version installée, indépendamment de ce qui est publié
@@ -12,8 +12,17 @@ name: Exécutables autoporteurs (release)
 # docs/roadmap.md).
 #
 # Déclenchement : push d'un tag de version (ex. v0.1.0), ou manuellement
-# depuis l'onglet Actions. Les trois archives (Windows, Linux, doc) sont
-# jointes à une Release GitHub créée automatiquement.
+# depuis l'onglet Actions. Les quatre archives (Windows, Linux, macOS, doc)
+# sont jointes à une Release GitHub créée automatiquement.
+#
+# macOS -- limites connues, jamais vérifiées sur une vraie machine (voir
+# docs/dev-guide/index.md) : fletchtime.spec ne définit pas de cible
+# BUNDLE(), donc ce build produit un simple dossier (comme Linux), pas une
+# vraie .app cliquable avec icône dans le Dock. Gatekeeper bloquera aussi
+# plus agressivement qu'un simple SmartScreen Windows, faute de
+# certificat/notarisation Apple (absent ici). Runner GitHub Actions en
+# Apple Silicon (ARM64) par défaut -- un Mac Intel pourrait nécessiter
+# Rosetta 2 ou un build séparé.
 permissions:
   contents: write
   
@@ -33,6 +42,9 @@ jobs:
 
           - os: ubuntu-latest
             archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-linux.tar.gz
+
+          - os: macos-latest
+            archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-macos.tar.gz
 
     runs-on: ${{ matrix.os }}
 
@@ -62,8 +74,8 @@ jobs:
           pwd
           ls -R dist
 
-      - name: Test de fumée -- l'exécutable démarre et sert la vraie page d'accueil (Linux)
-        if: runner.os == 'Linux'
+      - name: Test de fumée -- l'exécutable démarre et sert la vraie page d'accueil (Linux/macOS)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           cd dist/FletchTime
@@ -111,8 +123,8 @@ jobs:
            -Path dist/FletchTime/* `
            -DestinationPath dist/${{ matrix.archive_name }}
 
-      - name: Créer l'archive Linux
-        if: runner.os == 'Linux'
+      - name: Créer l'archive Linux/macOS
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           cd dist
