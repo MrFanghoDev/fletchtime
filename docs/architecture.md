@@ -44,6 +44,17 @@ et diffusé à tous les écrans connectés. Chaque connexion reçoit un payload
 individualisé (pas un broadcast identique pour tous), car un message peut être
 ciblé sur une seule lane.
 
+```{important}
+`MatchServer.tick_loop()` mesure le temps **réellement écoulé** entre deux
+ticks via `time.monotonic()`, plutôt que de supposer que l'intervalle visé
+(`TICK_INTERVAL`, 0.2s) s'est écoulé pile. `asyncio.sleep()` ne dort jamais
+exactement la durée demandée -- l'écart, minime à chaque tick, dérivait de
+façon perceptible sur une volée longue (plusieurs secondes sur les 45s
+d'un walk-up Flint, remonté sous Windows spécifiquement, dont la
+granularité de l'ordonnanceur est plus grossière que sous Linux). Voir
+`tests/test_match_server.py::test_tick_loop_uses_actual_elapsed_time_not_fixed_interval`.
+```
+
 ```{code-block} json
 :caption: Payload diffusé à un client donné (exemple)
 

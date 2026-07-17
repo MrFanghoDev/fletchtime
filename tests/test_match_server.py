@@ -1,9 +1,10 @@
+import asyncio
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from fletchtime.server import config_store
+from fletchtime.server import config_store, match_server
 from fletchtime.server.match_server import MatchServer
 
 
@@ -208,6 +209,52 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.display.last_state()["time_left"], 9.8)
         self.assertEqual(events, [])  # no phase transition yet at 0.2s into a 10s step
+
+    async def test_tick_loop_uses_actual_elapsed_time_not_fixed_interval(self) -> None:
+        """Régression pour un écart de plusieurs secondes remonté sur
+        Windows sur une volée de 45s : tick_loop appelait
+        `engine.tick(TICK_INTERVAL)` en supposant que TICK_INTERVAL s'était
+        écoulé pile, alors qu'`asyncio.sleep()` ne dort jamais exactement
+        la durée demandée -- l'erreur, petite à chaque tick, dérive sur une
+        volée longue (plus perceptible sous Windows, dont la granularité
+        de l'ordonnanceur est plus grossière que sous Linux). Corrigé en
+        mesurant le temps réellement écoulé via `time.monotonic()`."""
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        self.server.engine.pop_pending_events()
+        before = self.server.engine.current_state.time_left
+
+        # Chaque appel à time.monotonic() avance un temps simulé d'une
+        # valeur fixe DIFFÉRENTE de TICK_INTERVAL (0.2s réel) -- si le
+        # code utilisait encore TICK_INTERVAL en dur (l'ancien bug), le
+        # décompte serait un multiple de 0.2, jamais de 0.05.
+        state = {"t": 1000.0}
+
+        def fake_monotonic():
+            state["t"] += 0.05
+            return state["t"]
+
+        original_monotonic = match_server.time.monotonic
+        match_server.time.monotonic = fake_monotonic
+        try:
+            task = asyncio.ensure_future(self.server.tick_loop())
+            await asyncio.sleep(0.65)  # laisse tourner quelques vrais ticks
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        finally:
+            match_server.time.monotonic = original_monotonic
+
+        after = self.server.engine.current_state.time_left
+        decrement = before - after
+        self.assertGreater(decrement, 0)
+        remainder = round(decrement, 10) % 0.05
+        self.assertTrue(
+            remainder < 1e-6 or abs(remainder - 0.05) < 1e-6,
+            f"decrement={decrement} devrait être un multiple de 0.05 (temps mesuré), "
+            "pas de 0.2 (TICK_INTERVAL fixe -- signe d'une régression de ce correctif)",
+        )
 
     async def test_unregister_stops_further_broadcasts(self) -> None:
         count_before = len(self.display.sent)

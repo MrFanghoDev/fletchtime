@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from dataclasses import asdict, replace
 
 from fletchtime.engine import (
@@ -327,12 +328,26 @@ class MatchServer:
     # -- background ticking -------------------------------------------------
 
     async def tick_loop(self) -> None:
+        # Mesure le temps réellement écoulé entre deux ticks plutôt que de
+        # supposer que TICK_INTERVAL s'est écoulé pile -- asyncio.sleep()
+        # ne dort jamais exactement la durée demandée (dépend de la
+        # granularité de l'ordonnanceur du système, plus grossière sous
+        # Windows que sous Linux), et cette petite erreur, répétée à
+        # chaque tick, dérive de façon perceptible sur une volée longue
+        # (mesuré : plusieurs secondes d'écart sur 45s de walk-up Flint).
+        # time.monotonic() n'est jamais affecté par un ajustement de
+        # l'horloge système (contrairement à time.time()), ce qui compte
+        # ici puisqu'on mesure un intervalle, pas une heure absolue.
+        last_tick = time.monotonic()
         while True:
             await asyncio.sleep(TICK_INTERVAL)
+            now = time.monotonic()
+            elapsed = now - last_tick
+            last_tick = now
             events = []
             async with self._lock:
                 if self.engine is not None:
-                    self.engine.tick(TICK_INTERVAL)
+                    self.engine.tick(elapsed)
                     events = self.engine.pop_pending_events()
             await self.broadcast_state()
             if events:
