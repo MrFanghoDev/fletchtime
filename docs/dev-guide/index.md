@@ -222,11 +222,23 @@ construction elle-même s'est terminée sans erreur apparente.
 **Piège PyInstaller + modules internes du paquet** : constaté sur un vrai
 build macOS -- `ModuleNotFoundError: No module named 'fletchtime.runtime'`
 au lancement, alors que ce module est importé sans condition en tête de
-`fletchtime/__main__.py`. Cause exacte non confirmée (l'analyse statique
-de PyInstaller a dû rater ce module pour une raison qui reste floue), mais
-`fletchtime.spec` embarque désormais tous les sous-modules du paquet de
-façon exhaustive via `collect_submodules("fletchtime")`, plutôt que de
-compter sur la détection automatique au cas par cas.
+`fletchtime/__main__.py`. `fletchtime.spec` embarque désormais tous les
+sous-modules du paquet de façon exhaustive via
+`collect_submodules("fletchtime")`, plutôt que de compter sur la
+détection automatique au cas par cas -- **mais ça ne suffit pas à soi
+seul** : `collect_submodules("fletchtime")` s'exécute immédiatement, à
+l'interprétation du fichier `.spec`, *avant* la construction de l'objet
+`Analysis` -- le `pathex` qu'on lui passe plus bas ne s'applique donc pas
+à cet appel, seulement à l'analyse de l'exécutable lui-même. Si
+`fletchtime` n'est pas importable dans l'environnement exact où tourne
+`pyinstaller` à cet instant précis, `collect_submodules` ne trouve
+silencieusement rien à embarquer -- confirmé en testant en local : un
+`import fletchtime` sans aucune configuration de chemin échoue
+entièrement (`ModuleNotFoundError`), reproduisant exactement le
+symptôme. D'où le `sys.path.insert(0, str(project_root / "src"))` ajouté
+en toute tête du `.spec`, avant l'appel à `collect_submodules` -- rend le
+résultat indépendant de si `pip install -e .` a été fait au préalable
+dans cet environnement.
 
 **Pourquoi c'est plus grave qu'il n'y paraît** : ce même problème,
 survenant sur `fletchtime.gui` plutôt que `fletchtime.runtime`, échouerait

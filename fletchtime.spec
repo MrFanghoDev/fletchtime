@@ -19,11 +19,23 @@
 # -- voir .github/workflows/release.yml qui construit les deux séparément
 # via les runners windows-latest/ubuntu-latest de GitHub Actions.
 
+import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 project_root = Path(SPECPATH)
+
+# Nécessaire pour que collect_submodules("fletchtime") ci-dessous puisse
+# réellement importer et énumérer le paquet : cet appel s'exécute
+# immédiatement, à l'interprétation de ce fichier .spec -- avant même la
+# construction de l'objet Analysis -- donc le `pathex` qu'on lui passe
+# plus bas ne s'applique pas ici, seulement à l'analyse de l'exécutable
+# lui-même. Sans ce sys.path.insert, collect_submodules échoue à trouver
+# fletchtime si le paquet n'a pas été pip-installé au préalable dans cet
+# environnement précis (ex. build local sans `pip install -e .` -- voir
+# release.yml, qui le fait, mais un lancement manuel pourrait l'omettre).
+sys.path.insert(0, str(project_root / "src"))
 
 a = Analysis(
     [str(project_root / "src" / "fletchtime" / "__main__.py")],
