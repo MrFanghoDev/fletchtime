@@ -48,6 +48,12 @@ Aucune installation de Python nécessaire. Les dossiers `web/assets/...` et
 `config/` sont créés automatiquement à côté de l'exécutable au premier
 lancement s'ils manquent.
 
+Chaque Release inclut aussi `FletchTime-<version>-docs.tar.gz` : la
+documentation technique (Sphinx) telle qu'elle était pour ce tag précis --
+contrairement à la version publiée sur GitHub Pages (toujours celle de
+`main`), utile pour consulter la doc correspondant exactement à une
+version installée. Décompresse et ouvre `index.html`.
+
 **Windows -- pare-feu** : au premier lancement, Windows affiche une alerte
 "Le Pare-feu Windows Defender a bloqué certaines fonctionnalités de cette
 application" -- coche au moins **Réseaux privés** puis clique **Autoriser

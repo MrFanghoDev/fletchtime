@@ -3,11 +3,17 @@ name: Exécutables autoporteurs (release)
 # Construit un exécutable autoporteur pour Windows (.zip) et Linux (.tar.gz)
 # via PyInstaller, sur les runners natifs de GitHub Actions (PyInstaller ne
 # fait pas de cross-compilation : le binaire Windows est produit par un
-# runner Windows, le binaire Linux par un runner Linux).
+# runner Windows, le binaire Linux par un runner Linux). Construit aussi
+# une archive de la documentation HTML générée (Sphinx) telle qu'elle
+# était à ce tag précis -- utile pour consulter la doc correspondant
+# exactement à une version installée, indépendamment de ce qui est publié
+# sur GitHub Pages (qui reflète toujours la dernière version de `main`,
+# voir docs.yml et le point d'attention "/latest/" du backlog dans
+# docs/roadmap.md).
 #
 # Déclenchement : push d'un tag de version (ex. v0.1.0), ou manuellement
-# depuis l'onglet Actions. Les deux archives sont jointes à une Release
-# GitHub créée automatiquement.
+# depuis l'onglet Actions. Les trois archives (Windows, Linux, doc) sont
+# jointes à une Release GitHub créée automatiquement.
 permissions:
   contents: write
   
@@ -117,8 +123,40 @@ jobs:
           name: ${{ matrix.archive_name }}
           path: dist/${{ matrix.archive_name }}
 
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historique complet (tags compris) -- nécessaire à
+                           # setuptools_scm pour déterminer la version
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer le paquet et les dépendances de la doc
+        run: |
+          pip install -e .
+          pip install -r docs/requirements.txt
+
+      - name: Construire la doc HTML
+        run: sphinx-build -b html docs docs/_build/html
+
+      - name: Créer l'archive de la doc
+        env:
+          ARCHIVE_NAME: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-docs.tar.gz
+        run: |
+          tar -czf "$ARCHIVE_NAME" -C docs/_build/html .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-docs.tar.gz
+          path: FletchTime-*-docs.tar.gz
+
   release:
-    needs: build
+    needs: [build, build-docs]
 
     if: startsWith(github.ref, 'refs/tags/v')
 
