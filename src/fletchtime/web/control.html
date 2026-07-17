@@ -207,6 +207,12 @@
   label.checkbox { display: flex; align-items: center; gap: 0.4rem; }
 
   .quick-messages { display: grid; gap: 0.6rem; }
+  #message-shooting-warning {
+    background: rgba(209, 161, 61, 0.15);
+    border: 1px solid var(--gold); color: var(--gold);
+    border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
   .quick-messages-group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
   .quick-messages-label {
     font-size: 0.72rem; color: var(--text-faint); width: 100%;
@@ -376,6 +382,7 @@
     <details class="panel" data-accent="message" id="panel-messages">
       <summary><span class="accent-bar"></span><span data-i18n="panelMessagesTitle">Messages</span><span class="chevron">▶</span></summary>
       <div class="panel-body">
+        <div class="hint" id="message-shooting-warning" style="display:none;" data-i18n="messageShootingWarning">⚠ Le tir est en cours : le message n'apparaîtra qu'à la prochaine pause (ramassage des flèches), urgence, ou fin de match.</div>
         <div class="row">
           <input type="text" id="msg" data-i18n-placeholder="messagePlaceholder"
             placeholder="Message à afficher sur les écrans...">
@@ -582,6 +589,8 @@
 
         const safeToShow = !data.state || data.state.finished
           || data.state.phase === "pause" || data.state.phase === "emergency";
+        document.getElementById("message-shooting-warning").style.display =
+          safeToShow ? "none" : "block";
         const messageStatus = !data.message
           ? t(currentLanguage, "messageNone")
           : JSON.stringify(data.message) + " -- " + (safeToShow ? t(currentLanguage, "messageShown") : t(currentLanguage, "messageWaiting"));
