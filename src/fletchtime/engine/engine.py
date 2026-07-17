@@ -18,9 +18,7 @@ from .sequence import Step
 class MatchEngine:
     def __init__(self, mode: ShootingMode, countdown_tick_seconds: int = 5) -> None:
         if countdown_tick_seconds < 0:
-            raise ValueError(
-                f"countdown_tick_seconds must be >= 0, got {countdown_tick_seconds}"
-            )
+            raise ValueError(f"countdown_tick_seconds must be >= 0, got {countdown_tick_seconds}")
         self._countdown_tick_seconds = countdown_tick_seconds
 
         self._steps: list[Step] = mode.build_sequence()
