@@ -195,6 +195,22 @@ plante au lancement de la fenêtre (thème introuvable), même si la
 construction elle-même s'est terminée sans erreur apparente.
 ```
 
+```{warning}
+**Ne pas écrire un thème `customtkinter` entièrement personnalisé (JSON
+maison).** Tenté une première fois pour reprendre la palette de marque de
+l'appli -- a cassé la construction de la fenêtre en conditions réelles
+(`KeyError: 'corner_radius'`) car le fichier fait à la main oubliait une
+clé interne attendue par la version de `customtkinter` installée. Le
+schéma exact de ces fichiers n'est pas garanti stable d'une version à
+l'autre et est difficile à valider sans lancer réellement la fenêtre (pas
+possible dans l'environnement où ce module est habituellement modifié,
+voir plus bas). À la place, `fletchtime.gui._apply_brand_colors` part d'un
+thème **intégré** ("dark-blue", garanti complet) et ne surcharge que les
+valeurs de couleur déjà présentes -- jamais de clé nouvelle -- le tout
+protégé par un `try/except` : en cas d'incompatibilité future, l'appli
+retombe sur le thème intégré tel quel plutôt que de planter.
+```
+
 ```{note}
 **Fenêtre graphique et tests** : `fletchtime.gui` n'a pas pu être testé
 visuellement (aucun affichage graphique disponible dans l'environnement où

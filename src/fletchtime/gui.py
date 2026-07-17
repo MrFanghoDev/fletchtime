@@ -101,6 +101,57 @@ class _QueueWriter:
                 pass
 
 
+def _apply_brand_colors() -> None:
+    """Surcharge uniquement les couleurs du thème `customtkinter` déjà
+    chargé (voir FletchTimeApp.__init__) pour reprendre la palette de
+    marque de l'appli -- mêmes couleurs que les pages web en thème sombre.
+    Ne touche à aucune clé structurelle (rayons, épaisseurs de bordure...),
+    qui reste celle du thème intégré ("dark-blue"), déjà complète et
+    testée pour la version de `customtkinter` installée -- un thème
+    entièrement personnalisé (JSON maison) risquait d'oublier une clé
+    interne attendue par une version différente de la bibliothèque,
+    faisant planter la construction de la fenêtre (déjà rencontré en
+    pratique)."""
+    try:
+        theme = ctk.ThemeManager.theme
+
+        def set_color(widget: str, key: str, light: str, dark: str) -> None:
+            # Ne crée jamais une clé absente du thème chargé -- seulement
+            # remplacer une valeur déjà attendue à cet endroit précis.
+            if widget in theme and key in theme[widget]:
+                theme[widget][key] = [light, dark]
+
+        set_color("CTk", "fg_color", "#eef1f6", "#0f1216")
+        set_color("CTkToplevel", "fg_color", "#eef1f6", "#0f1216")
+
+        set_color("CTkFrame", "fg_color", "#ffffff", "#171b22")
+        set_color("CTkFrame", "top_fg_color", "#f2f4f9", "#1d232c")
+        set_color("CTkFrame", "border_color", "#d7dce6", "#2a3140")
+
+        set_color("CTkButton", "fg_color", "#a8781f", "#d1a13d")
+        set_color("CTkButton", "hover_color", "#8a6119", "#b38732")
+        set_color("CTkButton", "text_color", "#ffffff", "#0f1216")
+
+        set_color("CTkLabel", "text_color", "#1b2333", "#e8ebf1")
+
+        set_color("CTkEntry", "fg_color", "#f2f4f9", "#1d232c")
+        set_color("CTkEntry", "border_color", "#d7dce6", "#2a3140")
+        set_color("CTkEntry", "text_color", "#1b2333", "#e8ebf1")
+
+        set_color("CTkOptionMenu", "fg_color", "#3357bf", "#4c7bdb")
+
+        set_color("CTkTextbox", "fg_color", "#f2f4f9", "#05070a")
+        set_color("CTkTextbox", "border_color", "#d7dce6", "#2a3140")
+        set_color("CTkTextbox", "text_color", "#1b2333", "#e8ebf1")
+    except Exception:
+        # Filet de sécurité : si l'API interne de ThemeManager diffère de
+        # ce qui est attendu ici (ex. version de customtkinter différente),
+        # l'appli continue avec le thème intégré "dark-blue" tel quel --
+        # moins conforme à la charte graphique, mais jamais un plantage au
+        # démarrage pour une simple histoire de couleurs.
+        pass
+
+
 class FletchTimeApp(ctk.CTk):
     def __init__(self) -> None:
         # Doit être fait AVANT super().__init__() : customtkinter applique
@@ -110,10 +161,19 @@ class FletchTimeApp(ctk.CTk):
         # la même palette que les pages web en thème sombre, cohérent
         # avec display.html qui reste lui aussi toujours sombre par choix
         # délibéré (voir docs/architecture.md).
+        #
+        # Part d'un thème intégré à customtkinter ("dark-blue" -- garanti
+        # complet pour la version installée) plutôt qu'un JSON entièrement
+        # personnalisé : un thème maison risque d'oublier une clé interne
+        # que customtkinter s'attend à trouver (ex. `corner_radius` sur une
+        # section qu'on ne pensait pas à fournir), faisant planter la
+        # construction de la fenêtre -- déjà rencontré en pratique. Seules
+        # les couleurs sont ensuite surchargées (voir _apply_brand_colors),
+        # tout le reste (rayons, épaisseurs de bordure...) reste celui,
+        # déjà testé, du thème intégré.
         ctk.set_appearance_mode("dark")
-        app_web_dir = _app_web_dir()
-        theme_path = app_web_dir / "_defaults" / "gui" / "theme.json"
-        ctk.set_default_color_theme(str(theme_path) if theme_path.is_file() else "blue")
+        ctk.set_default_color_theme("dark-blue")
+        _apply_brand_colors()
 
         super().__init__()
 
@@ -121,7 +181,7 @@ class FletchTimeApp(ctk.CTk):
         self.log_queue: queue.Queue[str] = queue.Queue()
 
         self.data_root = _data_root()
-        self.app_web_dir = app_web_dir
+        self.app_web_dir = _app_web_dir()
         ensure_directories(self.data_root, self.app_web_dir)
         self.assets_dir = self.data_root / "web" / "assets"
         self.runtime = ServerRuntime(
