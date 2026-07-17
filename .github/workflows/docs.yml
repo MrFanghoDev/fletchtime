@@ -11,6 +11,16 @@ name: Documentation développeur (GitHub Pages)
 on:
   push:
     branches: [main, master]
+    tags:
+      - "v*.*.*"  # sans ça, taguer une release ne redéclenche jamais ce
+                   # workflow (un push de tag n'est pas un push de branche) --
+                   # la doc publiée restait bloquée sur la version de dev du
+                   # dernier push de branche, jamais la version propre de la
+                   # release qu'on vient de taguer. Les filtres `paths`
+                   # ci-dessous ne s'appliquent de toute façon pas aux push
+                   # de tags (comportement documenté par GitHub) : un tag
+                   # reconstruit donc toujours la doc, peu importe si
+                   # docs/src ont changé -- exactement ce qu'on veut ici.
     paths:
       - "docs/**"
       - "src/**"  # la référence API (docs/api-reference.md) documente le

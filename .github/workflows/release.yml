@@ -62,6 +62,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller websockets customtkinter
+          # Installe aussi le paquet lui-même (pas juste ses dépendances) :
+          # c'est cette étape qui déclenche setuptools_scm et génère
+          # src/fletchtime/_version.py avec la version dérivée du tag --
+          # sans elle, PyInstaller (qui lit les sources directement via
+          # pathex, sans jamais "construire" le paquet) ne trouve jamais ce
+          # fichier, et fletchtime.__version__ retombe sur le repli "dev"
+          # même sur un vrai tag de release.
+          pip install -e .
 
       - name: Construire l'exécutable
         run: |

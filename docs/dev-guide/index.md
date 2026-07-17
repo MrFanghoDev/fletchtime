@@ -72,6 +72,29 @@ produirait une version de secours (`0.0.0`, voir `fallback_version` dans
 `fetch-depth: 0` sur leur étape de checkout -- à ne pas retirer en pensant
 que c'est superflu.
 
+**Deux autres pièges rencontrés en pratique** (version affichée restée
+sur "dev" après une vraie release, aussi bien dans le terminal du serveur
+que dans la doc publiée) :
+
+- **`release.yml` (exécutables PyInstaller)** : PyInstaller lit les
+  sources directement via `pathex`, sans jamais "construire" le paquet --
+  `setuptools_scm` ne se déclenche donc que si on installe explicitement
+  le paquet (`pip install -e .`) *avant* `pyinstaller fletchtime.spec`,
+  puisque c'est cette installation qui génère
+  `src/fletchtime/_version.py` (voir `pyproject.toml`, `write_to`) que
+  `fletchtime.__version__` lit ensuite. Sans cette étape, le fichier
+  n'existe jamais et `fletchtime.__version__` retombe sur `"dev"` --
+  même sur un vrai tag de release.
+- **`docs.yml` (doc publiée sur GitHub Pages)** : ne se déclenchait qu'au
+  push d'une branche (`branches: [main, master]`), jamais au push d'un
+  tag -- taguer une release ne redéclenchait donc jamais ce workflow, et
+  la doc publiée restait bloquée sur la version de développement du
+  dernier push de branche. Ajout de `tags: ["v*.*.*"]` au déclencheur.
+  Les filtres `paths` de ce même workflow ne s'appliquent de toute façon
+  jamais aux push de tags (comportement documenté par GitHub) : un tag
+  reconstruit donc toujours la doc, peu importe si `docs/`/`src/` ont
+  changé depuis -- exactement ce qu'on veut ici.
+
 ## Architecture générale
 
 Voir {doc}`../architecture` pour le détail complet. En résumé :
@@ -260,6 +283,18 @@ disponible pour les traiter :
   Silicon (ARM64) -- un Mac Intel pourrait nécessiter Rosetta 2 ou un
   build séparé (`macos-13` reste en Intel au moment où ceci est écrit,
   à vérifier sur la page officielle des runners GitHub le cas échéant).
+
+**Décision délibérée, pas un oubli** : ne pas construire d'artefact séparé
+par architecture (Windows/Linux ARM64, macOS Intel) tant qu'aucun
+utilisateur réel n'en a exprimé le besoin. Windows/Linux x86_64 couvrent
+l'écrasante majorité des PC de club ; Windows sait émuler x86_64 sur
+ARM64 nativement ; un besoin Linux ARM (ex. Raspberry Pi) passerait de
+toute façon plus naturellement par `pip install fletchtime` (fonctionne
+sur n'importe quelle architecture) que par un exécutable PyInstaller
+dédié. Pour macOS, doubler la matrice (Intel + Apple Silicon) sans
+utilisateur Mac avéré ajouterait de la complexité CI pour un besoin
+encore hypothétique -- à reconsidérer si un vrai retour utilisateur le
+justifie.
 ```
 
 ```{note}
