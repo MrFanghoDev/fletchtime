@@ -4,7 +4,7 @@ Le manuel utilisateur (premier lancement, configuration d'un concours,
 pilotage d'un match, écrans d'affichage, logo/bannières, pack de sons,
 messages, FAQ) vit directement dans l'application, pas ici.
 
-Il est pensé pour un DOS ou un bénévole non-développeur, bilingue
+Il est pensé pour le responsable du chronométrage ou un bénévole non-développeur, bilingue
 français/anglais, et **fonctionne hors ligne** puisqu'il est servi
 localement par FletchTime lui-même comme les autres pages
 (`control.html`, `display.html`) -- pas de sens à le dupliquer dans cette

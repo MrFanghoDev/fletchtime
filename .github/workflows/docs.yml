@@ -13,6 +13,9 @@ on:
     branches: [main, master]
     paths:
       - "docs/**"
+      - "src/**"  # la référence API (docs/api-reference.md) documente le
+                   # code source via autodoc -- doit se reconstruire aussi
+                   # quand le code change, pas juste la doc écrite à la main
       - ".github/workflows/docs.yml"
   workflow_dispatch:  # permet aussi un lancement manuel depuis l'onglet Actions
 

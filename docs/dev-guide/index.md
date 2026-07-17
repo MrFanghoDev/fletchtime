@@ -126,7 +126,7 @@ Voir {doc}`../architecture` pour le détail complet. En résumé :
   `MatchEngine`, qui rejoue la séquence produite.
 - Un `Step` avec `duration=None` signifie "attente indéfinie" (utilisé pour
   la pause de fin de volée) -- l'engine ne décompte jamais ce genre de step,
-  seul un `next()` manuel du DOS le fait avancer.
+  seul un `next()` manuel du responsable du chronométrage le fait avancer.
 - Si ton mode a besoin d'un seuil d'alerte (orange) qui ne redémarre pas le
   décompte, utilise `orange_threshold`/`orange_sound_event` sur le `Step`
   plutôt que de créer un step séparé (voir `engine.py`,

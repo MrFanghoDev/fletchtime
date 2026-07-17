@@ -65,7 +65,7 @@ Points structurants pour le chronométrage :
   fin de volée (récupération des flèches, décompte à l'arrêt), urgence.
 - Séquence walk-up Flint : 4 flèches enchaînées automatiquement (45s chacune),
   sans pause entre elles.
-- Commandes DOS : avancer manuellement (Next), mettre en pause temporairement
+- Commandes du responsable du chronométrage : avancer manuellement (Next), mettre en pause temporairement
   et reprendre, arrêter le match, recommencer depuis le début, aller
   directement à une volée précise (utile en cas d'erreur ou d'incident).
 - Urgence : arrêt immédiat, décompte figé, reprise avec possibilité de
@@ -86,16 +86,16 @@ Chaque écran affiche :
   (recourbe/trad et poulies), une seule pour le Flint (alternance 1 spot/4
   spots selon la parité de la volée).
 - Le numéro du pas de tir et un titre d'événement permanent (choisi par le
-  DOS, ex. "Concours FFTL Indoor — Février 2026").
+  responsable du chronométrage, ex. "Concours FFTL Indoor — Février 2026").
 
 En dehors des phases de tir actif (avant le concours, après sa fin, en cas de
 déconnexion réseau) : un **écran neutre unique et cohérent** — logo du club et
-horloge en direct, sans texte superflu (les messages du DOS restent
+horloge en direct, sans texte superflu (les messages du responsable du chronométrage restent
 indépendants et s'affichent par-dessus si besoin). Un diaporama alterne
 automatiquement cet écran neutre avec des bannières sponsors déposées par le
 club, jamais pendant le tir actif.
 
-L'interface est bilingue (français/anglais, choix du DOS, appliqué à tous les
+L'interface est bilingue (français/anglais, choix du responsable du chronométrage, appliqué à tous les
 écrans) et propose un thème clair/sombre (suit la préférence système ou choix
 explicite).
 
@@ -112,7 +112,7 @@ explicite).
 - 10 événements distincts : début de mise en place, début de tir, passage à
   l'orange, décompte des dernières secondes (nombre de secondes
   configurable, 5 par défaut, 0 pour désactiver), fin de volée,
-  pause/reprise manuelle du DOS, urgence/fin d'urgence, fin de match.
+  pause/reprise manuelle du responsable du chronométrage, urgence/fin d'urgence, fin de match.
 - Réglage global (pas par mode) : un seul pack actif à la fois pour toute
   l'application, changement pris en compte immédiatement sur tous les écrans
   déjà connectés.
@@ -143,7 +143,7 @@ explicite).
   d'affichage via `/display.html?lane=<n>`, synchronisé en temps réel.
 - Le poste de contrôle voit quels pas de tir sont effectivement connectés, et
   peut envoyer un message à tous les écrans ou à un seul en particulier.
-- Le poste de contrôle (DOS) et un écran peuvent cohabiter sur le même
+- Le poste de contrôle (responsable du chronométrage) et un écran peuvent cohabiter sur le même
   appareil (miniature d'aperçu en direct intégrée à l'interface de contrôle).
 
 ## Hors périmètre (pour l'instant)

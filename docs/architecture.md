@@ -2,27 +2,21 @@
 
 ## Vue d'ensemble
 
-```{code-block} text
-                     ┌──────────────────────────┐
-                     │   Serveur Python (asyncio) │
-                     │  (tourne sur le poste DOS,  │
-                     │   testé sur Pydroid 3)      │
-                     │                             │
-                     │  - MatchServer : état du     │
-                     │    match, source de vérité   │
-                     │    unique                    │
-                     │  - MatchEngine (Indoor/Flint) │
-                     │  - HTTP statique (stdlib)     │
-                     │  - WebSocket (paquet          │
-                     │    `websockets`)               │
-                     └────────────┬────────────────┘
-                                  │  réseau local (WiFi)
-              ┌───────────────────┼───────────────────┐
-              │                   │                   │
-       ┌──────▼──────┐    ┌──────▼──────┐     ┌──────▼──────┐
-       │ control.html │    │display.html │     │display.html │
-       │  (poste DOS) │    │  (lane 1)    │     │  (lane 2)    │
-       └──────────────┘    └──────────────┘     └──────────────┘
+```{mermaid}
+flowchart TB
+    subgraph srv["Serveur Python (asyncio)<br/>tourne sur le poste du responsable<br/>du chronométrage, testé sur Pydroid 3"]
+        MS["MatchServer<br/><i>état du match, source de vérité unique</i>"]
+        ME["MatchEngine<br/><i>Indoor / Flint</i>"]
+        HTTP["HTTP statique (stdlib)"]
+        WS["WebSocket (paquet websockets)"]
+        MS --- ME
+        MS --- HTTP
+        MS --- WS
+    end
+
+    srv -->|réseau local WiFi| C["control.html<br/><i>poste de contrôle</i>"]
+    srv -->|réseau local WiFi| D1["display.html<br/><i>pas de tir 1</i>"]
+    srv -->|réseau local WiFi| D2["display.html<br/><i>pas de tir 2</i>"]
 ```
 
 Un seul service Python centralise l'état de la compétition. Tous les clients
@@ -98,9 +92,30 @@ indépendantes :
   tester chaque mode en asserting directement sur la liste de steps produite,
   sans faire tourner de minuteur.
 - **`MatchEngine`** : rejoue cette liste. C'est la seule classe avec de l'état
-  (index courant, temps restant, pause, urgence). Expose les commandes du DOS :
-  `tick(dt)`, `next()`, `stop()`, `restart()`, `goto(unit, end, arrow, turn)`,
-  `emergency()`/`resume()`, `pause()`/`play()`.
+  (index courant, temps restant, pause, urgence). Expose les commandes du
+  responsable du chronométrage : `tick(dt)`, `next()`, `stop()`, `restart()`,
+  `goto(unit, end, arrow, turn)`, `emergency()`/`resume()`, `pause()`/`play()`.
+
+Les phases visuelles (`Phase`, voir {doc}`api-reference`) suivent ces
+transitions :
+
+```{mermaid}
+stateDiagram-v2
+    [*] --> RED: mise en place
+    RED --> GREEN: fin de la mise en place
+    GREEN --> ORANGE: seuil d alerte franchi, même décompte
+    GREEN --> PAUSE: fin de volée standard
+    ORANGE --> PAUSE: fin de volée
+    PAUSE --> RED: next, relais ou volée suivante
+    RED --> EMERGENCY: emergency
+    GREEN --> EMERGENCY: emergency
+    ORANGE --> EMERGENCY: emergency
+    EMERGENCY --> RED: resume
+    EMERGENCY --> GREEN: resume
+    EMERGENCY --> ORANGE: resume
+    GREEN --> [*]: fin de match
+    ORANGE --> [*]: fin de match
+```
 
 ```{code-block} python
 :caption: Step -- un segment temporisé (extrait réel)

@@ -22,7 +22,20 @@ version = release  # les deux valeurs Sphinx standard, identiques ici par simpli
 extensions = [
     "myst_parser",
     "sphinx.ext.autosectionlabel",
+    "sphinx.ext.autodoc",       # documentation de l'API Python interne
+    "sphinx.ext.napoleon",      # comprend les docstrings de style Google/NumPy
+    "sphinx.ext.viewcode",      # lien "voir le code source" sur chaque objet documenté
+    "sphinxcontrib.mermaid",    # diagrammes ```mermaid dans les fichiers .md
+    "sphinx_design",            # cartes/grilles/onglets pour aérer la mise en page
 ]
+
+# -- Documentation de l'API Python (autodoc) ----------------------------------
+# Nécessite que le paquet fletchtime soit installé (pip install -e .) avant
+# de construire la doc -- déjà fait par .github/workflows/docs.yml.
+autodoc_member_order = "bysource"  # ordre du fichier source, pas alphabétique
+autodoc_typehints = "description"  # affiche les annotations de type dans la description, pas la signature
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
 
 source_suffix = {
     ".rst": "restructuredtext",
