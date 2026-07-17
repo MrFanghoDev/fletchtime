@@ -105,3 +105,16 @@ deux ports séparés).
 :::
 
 ::::
+
+## `fletchtime.runtime` -- cycle de vie des serveurs
+
+Démarrage/arrêt propre des deux serveurs (HTTP + WebSocket), partagé entre
+le mode graphique et le mode terminal (`--headless`) -- voir
+{doc}`architecture`, section "Fenêtre graphique et cycle de vie des
+serveurs".
+
+```{eval-rst}
+.. automodule:: fletchtime.runtime
+   :members:
+   :show-inheritance:
+```

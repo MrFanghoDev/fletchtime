@@ -6,6 +6,12 @@ Logiciel open source de gestion du temps pour compétitions d'archerie FFTL
 (Indoor et Flint), pensé pour être simple à déployer sur un réseau local
 multi-écrans et à paramétrer sans compétences techniques.
 
+Se lance avec une fenêtre graphique (démarrage/arrêt du serveur, liens
+rapides vers les pages, journal réseau) sur toutes les plateformes, y
+compris Pydroid 3. Ajoute `--headless` pour retrouver l'ancien mode
+terminal (aussi utilisé automatiquement si la fenêtre ne peut pas se
+charger, ex. `customtkinter` absent).
+
 ## Installation
 
 Trois façons d'obtenir et faire tourner FletchTime, selon ton matériel --

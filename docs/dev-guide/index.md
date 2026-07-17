@@ -185,6 +185,30 @@ dossier bootstrapé), sans les pages de l'appli -- **et ça touche même
 problème de pare-feu/réseau si ce symptôme précis apparaît.
 ```
 
+```{warning}
+**Piège PyInstaller + `customtkinter`** : cette bibliothèque embarque ses
+thèmes (`.json`) et polices (`.otf`) comme données de paquet, que
+PyInstaller ne détecte pas automatiquement (piège documenté par le projet
+customtkinter lui-même). `fletchtime.spec` les inclut explicitement via
+`collect_data_files("customtkinter")` -- sans ça, l'exécutable construit
+plante au lancement de la fenêtre (thème introuvable), même si la
+construction elle-même s'est terminée sans erreur apparente.
+```
+
+```{note}
+**Fenêtre graphique et tests** : `fletchtime.gui` n'a pas pu être testé
+visuellement (aucun affichage graphique disponible dans l'environnement où
+ce module a été écrit). Ce qui est testé pour de vrai, c'est la logique
+qu'elle pilote : `fletchtime.runtime.ServerRuntime` (voir
+`tests/test_runtime.py` -- démarrage, requête HTTP réelle, arrêt propre,
+port libéré, redémarrage). Si tu modifies `fletchtime/gui.py`, un
+lancement réel sur PC (et si possible sur Pydroid) reste nécessaire avant
+de considérer le changement fiable -- l'exécution de `ci.yml` ne le
+détecterait pas (ni GitHub Actions, dont les runners n'ont pas
+d'affichage graphique, ce qui est justement pourquoi `main()` propose un
+mode `--headless`, utilisé par les tests de fumée de `release.yml`).
+```
+
 ```{note}
 La publication automatique de cette doc sur GitHub Pages est déjà en place
 (`.github/workflows/docs.yml`) -- voir le README à la racine du dépôt pour

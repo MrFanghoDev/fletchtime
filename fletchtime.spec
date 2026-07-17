@@ -21,6 +21,8 @@
 
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_data_files
+
 project_root = Path(SPECPATH)
 
 a = Analysis(
@@ -30,8 +32,13 @@ a = Analysis(
     datas=[
         (str(project_root / "src" / "fletchtime" / "web"), "web"),
         (str(project_root / "config"), "config"),
+        # customtkinter embarque ses thèmes (.json) et polices (.otf) comme
+        # données de paquet -- PyInstaller ne les détecte pas tout seul,
+        # d'où ce collect_data_files explicite (piège documenté par le
+        # projet customtkinter lui-même).
+        *collect_data_files("customtkinter"),
     ],
-    hiddenimports=["websockets"],
+    hiddenimports=["websockets", "customtkinter"],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
@@ -46,7 +53,13 @@ exe = EXE(
     exclude_binaries=True,
     name="FletchTime",
     debug=False,
-    console=True,  # fenêtre console visible -- affiche l'adresse IP à ouvrir
+    # Console gardée visible (voir fletchtime.gui._hide_console_on_windows,
+    # qui la masque automatiquement une fois la fenêtre graphique lancée
+    # avec succès) : sert de filet de sécurité si l'import de
+    # fletchtime.gui échoue (ex. customtkinter cassé sur cette machine) --
+    # fletchtime.__main__.main retombe alors sur le mode terminal, qui a
+    # besoin d'une console pour être visible.
+    console=True,
     upx=False,
     # Depuis PyInstaller 6.0, un build --onedir place par défaut tout son
     # contenu (hors l'exécutable lui-même) dans un sous-dossier _internal/,

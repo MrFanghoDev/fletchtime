@@ -267,6 +267,71 @@ de concours dédié/fermé, pas à un réseau partagé avec le grand public
 (voir `docs/roadmap.md`, backlog sécurité).
 ```
 
+## Fenêtre graphique et cycle de vie des serveurs
+
+Depuis l'introduction de la fenêtre graphique (`fletchtime.gui`, basée sur
+`customtkinter`), point d'entrée par défaut sur toutes les plateformes
+(`fletchtime.__main__.main`), les deux serveurs (HTTP statique et
+WebSocket) doivent pouvoir démarrer et s'arrêter **proprement**, pas
+seulement tourner jusqu'à un Ctrl+C -- boutons Démarrer/Arrêter obligent.
+Cette logique vit dans `fletchtime.runtime.ServerRuntime`, partagée entre
+le mode graphique et le mode terminal (`--headless`), pour ne jamais la
+dupliquer.
+
+```{mermaid}
+flowchart LR
+    subgraph main["Thread principal"]
+        GUI["Fenêtre customtkinter<br/><i>mainloop -- doit posséder ce thread</i>"]
+    end
+    subgraph httpT["Thread HTTP"]
+        HTTPD["ThreadingHTTPServer<br/><i>serve_forever / shutdown</i>"]
+    end
+    subgraph wsT["Thread WebSocket"]
+        LOOP["Boucle asyncio dédiée<br/><i>run_ws_server -- attend un stop_event</i>"]
+    end
+
+    GUI -->|start / stop| HTTPD
+    GUI -->|start / stop| LOOP
+    HTTPD -.->|file thread-safe| GUI
+    LOOP -.->|file thread-safe| GUI
+```
+
+Points clés :
+
+- Une fenêtre graphique (tkinter et ses surcouches, dont `customtkinter`)
+  doit posséder le thread principal -- contrairement à l'ancien
+  `fletchtime.__main__.main`, qui y faisait tourner directement
+  `asyncio.run(run_ws_server(...))`. Le serveur WebSocket tourne donc
+  maintenant dans son **propre thread**, avec sa propre boucle asyncio
+  (`asyncio.new_event_loop()`), exactement comme le serveur HTTP l'a
+  toujours fait.
+- Arrêt propre du serveur HTTP : `ThreadingHTTPServer.shutdown()` (offert
+  par la stdlib, `socketserver.BaseServer`) débloque `serve_forever()`
+  depuis n'importe quel autre thread -- rien à construire à la main.
+- Arrêt propre du serveur WebSocket : `run_ws_server` attend maintenant un
+  `asyncio.Event` (`stop_event`) plutôt qu'un `await asyncio.Future()` qui
+  ne se résout jamais. Le déclencher depuis un autre thread (le thread
+  graphique) passe par `loop.call_soon_threadsafe(stop_event.set)` --
+  seule façon sûre d'interagir avec une boucle asyncio depuis l'extérieur
+  de son propre thread.
+- Le journal affiché dans la fenêtre est une redirection de `sys.stdout`/
+  `sys.stderr` vers une `queue.Queue` (thread-safe par construction), lue
+  et affichée via un `after()` périodique de tkinter -- capte le journal
+  d'accès HTTP (`http.server` écrit sur stderr) sans avoir à instrumenter
+  chaque site d'appel.
+
+```{warning}
+Le rendu de la fenêtre elle-même n'a pas pu être testé visuellement lors
+de son écriture initiale (pas d'affichage graphique disponible dans
+l'environnement de développement utilisé). La logique de cycle de vie
+qu'elle pilote (`ServerRuntime`) est testée pour de vrai (voir
+`tests/test_runtime.py` : démarrage, requête HTTP réelle, arrêt, vérifi-
+cation que le port est bien libéré, redémarrage sur le même port). Un
+premier lancement réel sur PC et sur Pydroid reste nécessaire pour
+confirmer le rendu et l'ergonomie tactile -- voir aussi le piège
+PyInstaller/`customtkinter` documenté dans {doc}`dev-guide/index`.
+```
+
 ## Multi-écrans et ciblage
 
 Chaque écran se connecte au WebSocket et s'enregistre avec son numéro de lane

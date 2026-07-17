@@ -64,13 +64,20 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
         return super().translate_path(path)
 
 
-def start_http_server(directory: str, port: int, assets_dir: str | None = None) -> None:
+def start_http_server(
+    directory: str, port: int, assets_dir: str | None = None
+) -> ThreadingHTTPServer:
     """``assets_dir`` defaults to ``<directory>/assets`` when not given,
     matching the historical single-root behaviour (dev checkout, or a
-    PyInstaller build where everything sits together next to the exe)."""
+    PyInstaller build where everything sits together next to the exe).
+
+    Returns the bound (but not yet serving) server instance -- the caller
+    is expected to run ``.serve_forever()`` on it (typically in a
+    background thread) and can call ``.shutdown()`` from any other thread
+    for a clean stop (standard library guarantee, see
+    ``socketserver.BaseServer``)."""
     resolved_assets_dir = assets_dir or str(Path(directory) / "assets")
     handler = functools.partial(
         _DualRootHandler, directory=directory, assets_dir=resolved_assets_dir
     )
-    httpd = ThreadingHTTPServer(("0.0.0.0", port), handler)
-    httpd.serve_forever()
+    return ThreadingHTTPServer(("0.0.0.0", port), handler)

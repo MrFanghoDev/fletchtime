@@ -19,16 +19,15 @@ Deux notions de dossier bien distinctes ici, à ne pas confondre :
 
 from __future__ import annotations
 
-import asyncio
 import shutil
+import signal
 import socket
 import sys
 import threading
 from importlib import resources
 from pathlib import Path
 
-from fletchtime.server.http_static import start_http_server
-from fletchtime.server.ws_server import run_ws_server
+from fletchtime.runtime import ServerRuntime
 
 HTTP_PORT = 8000
 WS_PORT = 8765
@@ -112,13 +111,7 @@ def local_ip() -> str:
         s.close()
 
 
-def main() -> None:
-    data_root = _data_root()
-    app_web_dir = _app_web_dir()
-    ensure_directories(data_root, app_web_dir)
-    assets_dir = data_root / "web" / "assets"
-
-    ip = local_ip()
+def _print_banner(ip: str, data_root: Path) -> None:
     print("=" * 60)
     print("  FletchTime -- serveur de contrôle et d'affichage")
     print("  FletchTime -- control and display server")
@@ -148,17 +141,50 @@ def main() -> None:
         print("  networks) when the alert pops up, or check it in settings.")
         print("=" * 60)
 
-    http_thread = threading.Thread(
-        target=start_http_server,
-        args=(str(app_web_dir), HTTP_PORT, str(assets_dir)),
-        daemon=True,
-    )
-    http_thread.start()
+
+def _run_headless() -> None:
+    """Mode terminal classique -- utilisé si l'interface graphique n'a pas
+    pu être chargée (ex. `customtkinter` absent), ou explicitement demandé
+    via `--headless`/`--no-gui`."""
+    data_root = _data_root()
+    app_web_dir = _app_web_dir()
+    ensure_directories(data_root, app_web_dir)
+    assets_dir = data_root / "web" / "assets"
+
+    _print_banner(local_ip(), data_root)
+
+    runtime = ServerRuntime(str(app_web_dir), str(assets_dir), HTTP_PORT, WS_PORT)
+    runtime.start()
+
+    stop_event = threading.Event()
+    if sys.platform != "win32":
+        # SIGTERM (ex. arrêt de service) en plus de Ctrl+C -- pas
+        # nécessaire sous Windows, où signal.SIGTERM n'est pas géré de la
+        # même façon et n'apporte rien de plus que KeyboardInterrupt ici.
+        signal.signal(signal.SIGTERM, lambda *_: stop_event.set())
+    try:
+        stop_event.wait()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        runtime.stop()
+        print("Arrêt du serveur. / Server stopped.")
+
+
+def main() -> None:
+    if "--headless" in sys.argv or "--no-gui" in sys.argv:
+        _run_headless()
+        return
 
     try:
-        asyncio.run(run_ws_server(WS_PORT))
-    except KeyboardInterrupt:
-        print("Arrêt du serveur. / Server stopped.")
+        from fletchtime.gui import run_gui
+    except ImportError as exc:
+        print(f"Interface graphique indisponible ({exc}) -- mode terminal.")
+        print(f"Graphical interface unavailable ({exc}) -- terminal mode.")
+        _run_headless()
+        return
+
+    run_gui()
 
 
 if __name__ == "__main__":

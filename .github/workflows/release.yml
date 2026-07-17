@@ -43,7 +43,7 @@ jobs:
       - name: Installer les dépendances
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller websockets
+          pip install pyinstaller websockets customtkinter
 
       - name: Construire l'exécutable
         run: |
@@ -61,7 +61,7 @@ jobs:
         shell: bash
         run: |
           cd dist/FletchTime
-          ./FletchTime &
+          ./FletchTime --headless &
           SERVER_PID=$!
           sleep 3
           RESPONSE=$(curl -sf http://127.0.0.1:8000/)
@@ -80,7 +80,7 @@ jobs:
         shell: pwsh
         run: |
           Push-Location dist/FletchTime
-          Start-Process -FilePath ".\FletchTime.exe" -WindowStyle Hidden
+          Start-Process -FilePath ".\FletchTime.exe" -ArgumentList "--headless" -WindowStyle Hidden
           Start-Sleep -Seconds 3
           try {
             $response = Invoke-WebRequest -Uri "http://127.0.0.1:8000/" -UseBasicParsing
