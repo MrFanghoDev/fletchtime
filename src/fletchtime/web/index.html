@@ -168,11 +168,25 @@
 
   <footer>
     <span data-i18n="homeFooter">FletchTime — logiciel libre pour la FFTL.</span>
-    <a href="https://github.com/MrFanghoDev/fletchtime" data-i18n="homeFooterDevLink">Documentation développeur</a>
+    <span id="footer-version"></span>
+    · <a href="https://github.com/MrFanghoDev/fletchtime" data-i18n="homeFooterDevLink">Documentation développeur</a>
   </footer>
 
 <script src="i18n.js"></script>
 <script src="theme.js"></script>
+<script>
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "api/version");
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      try {
+        var data = JSON.parse(xhr.responseText);
+        document.getElementById("footer-version").textContent = "· v" + data.version;
+      } catch (e) { /* pas grave si ça échoue, juste pas affiché */ }
+    }
+  };
+  xhr.send();
+</script>
 <script>
   let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
 

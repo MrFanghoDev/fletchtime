@@ -46,6 +46,12 @@ local_scheme = "no-local-version"  # sans ça : suffixe +g<hash> ajouté, or
                                      # PyPI/TestPyPI refusent catégoriquement
                                      # toute "version locale" (PEP 440) à
                                      # l'upload -- voir la doc setuptools_scm
+write_to = "src/fletchtime/_version.py"
+# Génère aussi un simple fichier .py avec la version en clair, importable
+# directement (voir fletchtime/__init__.py) -- contrairement à
+# `importlib.metadata.version(...)`, ça fonctionne aussi une fois empaqueté
+# par PyInstaller, qui ne préserve pas forcément les métadonnées du paquet.
+# Fichier généré à la construction, jamais committé (voir .gitignore).
 
 [tool.black]
 line-length = 100

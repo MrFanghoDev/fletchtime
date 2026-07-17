@@ -15,6 +15,7 @@ try:
     release = _pkg_version("fletchtime")
 except PackageNotFoundError:
     release = "dev"
+version = release  # les deux valeurs Sphinx standard, identiques ici par simplicité
 
 # -- General configuration ---------------------------------------------------
 
@@ -34,7 +35,10 @@ myst_enable_extensions = [
     "fieldlist",
     "attrs_inline",
     "tasklist",
+    "substitution",     # active {{ version }} etc. dans les fichiers .md
 ]
+
+myst_substitutions = {"version": release}
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
@@ -44,6 +48,6 @@ language = "fr"
 
 html_theme = "furo"  # thème moderne, responsive, lisible sur mobile
 html_static_path = ["_static"]
-html_title = "FletchTime — Documentation"
+html_title = f"FletchTime {release} — Documentation"
 html_logo = "_static/logo.svg"
 html_favicon = "_static/logo.svg"

@@ -10,14 +10,19 @@ and guaranteed to work everywhere, including on a phone.
 from __future__ import annotations
 
 import functools
+import json
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+from fletchtime import __version__
 
 
 class _DualRootHandler(SimpleHTTPRequestHandler):
     """Serves the app's own static pages (control.html, i18n.js, logo.svg...)
     from ``directory`` as usual, but reroutes any ``/assets/...`` request to
-    a separate ``assets_dir`` instead.
+    a separate ``assets_dir`` instead, and answers ``/api/version`` directly
+    (used by index.html to display the running server's version -- see
+    ``fletchtime.__version__``).
 
     This matters once FletchTime is a proper installed package: the app
     pages live read-only inside the installed package, while club-specific
@@ -31,6 +36,18 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, directory: str, assets_dir: str, **kwargs) -> None:
         self._assets_dir = assets_dir
         super().__init__(*args, directory=directory, **kwargs)
+
+    def do_GET(self) -> None:
+        if self.path == "/api/version":
+            body = json.dumps({"version": __version__}).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        super().do_GET()
 
     def translate_path(self, path: str) -> str:
         if path == "/assets" or path.startswith("/assets/"):

@@ -5,6 +5,11 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
+# Généré par setuptools_scm à la construction (voir pyproject.toml,
+# write_to) -- jamais committé, régénéré à chaque `pip install -e .` /
+# `python -m build` / etc.
+src/fletchtime/_version.py
+
 # Artefacts de build (wheel, PyInstaller) -- jamais versionnés, régénérés à
 # la demande via `python -m build`, `pip wheel .`, ou `pyinstaller fletchtime.spec`.
 build/
