@@ -219,6 +219,28 @@ construction elle-même s'est terminée sans erreur apparente.
 ```
 
 ```{warning}
+**Piège PyInstaller + modules internes du paquet** : constaté sur un vrai
+build macOS -- `ModuleNotFoundError: No module named 'fletchtime.runtime'`
+au lancement, alors que ce module est importé sans condition en tête de
+`fletchtime/__main__.py`. Cause exacte non confirmée (l'analyse statique
+de PyInstaller a dû rater ce module pour une raison qui reste floue), mais
+`fletchtime.spec` embarque désormais tous les sous-modules du paquet de
+façon exhaustive via `collect_submodules("fletchtime")`, plutôt que de
+compter sur la détection automatique au cas par cas.
+
+**Pourquoi c'est plus grave qu'il n'y paraît** : ce même problème,
+survenant sur `fletchtime.gui` plutôt que `fletchtime.runtime`, échouerait
+**silencieusement** -- `fletchtime.gui` est importé dans un `try/except`
+(voir `main()`), donc son absence retomberait sur le mode terminal sans
+aucune erreur visible, sur toutes les plateformes, sans que personne ne
+s'en aperçoive avant qu'un utilisateur signale que la fenêtre ne s'ouvre
+jamais. Si tu ajoutes un nouveau module au paquet `fletchtime` et que son
+import est conditionnel/protégé quelque part, vérifie particulièrement
+qu'il apparaît bien dans un vrai `dist/FletchTime/` construit, pas
+seulement que la construction se termine sans erreur.
+```
+
+```{warning}
 **Ne pas écrire un thème `customtkinter` entièrement personnalisé (JSON
 maison).** Tenté une première fois pour reprendre la palette de marque de
 l'appli -- a cassé la construction de la fenêtre en conditions réelles

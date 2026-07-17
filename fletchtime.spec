@@ -21,7 +21,7 @@
 
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 project_root = Path(SPECPATH)
 
@@ -38,7 +38,22 @@ a = Analysis(
         # projet customtkinter lui-même).
         *collect_data_files("customtkinter"),
     ],
-    hiddenimports=["websockets", "customtkinter"],
+    hiddenimports=[
+        "websockets",
+        "customtkinter",
+        # Filet de sécurité pour nos propres modules : l'analyse statique
+        # de PyInstaller a manqué fletchtime.runtime en pratique (constaté
+        # sur un vrai build macOS -- ModuleNotFoundError au lancement, alors
+        # que le module est bien importé sans condition en tête de
+        # __main__.py). Plutôt que de chasser les imports un par un,
+        # collect_submodules embarque tout le paquet de façon exhaustive.
+        # C'est d'autant plus important pour fletchtime.gui : il est
+        # importé dans un try/except (voir main()), donc le même problème
+        # y échouerait SILENCIEUSEMENT -- retour au mode terminal sans
+        # aucune erreur visible, sur toutes les plateformes, sans que
+        # personne ne s'en aperçoive avant un signalement utilisateur.
+        *collect_submodules("fletchtime"),
+    ],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
