@@ -94,3 +94,19 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   le WebSocket, lui, resterait bien sûr en temps réel, seul l'habillage
   statique serait mis en cache. Chantier indépendant du reste, à ne traiter
   qu'une fois l'interface stabilisée.
+- **Documentation Sphinx versionnée** : `docs.yml` publie aujourd'hui une
+  seule version de la doc sur GitHub Pages (celle de `main`/`master` au
+  moment du build), écrasée à chaque push -- pas de moyen de consulter la
+  doc telle qu'elle était pour une release précédente (ex. v0.1.2) si le
+  code a changé depuis. À terme : une doc par tag de version (ex.
+  `/v0.1.2/`, `/v0.1.3/`) en plus d'une version `/latest/` reflétant
+  `main`/`master`, avec un sélecteur de version dans le thème Furo (voir
+  `sphinx-multiversion` ou équivalent). **Point d'attention à afficher
+  clairement dans la doc `/latest/` elle-même** : puisqu'elle se
+  reconstruit à chaque push (pas seulement à chaque tag, voir
+  `.github/workflows/docs.yml`), elle peut décrire un comportement plus
+  récent que la dernière release réellement publiée (PyPI/exécutables) --
+  un bandeau du type "tu consultes la documentation de développement,
+  potentiellement en avance sur la dernière version publiée" éviterait
+  toute confusion pour quelqu'un qui compare la doc à ce qu'il a
+  effectivement installé.
