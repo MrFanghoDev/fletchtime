@@ -145,9 +145,9 @@ class FletchTimeApp(ctk.CTk):
         header = ctk.CTkFrame(self, corner_radius=0)
         header.pack(fill="x")
 
-        ctk.CTkLabel(header, text="FletchTime", font=ctk.CTkFont(size=22, weight="bold")).pack(
-            side="left", padx=(16, 4), pady=12
-        )
+        ctk.CTkLabel(
+            header, text="FletchTime", font=ctk.CTkFont(size=22, weight="bold")
+        ).pack(side="left", padx=(16, 4), pady=12)
 
         ctk.CTkLabel(
             header,

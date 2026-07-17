@@ -27,6 +27,7 @@ import threading
 from importlib import resources
 from pathlib import Path
 
+from fletchtime import __version__
 from fletchtime.runtime import ServerRuntime
 
 HTTP_PORT = 8000
@@ -113,8 +114,8 @@ def local_ip() -> str:
 
 def _print_banner(ip: str, data_root: Path) -> None:
     print("=" * 60)
-    print("  FletchTime -- serveur de contrôle et d'affichage")
-    print("  FletchTime -- control and display server")
+    print(f"  FletchTime {__version__} -- serveur de contrôle et d'affichage")
+    print(f"  FletchTime {__version__} -- control and display server")
     print("=" * 60)
     print(f"  Accueil / Home      : http://{ip}:{HTTP_PORT}/")
     print(f"  Contrôle / Control  : http://{ip}:{HTTP_PORT}/control.html")
