@@ -1,4 +1,4 @@
-name: CI (lint + tests)
+name: Tests (lint + tests)
 
 # Qualité continue : formatage/lint (Black + Ruff) puis suite de tests, à
 # chaque push et pull request.

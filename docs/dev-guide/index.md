@@ -60,7 +60,7 @@ est dérivée automatiquement du tag git le plus proche par
 git tag v0.1.3
 git push --tags
 ```
-`release.yml` et `pypi.yml` s'occupent du reste (voir `README.md`, section
+`build.yml` et `docs.yml` s'occupent du reste (voir `README.md`, section
 "Publication").
 
 **Piège à connaître** : `setuptools_scm` a besoin de l'historique complet du
@@ -68,15 +68,14 @@ dépôt (tags compris) pour fonctionner -- un clone superficiel
 (`actions/checkout` sans `fetch-depth: 0`) ne verrait aucun tag et
 produirait une version de secours (`0.0.0`, voir `fallback_version` dans
 `pyproject.toml`). Tous les workflows qui construisent le paquet
-(`docs.yml`, `pypi.yml`, `release.yml`, `testpypi.yml`) ont donc
-`fetch-depth: 0` sur leur étape de checkout -- à ne pas retirer en pensant
-que c'est superflu.
+(`docs.yml`, `build.yml`) ont donc `fetch-depth: 0` sur leur étape de
+checkout -- à ne pas retirer en pensant que c'est superflu.
 
 **Deux autres pièges rencontrés en pratique** (version affichée restée
 sur "dev" après une vraie release, aussi bien dans le terminal du serveur
 que dans la doc publiée) :
 
-- **`release.yml` (exécutables PyInstaller)** : PyInstaller lit les
+- **`build.yml` (exécutables PyInstaller)** : PyInstaller lit les
   sources directement via `pathex`, sans jamais "construire" le paquet --
   `setuptools_scm` ne se déclenche donc que si on installe explicitement
   le paquet (`pip install -e .`) *avant* `pyinstaller fletchtime.spec`,
@@ -275,7 +274,7 @@ et Linux aussi, sans que personne ne s'en aperçoive avant qu'un
 utilisateur signale que la fenêtre ne s'ouvre jamais.
 
 **Pour déboguer ce genre de souci sans attendre une vraie release** :
-`release.yml` construit désormais aussi les exécutables sur chaque push
+`build.yml` construit désormais aussi les exécutables sur chaque push
 touchant à l'empaquetage (`src/`, `fletchtime.spec`, `pyproject.toml`),
 sans publier de Release -- artefacts téléchargeables directement depuis
 la page du run (section "Artifacts"). `fail-fast: false` reste en place
@@ -306,10 +305,10 @@ qu'elle pilote : `fletchtime.runtime.ServerRuntime` (voir
 `tests/test_runtime.py` -- démarrage, requête HTTP réelle, arrêt propre,
 port libéré, redémarrage). Si tu modifies `fletchtime/gui.py`, un
 lancement réel sur PC (et si possible sur Pydroid) reste nécessaire avant
-de considérer le changement fiable -- l'exécution de `ci.yml` ne le
+de considérer le changement fiable -- l'exécution de `test.yml` ne le
 détecterait pas (ni GitHub Actions, dont les runners n'ont pas
 d'affichage graphique, ce qui est justement pourquoi `main()` propose un
-mode `--headless`, utilisé par les tests de fumée de `release.yml`).
+mode `--headless`, utilisé par les tests de fumée de `build.yml`).
 
 **Confirmé en conditions réelles** : Pydroid 3 refuse catégoriquement
 d'ouvrir une fenêtre Tk quand le script est lancé depuis son **Terminal**

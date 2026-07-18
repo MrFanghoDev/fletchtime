@@ -1,9 +1,19 @@
-name: Documentation développeur (GitHub Pages)
+name: Documentation (construction, publication, archivage)
 
-# Construit la doc Sphinx/MyST (docs/) et la publie sur GitHub Pages à
-# chaque push sur main qui touche à la doc. Ne concerne QUE la doc
-# développeur -- le manuel utilisateur (web/manual.html) est servi
-# localement par le serveur FletchTime lui-même, pas publié ici.
+# Un seul workflow pour tout le cycle de vie de la documentation Sphinx :
+# - construction à chaque push touchant à la doc ou au code (docs/, src/)
+# - publication sur GitHub Pages à la suite
+# - archivage (.tar.gz joint à la Release GitHub) uniquement sur un tag
+#
+# Ne concerne QUE la doc développeur -- le manuel utilisateur
+# (web/manual.html) est servi localement par le serveur FletchTime
+# lui-même, jamais publié ici.
+#
+# Sur un tag, la doc publiée sur GitHub Pages ("/latest/" au sens large,
+# pas une version figée par tag -- voir le point d'attention associé dans
+# docs/roadmap.md) et l'archive jointe à la Release contiennent le même
+# contenu : c'est le même artefact de construction, réutilisé pour les
+# deux, pas reconstruit deux fois.
 #
 # Configuration ponctuelle nécessaire (une seule fois, sur GitHub) :
 #   Settings -> Pages -> Source: "GitHub Actions"
@@ -14,7 +24,7 @@ on:
     tags:
       - "v*.*.*"  # sans ça, taguer une release ne redéclenche jamais ce
                    # workflow (un push de tag n'est pas un push de branche) --
-                   # la doc publiée restait bloquée sur la version de dev du
+                   # la doc publiée resterait bloquée sur la version de dev du
                    # dernier push de branche, jamais la version propre de la
                    # release qu'on vient de taguer. Les filtres `paths`
                    # ci-dessous ne s'appliquent de toute façon pas aux push
@@ -30,7 +40,8 @@ on:
   workflow_dispatch:  # permet aussi un lancement manuel depuis l'onglet Actions
 
 permissions:
-  contents: read
+  contents: write  # lecture pour le checkout, écriture pour joindre
+                    # l'archive à une Release (job archive-on-release)
   pages: write
   id-token: write
 
@@ -64,7 +75,19 @@ jobs:
         with:
           path: docs/_build/html
 
-  deploy:
+      - name: Créer l'archive de la doc (pour la Release, si on est sur un tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          ARCHIVE_NAME: FletchTime-${{ github.ref_name }}-docs.tar.gz
+        run: tar -czf "$ARCHIVE_NAME" -C docs/_build/html .
+
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: docs-archive
+          path: FletchTime-*-docs.tar.gz
+
+  deploy-pages:
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -73,3 +96,17 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  archive-on-release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-archive
+
+      - name: Joindre l'archive à la Release GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: FletchTime-*-docs.tar.gz

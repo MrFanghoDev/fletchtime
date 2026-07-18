@@ -75,7 +75,7 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   liste blanche d'IP ni de HTTPS envisagés pour l'instant (complexité jugée
   disproportionnée par rapport au risque réel pour ce projet).
 - ~~**Exécutable autoporteur**~~ -- fait : `fletchtime.spec` (PyInstaller) +
-  `.github/workflows/release.yml` construisent automatiquement un `.zip`
+  `.github/workflows/build.yml` construisent automatiquement un `.zip`
   Windows et un `.tar.gz` Linux à chaque tag de version (`git tag v0.1.0 &&
   git push --tags`), publiés en Release GitHub. `fletchtime/__main__.py`
   détecte le mode empaqueté (`sys.frozen`) et crée/pré-remplit

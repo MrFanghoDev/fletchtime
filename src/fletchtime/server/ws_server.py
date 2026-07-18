@@ -20,7 +20,7 @@ async def run_ws_server(
 ) -> None:
     # Import différé (pas en tête de fichier) : permet d'importer ce module
     # -- et fletchtime.runtime, qui en dépend -- sans que `websockets` soit
-    # installé, utile pour les tests (voir ci.yml, qui ne l'installe pas
+    # installé, utile pour les tests (voir test.yml, qui ne l'installe pas
     # volontairement). Seul un vrai démarrage du serveur en a besoin.
     import websockets
 

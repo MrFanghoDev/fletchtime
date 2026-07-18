@@ -61,6 +61,12 @@ contrairement à la version publiée sur GitHub Pages (toujours celle de
 `main`), utile pour consulter la doc correspondant exactement à une
 version installée. Décompresse et ouvre `index.html`.
 
+Le wheel et le sdist (`fletchtime-<version>-py3-none-any.whl`,
+`fletchtime-<version>.tar.gz`) sont eux aussi joints à chaque Release --
+permet d'installer le paquet directement depuis GitHub
+(`pip install fletchtime-<version>-py3-none-any.whl`) sans dépendre de
+PyPI.
+
 **Windows -- pare-feu** : au premier lancement, Windows affiche une alerte
 "Le Pare-feu Windows Defender a bloqué certaines fonctionnalités de cette
 application" -- coche au moins **Réseaux privés** puis clique **Autoriser
@@ -81,7 +87,7 @@ attente de connexion" indéfiniment (la synchronisation temps réel ne peut
 jamais s'établir).
 
 Pour construire ces exécutables toi-même :
-voir `.github/workflows/release.yml` et `fletchtime.spec` (PyInstaller). Un
+voir `.github/workflows/build.yml` et `fletchtime.spec` (PyInstaller). Un
 `git tag v0.1.0 && git push --tags` déclenche la construction et publie les
 deux archives automatiquement.
 
@@ -97,7 +103,7 @@ engine = MatchEngine(IndoorMode(IndoorConfig()))
 
 ## Qualité continue
 
-Chaque push et pull request déclenche `.github/workflows/ci.yml` :
+Chaque push et pull request déclenche `.github/workflows/test.yml` :
 formatage/lint (Black + Ruff -- corrigés et recommités automatiquement sur
 un push direct, juste vérifiés sur une pull request) puis la suite de
 tests complète. Aucune dépendance externe nécessaire pour les tests,
@@ -114,13 +120,24 @@ python -m unittest discover -s tests -v
 
 ## Publication (pour les mainteneurs)
 
+Trois workflows GitHub Actions couvrent toute la chaîne, organisés par
+type de production plutôt que par outil : `test.yml` (lint + tests),
+`docs.yml` (doc Sphinx : construction, publication GitHub Pages,
+archivage sur Release), `build.yml` (paquet Python + exécutables
+PyInstaller).
+
 - **TestPyPI** (essai avant publication réelle) : publication automatique
-  via `.github/workflows/testpypi.yml` à chaque push sur `main`/`master` qui
-  touche au code. Génère un numéro de version unique à chaque fois
-  (`0.1.0.devN`) pour ne jamais entrer en conflit. Configuration ponctuelle
-  sur [test.pypi.org/manage/account/publishing](https://test.pypi.org/manage/account/publishing/)
+  via `.github/workflows/build.yml` (job `publish-testpypi`) à chaque push
+  sur `main`/`master` qui touche au code. La version est dérivée
+  automatiquement du tag git le plus proche par `setuptools_scm` (voir
+  `pyproject.toml`) : sur un commit qui n'est pas exactement un tag, elle
+  inclut le nombre de commits depuis ce tag (ex. `0.1.3.dev4`), donc
+  jamais de conflit de version sur TestPyPI, sans bricolage manuel.
+  Configuration ponctuelle sur
+  [test.pypi.org/manage/account/publishing](https://test.pypi.org/manage/account/publishing/)
   -- **compte séparé de pypi.org**, à créer indépendamment sur
-  [test.pypi.org](https://test.pypi.org).
+  [test.pypi.org](https://test.pypi.org). Le champ "Workflow name" doit
+  être `build.yml`.
 
   Pour installer une version publiée sur TestPyPI et vérifier qu'elle
   fonctionne avant de publier pour de vrai :
@@ -137,12 +154,14 @@ python -m unittest discover -s tests -v
   cherchant `websockets` sur TestPyPI où il n'existe pas.
 
 - **PyPI** (`pip install fletchtime`) : publication automatique via
-  `.github/workflows/pypi.yml` (Trusted Publishing OIDC, sans jeton API) à
-  chaque Release GitHub. Configuration ponctuelle nécessaire sur
+  `.github/workflows/build.yml` (job `publish-pypi`, Trusted Publishing
+  OIDC, sans jeton API) à chaque Release GitHub. Configuration ponctuelle
+  nécessaire sur
   [pypi.org/manage/account/publishing](https://pypi.org/manage/account/publishing/)
-  -- voir les commentaires du fichier de workflow. À faire une fois que les
-  essais sur TestPyPI sont concluants : contrairement à TestPyPI, un numéro
-  de version publié sur PyPI ne peut plus jamais être réutilisé ni supprimé.
+  -- le champ "Workflow name" doit être `build.yml` (voir les commentaires
+  en tête du fichier de workflow). À faire une fois que les essais sur
+  TestPyPI sont concluants : contrairement à TestPyPI, un numéro de
+  version publié sur PyPI ne peut plus jamais être réutilisé ni supprimé.
 - **Exécutables** : voir section 2 ci-dessus.
 
 ## Documentation

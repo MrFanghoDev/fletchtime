@@ -3,7 +3,7 @@ shared by the CLI and the (future) GUI.
 
 A minimal fake ``websockets`` module is injected into ``sys.modules``
 before importing anything, since the real library isn't a test dependency
-(see ci.yml, which deliberately doesn't install it) and the WS server's
+(see test.yml, which deliberately doesn't install it) and the WS server's
 real code only needs the small subset of its API exercised here (an async
 context manager returned by ``serve()``). This mirrors how
 ``fletchtime.server.ws_server`` now imports ``websockets`` lazily inside

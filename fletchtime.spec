@@ -16,7 +16,7 @@
 #
 # Le résultat est spécifique à l'OS sur lequel tourne PyInstaller : lancer
 # ce spec sous Windows produit un .exe Windows, sous Linux un binaire Linux
-# -- voir .github/workflows/release.yml qui construit les deux séparément
+# -- voir .github/workflows/build.yml qui construit les deux séparément
 # via les runners windows-latest/ubuntu-latest de GitHub Actions.
 
 from pathlib import Path
