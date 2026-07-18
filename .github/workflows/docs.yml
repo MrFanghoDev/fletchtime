@@ -68,6 +68,16 @@ jobs:
           pip install -e .
           pip install -r docs/requirements.txt
 
+      - name: Diagnostic -- ref déclencheur et version calculée
+        run: |
+          echo "Événement : ${{ github.event_name }}"
+          echo "Ref déclencheur : ${{ github.ref }}"
+          echo "SHA du commit : ${{ github.sha }}"
+          echo "Version calculée par setuptools_scm :"
+          python -c "from importlib.metadata import version; print(version('fletchtime'))"
+          echo "Sortie de 'git describe' pour comparaison :"
+          git describe --tags --long --always || echo "(aucun tag trouvé)"
+
       - name: Construire la doc HTML
         run: sphinx-build -b html docs docs/_build/html
 
