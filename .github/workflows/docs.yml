@@ -61,6 +61,18 @@ concurrency:
 
 jobs:
   build:
+    # Ignore les commits du bot de formatage automatique (voir test.yml,
+    # job lint -- corrige et recommit Black/Ruff sur chaque push direct) :
+    # sans ça, ce commit automatique déclenche un second run séparé de CE
+    # workflow, sur un commit qui se trouve être exactement 1 après le
+    # commit qu'on vient de taguer -- observé en pratique : la doc publiée
+    # affichait alors "vX.Y.dev1" au lieu de la version propre du tag, ce
+    # commit fantôme ayant déployé après coup.
+    #
+    # Condition volontairement restreinte à `github.event_name == 'push'` :
+    # `github.event.head_commit` n'existe pas pour d'autres déclencheurs
+    # (workflow_dispatch, release) -- pas de risque d'y toucher par erreur.
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, 'corrections automatiques (black + ruff)')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
