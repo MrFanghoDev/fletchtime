@@ -64,6 +64,15 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 
+- ~~**Récupération après plantage/redémarrage du serveur**~~ -- fait :
+  `MatchServer` persiste un instantané JSON de l'état du match
+  (`config/match_state.json`, jamais versionné) à chaque commande qui
+  change l'état et périodiquement pendant le décompte, et tente une
+  restauration silencieuse à la construction -- avant ça, un plantage en
+  plein match perdait toute la progression (série, volée, temps écoulé).
+  Voir {doc}`architecture`, section dédiée, pour le détail complet
+  (écriture atomique, repli silencieux sur un démarrage normal si la
+  reprise échoue).
 - ~~**Revamping du logo**~~ -- fait : nouveau logo cadran/flèche noir-or-blanc,
   wordmark "FletchTime" bicolore Fletch/Time, cohérent avec le thème clair/sombre.
 - ~~**Sécurisation cyber**~~ -- en partie fait : mot de passe optionnel

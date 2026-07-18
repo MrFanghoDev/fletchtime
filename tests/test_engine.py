@@ -539,5 +539,97 @@ class TestMatchEngineStopRestartGoto(unittest.TestCase):
         self.assertEqual(state.phase, Phase.RED)
 
 
+class TestMatchEngineSnapshotRestore(unittest.TestCase):
+    """Couvre la récupération après un plantage/redémarrage du serveur --
+    voir fletchtime.server.match_server, qui persiste ce snapshot sur
+    disque et le recharge au démarrage."""
+
+    def _cfg(self) -> IndoorConfig:
+        return IndoorConfig(
+            series=1,
+            ends_per_series=2,
+            prep_time=10,
+            shoot_time=240,
+            orange_warning_time=30,
+            turn_mode="ab_only",
+        )
+
+    def test_restore_reproduces_the_exact_same_state_mid_match(self) -> None:
+        engine1 = MatchEngine(IndoorMode(self._cfg()))
+        engine1.tick(10)  # RED -> GREEN
+        engine1.tick(215)  # avance -> franchit le seuil orange (30s)
+        engine1.pop_pending_events()
+        state_before = engine1.current_state
+        snapshot = engine1.snapshot()
+
+        engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
+        self.assertEqual(engine2.current_state, state_before)
+
+    def test_restore_does_not_replay_any_sound_event(self) -> None:
+        """Une reprise après crash doit être silencieuse -- pas de
+        prep_start/shoot_start rejoué comme si l'étape venait de
+        commencer."""
+        engine1 = MatchEngine(IndoorMode(self._cfg()))
+        engine1.tick(10)
+        engine1.pop_pending_events()
+        snapshot = engine1.snapshot()
+
+        engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
+        self.assertEqual(engine2.pop_pending_events(), [])
+
+    def test_restore_does_not_refire_an_already_fired_orange_warning(self) -> None:
+        engine1 = MatchEngine(IndoorMode(self._cfg()))
+        engine1.tick(10)
+        engine1.tick(215)  # franchit le seuil orange, son déjà joué
+        engine1.pop_pending_events()
+        snapshot = engine1.snapshot()
+
+        engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
+        engine2.tick(1)  # toujours en orange
+        self.assertNotIn("warning_orange", engine2.pop_pending_events())
+
+    def test_restore_preserves_emergency_state(self) -> None:
+        engine1 = MatchEngine(IndoorMode(self._cfg()))
+        engine1.tick(10)
+        engine1.tick(50)
+        engine1.emergency()
+        engine1.pop_pending_events()
+        state_before = engine1.current_state
+        snapshot = engine1.snapshot()
+
+        engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
+        self.assertEqual(engine2.current_state, state_before)
+        self.assertEqual(engine2.current_state.phase, Phase.EMERGENCY)
+        # Toujours gelé : un tick ne doit rien faire avancer en urgence
+        engine2.tick(5)
+        self.assertEqual(engine2.current_state, state_before)
+
+    def test_restore_preserves_pause_state(self) -> None:
+        engine1 = MatchEngine(IndoorMode(self._cfg()))
+        engine1.tick(10)
+        engine1.pause()
+        engine1.pop_pending_events()
+        snapshot = engine1.snapshot()
+
+        engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
+        self.assertTrue(engine2.current_state)  # ne plante pas
+        engine2.tick(5)  # gelé, ne doit rien faire avancer
+        self.assertEqual(round(engine2.current_state.time_left, 1), 240.0)
+
+    def test_snapshot_round_trips_through_a_plain_dict(self) -> None:
+        """Le snapshot doit être sérialisable tel quel (ex. json.dumps),
+        pas d'objet Python complexe qui échapperait à une sauvegarde
+        disque -- voir fletchtime.server.match_server."""
+        import json
+
+        engine = MatchEngine(IndoorMode(self._cfg()))
+        engine.tick(10)
+        snapshot = engine.snapshot()
+        # Ne doit pas lever -- confirme que tout est json-sérialisable
+        roundtripped = json.loads(json.dumps(snapshot))
+        engine2 = MatchEngine(IndoorMode(self._cfg()), restore=roundtripped)
+        self.assertEqual(engine2.current_state, engine.current_state)
+
+
 if __name__ == "__main__":
     unittest.main()

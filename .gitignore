@@ -27,6 +27,11 @@ docs/_build/
 # vrai secret et ne doit jamais être versionné.
 config/auth.toml
 
+# Instantané du match en cours (récupération après crash) -- propre à une
+# session de match en cours, pas un réglage du club à partager/versionner.
+config/match_state.json
+config/match_state.json.tmp
+
 # Assets propres à un club (logo, banderoles) -- jamais versionnés dans le
 # dépôt public partagé avec la FFTL, voir docs/architecture.md. Le README
 # explicatif est copié depuis src/fletchtime/web/_defaults/ au premier

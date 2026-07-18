@@ -16,7 +16,22 @@ from .sequence import Step
 
 
 class MatchEngine:
-    def __init__(self, mode: ShootingMode, countdown_tick_seconds: int = 5) -> None:
+    def __init__(
+        self,
+        mode: ShootingMode,
+        countdown_tick_seconds: int = 5,
+        *,
+        restore: dict | None = None,
+    ) -> None:
+        """``restore``, if given, reconstructs the engine's exact internal
+        state (position, time left, pause/emergency status) instead of
+        starting fresh at step 0 -- used to recover a match in progress
+        after a server crash/restart, see
+        :meth:`snapshot`/``fletchtime.server.match_server``. Assumed
+        already validated by the caller (bounds-checked against this same
+        ``mode``'s sequence, required keys present) -- this constructor
+        does not defensively re-validate it, matching how the rest of
+        this class trusts its own internal state."""
         if countdown_tick_seconds < 0:
             raise ValueError(f"countdown_tick_seconds must be >= 0, got {countdown_tick_seconds}")
         self._countdown_tick_seconds = countdown_tick_seconds
@@ -25,19 +40,52 @@ class MatchEngine:
         if not self._steps:
             raise ValueError("A shooting mode must produce at least one step")
 
-        self._index = 0
-        self._time_left: float | None = self._steps[0].duration
-        self._finished = False
-        self._paused = False
-
-        self._emergency = False
-        self._emergency_saved_time: float | None = None
-
-        self._orange_event_fired = False
-        self._countdown_ticks_fired: set = set()
-
         self._pending_events: list[str] = []
-        self._emit_current_step_event()
+
+        if restore is not None:
+            self._index = restore["index"]
+            self._time_left = restore["time_left"]
+            self._finished = restore["finished"]
+            self._paused = restore["paused"]
+            self._emergency = restore["emergency"]
+            self._emergency_saved_time = restore["emergency_saved_time"]
+            self._orange_event_fired = restore["orange_event_fired"]
+            self._countdown_ticks_fired = set(restore["countdown_ticks_fired"])
+            # Pas d'appel à _emit_current_step_event() ici, volontairement :
+            # une reprise après crash doit être silencieuse (pas de
+            # prep_start/shoot_start rejoué comme si l'étape venait de
+            # commencer) -- les écrans reprennent juste où ça en était.
+        else:
+            self._index = 0
+            self._time_left: float | None = self._steps[0].duration
+            self._finished = False
+            self._paused = False
+            self._emergency = False
+            self._emergency_saved_time = None
+            self._orange_event_fired = False
+            self._countdown_ticks_fired: set = set()
+            self._emit_current_step_event()
+
+    # -- persistance (récupération après crash) -----------------------------
+
+    def snapshot(self) -> dict:
+        """Extrait l'état interne exact, réutilisable via ``restore=`` pour
+        reconstruire un moteur identique -- voir
+        ``fletchtime.server.match_server`` pour la sérialisation sur
+        disque. Ne capture PAS ``mode``/``countdown_tick_seconds`` : le
+        code appelant est responsable de reconstruire le bon ``mode``
+        (même config indoor/flint) séparément avant de passer ce
+        dictionnaire à ``restore=``."""
+        return {
+            "index": self._index,
+            "time_left": self._time_left,
+            "finished": self._finished,
+            "paused": self._paused,
+            "emergency": self._emergency,
+            "emergency_saved_time": self._emergency_saved_time,
+            "orange_event_fired": self._orange_event_fired,
+            "countdown_ticks_fired": list(self._countdown_ticks_fired),
+        }
 
     # -- controls --------------------------------------------------------
 

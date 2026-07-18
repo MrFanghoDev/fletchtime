@@ -7,6 +7,25 @@ from pathlib import Path
 from fletchtime.server import config_store, match_server
 from fletchtime.server.match_server import MatchServer
 
+# Isole config_store.MATCH_STATE_JSON pour tout ce module de tests, quelle
+# que soit la classe -- plusieurs classes construisent un MatchServer()
+# sans jamais rediriger les chemins de config_store (voir TestMatchServer
+# ci-dessous), donc sans ceci, un instantané laissé par un test
+# contaminerait le suivant : MatchServer.__init__ tente une restauration
+# automatique dès la construction (voir _try_restore_from_snapshot).
+_original_match_state_json = config_store.MATCH_STATE_JSON
+
+
+def setUpModule() -> None:
+    global _match_state_tmpdir
+    _match_state_tmpdir = tempfile.TemporaryDirectory()
+    config_store.MATCH_STATE_JSON = Path(_match_state_tmpdir.name) / "match_state.json"
+
+
+def tearDownModule() -> None:
+    config_store.MATCH_STATE_JSON = _original_match_state_json
+    _match_state_tmpdir.cleanup()
+
 
 class FakeWebSocket:
     """Stand-in for a real websocket connection: just records what would
@@ -50,6 +69,10 @@ class FakeWebSocket:
 
 class TestMatchServer(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
+        # Efface tout instantané laissé par un test précédent -- voir
+        # setUpModule/tearDownModule plus haut, qui isole déjà le chemin
+        # lui-même, mais pas son contenu entre deux tests de ce fichier.
+        config_store.clear_match_snapshot()
         self.server = MatchServer()
         self.control = FakeWebSocket()
         self.display = FakeWebSocket()
@@ -320,6 +343,10 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
 
 class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
+        # Efface tout instantané laissé par un test précédent -- voir
+        # setUpModule/tearDownModule plus haut, qui isole déjà le chemin
+        # lui-même, mais pas son contenu entre deux tests de ce fichier.
+        config_store.clear_match_snapshot()
         self.server = MatchServer()
         self.control = FakeWebSocket()
         self.lane1 = FakeWebSocket()
@@ -459,6 +486,10 @@ class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
 
 class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
+        # Efface tout instantané laissé par un test précédent -- voir
+        # setUpModule/tearDownModule plus haut, qui isole déjà le chemin
+        # lui-même, mais pas son contenu entre deux tests de ce fichier.
+        config_store.clear_match_snapshot()
         self._tmpdir = tempfile.TemporaryDirectory()
         self._original_indoor = config_store.INDOOR_TOML
         self._original_flint = config_store.FLINT_TOML
@@ -777,6 +808,10 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
 
 class TestMatchServerAuth(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
+        # Efface tout instantané laissé par un test précédent -- voir
+        # setUpModule/tearDownModule plus haut, qui isole déjà le chemin
+        # lui-même, mais pas son contenu entre deux tests de ce fichier.
+        config_store.clear_match_snapshot()
         self._tmpdir = tempfile.TemporaryDirectory()
         self._originals = {
             "INDOOR_TOML": config_store.INDOOR_TOML,
@@ -1015,6 +1050,65 @@ class TestMatchServerAuth(unittest.IsolatedAsyncioTestCase):
         await self.server.register(fresh)
         await self.server.handle_command(json.dumps({"action": "start_indoor"}), fresh)
         self.assertIsNotNone(fresh.last_state())
+
+
+class TestMatchServerCrashRecovery(unittest.IsolatedAsyncioTestCase):
+    """Couvre la récupération après un plantage/redémarrage du serveur --
+    voir MatchServer._save_snapshot/_try_restore_from_snapshot et
+    fletchtime.engine.engine.MatchEngine.snapshot/restore. Le chemin
+    MATCH_STATE_JSON lui-même est isolé pour tout le module par
+    setUpModule/tearDownModule plus haut ; ici, on efface juste son
+    contenu entre deux tests de cette classe précise.
+    """
+
+    async def asyncSetUp(self) -> None:
+        config_store.clear_match_snapshot()
+
+    async def asyncTearDown(self) -> None:
+        config_store.clear_match_snapshot()
+
+    async def test_a_fresh_server_restores_a_match_in_progress(self) -> None:
+        server1 = MatchServer()
+        await server1.handle_command(json.dumps({"action": "start_indoor"}))
+        await server1.handle_command(json.dumps({"action": "next"}))  # RED -> GREEN
+        server1.engine.tick(15)
+        server1._save_snapshot()  # simule la sauvegarde périodique du tick_loop
+        state_before = server1.engine.current_state
+
+        # Simule un plantage + redémarrage : un tout nouveau MatchServer,
+        # sans rien de partagé avec server1 sinon le fichier sur disque.
+        server2 = MatchServer()
+        self.assertIsNotNone(server2.engine)
+        self.assertEqual(server2.engine.current_state, state_before)
+        self.assertEqual(server2._current_mode_kind, "indoor")
+
+    async def test_no_snapshot_means_fresh_server_has_no_match(self) -> None:
+        server = MatchServer()
+        self.assertIsNone(server.engine)
+
+    async def test_stop_clears_the_snapshot(self) -> None:
+        server1 = MatchServer()
+        await server1.handle_command(json.dumps({"action": "start_indoor"}))
+        await server1.handle_command(json.dumps({"action": "stop"}))
+
+        server2 = MatchServer()
+        self.assertIsNone(server2.engine)
+
+    async def test_restart_command_persists_the_reset_state(self) -> None:
+        server1 = MatchServer()
+        await server1.handle_command(json.dumps({"action": "start_indoor"}))
+        await server1.handle_command(json.dumps({"action": "next"}))
+        await server1.handle_command(json.dumps({"action": "restart"}))
+
+        server2 = MatchServer()
+        self.assertIsNotNone(server2.engine)
+        self.assertEqual(server2.engine.current_state.phase.value, "red")
+
+    async def test_corrupted_snapshot_file_does_not_prevent_server_startup(self) -> None:
+        config_store.MATCH_STATE_JSON.parent.mkdir(parents=True, exist_ok=True)
+        config_store.MATCH_STATE_JSON.write_text("not valid json {{{", encoding="utf-8")
+        server = MatchServer()  # ne doit pas lever
+        self.assertIsNone(server.engine)
 
 
 if __name__ == "__main__":

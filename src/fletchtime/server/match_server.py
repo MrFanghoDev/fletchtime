@@ -24,6 +24,7 @@ from fletchtime.engine import (
 from . import config_store
 
 TICK_INTERVAL = 0.2  # seconds between engine ticks / broadcasts
+SNAPSHOT_SAVE_INTERVAL = 5.0  # seconds between periodic crash-recovery snapshots
 
 # Actions qui changent l'état du match ou son affichage -- protégées par mot
 # de passe si un mot de passe est configuré (voir _auth_required). Tout le
@@ -100,6 +101,11 @@ class MatchServer:
         # "authenticate") -- par connexion, pas persistant : rouvrir la page
         # (nouvelle connexion WebSocket) redemande le mot de passe.
         self._authenticated_connections: set = set()
+
+        # Reprise après un plantage/redémarrage du serveur -- doit être fait
+        # en dernier, une fois _countdown_tick_seconds chargé ci-dessus
+        # (nécessaire pour reconstruire le moteur).
+        self._try_restore_from_snapshot()
 
     # -- connection lifecycle ---------------------------------------------
 
@@ -239,6 +245,13 @@ class MatchServer:
                 except ValueError:
                     pass  # e.g. goto target that doesn't exist -- ignore silently
 
+            # Un seul point d'appel pour toutes les actions ci-dessus,
+            # plutôt qu'un appel dispersé par action -- voir _save_snapshot,
+            # qui efface d'elle-même l'instantané si le match est terminé
+            # (fin naturelle ou stop() explicite), donc aucune logique
+            # d'effacement séparée n'est nécessaire ici.
+            self._save_snapshot()
+
         await self.broadcast_state()
 
     # -- config get/save (no match-state broadcast involved) -----------------
@@ -325,6 +338,56 @@ class MatchServer:
             and not self.engine.current_state.finished
         )
 
+    # -- récupération après crash (instantané du match en cours) -----------
+
+    def _save_snapshot(self) -> None:
+        """Persiste l'état actuel du match, ou efface l'instantané s'il n'y
+        a plus de match en cours (aucun engine, ou terminé -- fin
+        naturelle ou stop() explicite) : rien à reprendre dans ce cas, un
+        instantané qui traînerait redémarrerait un match déjà fini au
+        prochain lancement."""
+        if self.engine is None or self._current_mode_kind is None:
+            config_store.clear_match_snapshot()
+            return
+        if self.engine.current_state.finished:
+            config_store.clear_match_snapshot()
+            return
+        config_store.save_match_snapshot(
+            {"mode_kind": self._current_mode_kind, "engine": self.engine.snapshot()}
+        )
+
+    def _try_restore_from_snapshot(self) -> None:
+        """Best-effort, silencieux : toute reprise ratée (config changée
+        depuis le plantage rendant l'index invalide, fichier corrompu,
+        etc.) efface l'instantané et laisse le serveur démarrer sans match
+        en cours, exactement comme sans plantage préalable -- ne doit
+        jamais empêcher le démarrage du serveur."""
+        snapshot = config_store.load_match_snapshot()
+        if snapshot is None:
+            return
+        mode_kind = snapshot.get("mode_kind")
+        engine_snapshot = snapshot.get("engine")
+        if mode_kind not in ("indoor", "flint") or not isinstance(engine_snapshot, dict):
+            config_store.clear_match_snapshot()
+            return
+        try:
+            if mode_kind == "indoor":
+                mode = IndoorMode(config_store.load_indoor_config())
+            else:
+                mode = FlintMode(config_store.load_flint_config())
+            steps_len = len(mode.build_sequence())
+            index = engine_snapshot.get("index")
+            if not isinstance(index, int) or not (0 <= index < steps_len):
+                raise ValueError("index hors bornes -- config modifiée depuis le plantage")
+            self.engine = MatchEngine(
+                mode,
+                countdown_tick_seconds=self._countdown_tick_seconds,
+                restore=engine_snapshot,
+            )
+            self._current_mode_kind = mode_kind
+        except Exception:
+            config_store.clear_match_snapshot()
+
     # -- background ticking -------------------------------------------------
 
     async def tick_loop(self) -> None:
@@ -339,6 +402,7 @@ class MatchServer:
         # l'horloge système (contrairement à time.time()), ce qui compte
         # ici puisqu'on mesure un intervalle, pas une heure absolue.
         last_tick = time.monotonic()
+        last_snapshot = time.monotonic()
         while True:
             await asyncio.sleep(TICK_INTERVAL)
             now = time.monotonic()
@@ -349,6 +413,16 @@ class MatchServer:
                 if self.engine is not None:
                     self.engine.tick(elapsed)
                     events = self.engine.pop_pending_events()
+                    # Périodique plutôt qu'à chaque tick (5x/seconde) :
+                    # inutile d'écrire sur disque aussi souvent pour une
+                    # récupération après crash -- perte maximale en cas de
+                    # plantage : quelques secondes de décompte, jamais la
+                    # position dans le match (voir aussi _save_snapshot,
+                    # appelé immédiatement après chaque commande qui change
+                    # l'état, indépendamment de cet intervalle).
+                    if now - last_snapshot >= SNAPSHOT_SAVE_INTERVAL:
+                        self._save_snapshot()
+                        last_snapshot = now
             await self.broadcast_state()
             if events:
                 await self._broadcast({"type": "events", "events": events})

@@ -12,6 +12,7 @@ maison, largement suffisant pour les types simples qu'on manipule ici
 
 from __future__ import annotations
 
+import json
 import sys
 import tomllib
 from dataclasses import fields
@@ -39,6 +40,13 @@ APP_TOML = CONFIG_DIR / "app.toml"
 # passe), jamais versionné (voir .gitignore) -- contrairement à app.toml,
 # indoor.toml, flint.toml qui sont des réglages partageables sans risque.
 AUTH_TOML = CONFIG_DIR / "auth.toml"
+# Instantané du match en cours (JSON, pas TOML : structure imbriquée,
+# jamais éditée à la main par un humain contrairement aux fichiers
+# ci-dessus) -- permet de reprendre après un plantage/redémarrage du
+# serveur plutôt que de perdre la progression en cours. Jamais versionné
+# (voir .gitignore) : propre à une session de match en cours, pas un
+# réglage du club.
+MATCH_STATE_JSON = CONFIG_DIR / "match_state.json"
 
 APP_COMMENTS: dict[str, str] = {
     "sound_pack": "Nom du dossier dans web/assets/sounds/packs/ à utiliser (ex. classic)",
@@ -203,3 +211,33 @@ def _write_toml(path: Path, values: dict[str, Any], comments: dict[str, str]) ->
         lines.append("")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines), encoding="utf-8")
+
+
+# -- instantané du match en cours (récupération après crash) ----------------
+
+
+def save_match_snapshot(data: dict[str, Any]) -> None:
+    """Écriture atomique (fichier temporaire puis renommage) : ne laisse
+    jamais un fichier à moitié écrit si le processus s'arrête précisément
+    pendant l'écriture -- ``Path.replace`` est atomique aussi bien sous
+    Linux/macOS que Windows depuis Python 3.3+."""
+    MATCH_STATE_JSON.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = MATCH_STATE_JSON.with_suffix(".json.tmp")
+    tmp_path.write_text(json.dumps(data), encoding="utf-8")
+    tmp_path.replace(MATCH_STATE_JSON)
+
+
+def load_match_snapshot() -> dict[str, Any] | None:
+    """``None`` si aucun instantané n'existe, ou s'il est corrompu/
+    illisible -- une reprise ratée doit se rabattre silencieusement sur un
+    démarrage normal, jamais faire planter le serveur au lancement."""
+    if not MATCH_STATE_JSON.is_file():
+        return None
+    try:
+        return json.loads(MATCH_STATE_JSON.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+        return None
+
+
+def clear_match_snapshot() -> None:
+    MATCH_STATE_JSON.unlink(missing_ok=True)

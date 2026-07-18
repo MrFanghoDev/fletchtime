@@ -343,6 +343,41 @@ confirmer le rendu et l'ergonomie tactile -- voir aussi le piège
 PyInstaller/`customtkinter` documenté dans {doc}`dev-guide/index`.
 ```
 
+## Récupération après un plantage ou redémarrage du serveur
+
+Avant ce mécanisme, un plantage ou un redémarrage du serveur en plein
+match perdait toute la progression (série, volée, temps écoulé) : le
+`MatchServer` repartait d'un `self.engine = None`, sans aucun moyen de
+savoir où en était le concours -- il fallait alors un `goto()` manuel du
+responsable du chronométrage pour s'y retrouver.
+
+`MatchServer` persiste maintenant un instantané JSON de l'état du match
+(`config/match_state.json`, jamais versionné -- voir `.gitignore`) :
+
+- **Écriture** : à chaque commande qui change l'état (`next`, `stop`,
+  `restart`, `goto`, `emergency`, `resume`, `pause`, `play`,
+  `start_indoor`, `start_flint`) et périodiquement (toutes les
+  `SNAPSHOT_SAVE_INTERVAL` secondes, 5s actuellement -- voir
+  `fletchtime/server/match_server.py`) pendant le décompte -- perte
+  maximale en cas de plantage précis entre deux sauvegardes périodiques :
+  quelques secondes de décompte, jamais la position dans le match.
+  Écriture atomique (fichier temporaire puis renommage, voir
+  `config_store.save_match_snapshot`) : jamais de fichier à moitié écrit
+  si le plantage survient pendant l'écriture elle-même.
+- **Effacement** : dès que le match se termine (fin naturelle ou `stop()`
+  explicite) -- rien à reprendre dans ce cas, un instantané qui traînerait
+  redémarrerait un match déjà fini.
+- **Lecture** : à la construction de `MatchServer`, tentative de
+  restauration -- reconstruit la même séquence d'étapes à partir de la
+  config Indoor/Flint actuelle, puis restaure la position exacte
+  (`MatchEngine.snapshot`/`restore=`, voir {doc}`api-reference`). Une
+  reprise ratée (config changée depuis rendant l'index hors bornes,
+  fichier corrompu) efface l'instantané et se rabat silencieusement sur
+  un démarrage normal -- ne bloque jamais le lancement du serveur.
+- **Silencieuse** : contrairement à un vrai démarrage (`prep_start`), une
+  reprise ne rejoue aucun son de transition -- les écrans reprennent
+  juste où ça en était, sans redéclencher les sons du début de l'étape.
+
 ## Fonctionnement dégradé en cas de coupure réseau
 
 `display.html` continue de décompter **localement** pendant une coupure
