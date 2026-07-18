@@ -47,7 +47,17 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  # true, pas false : un push vers une branche et le push du tag qui suit
+  # quelques instants plus tard (même commit, deux événements séparés --
+  # voir plus haut) peuvent tous les deux déclencher un déploiement. Avec
+  # false, les deux étaient mis en file d'attente plutôt qu'annulés, sans
+  # garantie stricte que l'ordre d'achèvement respecte l'ordre de
+  # déclenchement -- observé en pratique : le run "branche" (version de
+  # dev, calculée avant que le tag existe) terminait après le run "tag"
+  # (version propre), donc c'est lui qui restait affiché. Avec true, un
+  # nouveau déclenchement annule net le précédent s'il tourne encore :
+  # seul le plus récent des deux déploie, sans course.
+  cancel-in-progress: true
 
 jobs:
   build:
