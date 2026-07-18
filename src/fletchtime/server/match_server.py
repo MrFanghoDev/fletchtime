@@ -24,7 +24,6 @@ from fletchtime.engine import (
 from . import config_store
 
 TICK_INTERVAL = 0.2  # seconds between engine ticks / broadcasts
-SNAPSHOT_SAVE_INTERVAL = 5.0  # seconds between periodic crash-recovery snapshots
 
 # Actions qui changent l'état du match ou son affichage -- protégées par mot
 # de passe si un mot de passe est configuré (voir _auth_required). Tout le
@@ -402,7 +401,6 @@ class MatchServer:
         # l'horloge système (contrairement à time.time()), ce qui compte
         # ici puisqu'on mesure un intervalle, pas une heure absolue.
         last_tick = time.monotonic()
-        last_snapshot = time.monotonic()
         while True:
             await asyncio.sleep(TICK_INTERVAL)
             now = time.monotonic()
@@ -413,16 +411,19 @@ class MatchServer:
                 if self.engine is not None:
                     self.engine.tick(elapsed)
                     events = self.engine.pop_pending_events()
-                    # Périodique plutôt qu'à chaque tick (5x/seconde) :
-                    # inutile d'écrire sur disque aussi souvent pour une
-                    # récupération après crash -- perte maximale en cas de
-                    # plantage : quelques secondes de décompte, jamais la
-                    # position dans le match (voir aussi _save_snapshot,
-                    # appelé immédiatement après chaque commande qui change
-                    # l'état, indépendamment de cet intervalle).
-                    if now - last_snapshot >= SNAPSHOT_SAVE_INTERVAL:
-                        self._save_snapshot()
-                        last_snapshot = now
+                    # À chaque tick (~5x/seconde), pas seulement
+                    # périodiquement : un instantané périodique trop
+                    # espacé (auparavant toutes les 5s) peut être visible
+                    # par les écrans -- en cas de redémarrage du serveur,
+                    # la reprise se fait alors sur un temps plus ANCIEN
+                    # que ce que l'écran affichait déjà (extrapolé
+                    # localement pendant la coupure, voir display.html et
+                    # docs/architecture.md), provoquant un retour en
+                    # arrière visible du chrono affiché. Écrire un petit
+                    # JSON à chaque tick reste bon marché (fichier local,
+                    # quelques dizaines d'octets) -- réduit la fenêtre de
+                    # péremption à ~200ms, imperceptible.
+                    self._save_snapshot()
             await self.broadcast_state()
             if events:
                 await self._broadcast({"type": "events", "events": events})

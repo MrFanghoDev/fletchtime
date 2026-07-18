@@ -10,6 +10,8 @@ isolation (see tests/test_indoor_mode.py, tests/test_flint_mode.py).
 
 from __future__ import annotations
 
+import time
+
 from .models import MatchState, Phase
 from .modes.base import ShootingMode
 from .sequence import Step
@@ -51,6 +53,25 @@ class MatchEngine:
             self._emergency_saved_time = restore["emergency_saved_time"]
             self._orange_event_fired = restore["orange_event_fired"]
             self._countdown_ticks_fired = set(restore["countdown_ticks_fired"])
+            # Recalcule time_left à partir de l'échéance murale (time.time(),
+            # PAS time.monotonic() -- cette dernière redémarre à zéro à
+            # chaque nouveau processus, une valeur sauvegardée avant le
+            # plantage n'aurait donc plus aucun sens après redémarrage)
+            # plutôt que de faire confiance à la valeur "time_left" telle
+            # quelle : celle-ci peut être légèrement périmée (l'instant
+            # exact de la sauvegarde, pas l'instant exact du plantage), et
+            # surtout ne tient pas compte du temps réel passé PENDANT
+            # l'indisponibilité du serveur (redémarrage, etc.) -- l'écran
+            # d'affichage, lui, continue de décompter localement pendant
+            # une coupure (voir display.html), donc sans ce recalcul, la
+            # reprise du chrono repartait perceptiblement en arrière par
+            # rapport à ce que les archers avaient déjà vu défiler.
+            # None si le décompte n'était pas actif au moment de la
+            # sauvegarde (pause/urgence/terminé) : rien à recalculer dans
+            # ce cas, le temps reste gelé tel quel.
+            deadline = restore.get("wallclock_deadline")
+            if deadline is not None:
+                self._time_left = max(0.0, deadline - time.time())
             # Pas d'appel à _emit_current_step_event() ici, volontairement :
             # une reprise après crash doit être silencieuse (pas de
             # prep_start/shoot_start rejoué comme si l'étape venait de
@@ -75,7 +96,22 @@ class MatchEngine:
         disque. Ne capture PAS ``mode``/``countdown_tick_seconds`` : le
         code appelant est responsable de reconstruire le bon ``mode``
         (même config indoor/flint) séparément avant de passer ce
-        dictionnaire à ``restore=``."""
+        dictionnaire à ``restore=``.
+
+        Inclut ``wallclock_deadline`` (horloge murale, ``time.time()`` --
+        jamais ``time.monotonic()``, qui n'a de sens que pour la durée de
+        vie d'un même processus) : l'instant exact où le décompte en cours
+        atteindra zéro, permettant à ``restore=`` de recalculer un
+        ``time_left`` exact quel que soit le temps écoulé depuis la
+        sauvegarde -- y compris le temps d'indisponibilité du serveur lui-
+        même. ``None`` si aucun décompte actif au moment de l'instantané
+        (pause, urgence, terminé)."""
+        is_counting_down = not (self._finished or self._paused or self._emergency)
+        wallclock_deadline = (
+            time.time() + self._time_left
+            if is_counting_down and self._time_left is not None
+            else None
+        )
         return {
             "index": self._index,
             "time_left": self._time_left,
@@ -85,6 +121,7 @@ class MatchEngine:
             "emergency_saved_time": self._emergency_saved_time,
             "orange_event_fired": self._orange_event_fired,
             "countdown_ticks_fired": list(self._countdown_ticks_fired),
+            "wallclock_deadline": wallclock_deadline,
         }
 
     # -- controls --------------------------------------------------------

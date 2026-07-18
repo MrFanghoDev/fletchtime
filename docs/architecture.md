@@ -356,12 +356,8 @@ responsable du chronométrage pour s'y retrouver.
 
 - **Écriture** : à chaque commande qui change l'état (`next`, `stop`,
   `restart`, `goto`, `emergency`, `resume`, `pause`, `play`,
-  `start_indoor`, `start_flint`) et périodiquement (toutes les
-  `SNAPSHOT_SAVE_INTERVAL` secondes, 5s actuellement -- voir
-  `fletchtime/server/match_server.py`) pendant le décompte -- perte
-  maximale en cas de plantage précis entre deux sauvegardes périodiques :
-  quelques secondes de décompte, jamais la position dans le match.
-  Écriture atomique (fichier temporaire puis renommage, voir
+  `start_indoor`, `start_flint`) et à chaque tick (~5x/seconde) pendant
+  le décompte. Écriture atomique (fichier temporaire puis renommage, voir
   `config_store.save_match_snapshot`) : jamais de fichier à moitié écrit
   si le plantage survient pendant l'écriture elle-même.
 - **Effacement** : dès que le match se termine (fin naturelle ou `stop()`
@@ -377,6 +373,40 @@ responsable du chronométrage pour s'y retrouver.
 - **Silencieuse** : contrairement à un vrai démarrage (`prep_start`), une
   reprise ne rejoue aucun son de transition -- les écrans reprennent
   juste où ça en était, sans redéclencher les sons du début de l'étape.
+
+```{important}
+**Le temps restauré est recalculé à partir d'une échéance en horloge
+murale (`time.time()`), pas de la valeur `time_left` telle
+qu'enregistrée.** Chaque instantané inclut `wallclock_deadline` :
+l'instant exact (horloge murale) où le décompte en cours atteindra zéro.
+À la restauration, `time_left = wallclock_deadline - time.time()` --
+recalculé à l'instant présent, pas relu tel quel. Résultat : peu importe
+combien de temps réel s'est écoulé entre la sauvegarde et la
+restauration (y compris le temps où le serveur était concrètement
+indisponible pendant son redémarrage), le temps restauré reste exact --
+sans ça, la reprise affichait un temps figé à l'instant de la dernière
+sauvegarde, revenant visiblement en arrière par rapport à ce que l'écran
+avait déjà montré en extrapolant localement pendant la coupure (voir plus
+bas, "Fonctionnement dégradé en cas de coupure réseau").
+
+Volontairement `time.time()` et jamais `time.monotonic()` pour cette
+échéance : `time.monotonic()` redémarre à une référence arbitraire à
+chaque nouveau processus, une valeur sauvegardée avant un plantage n'aurait
+donc plus aucun sens après redémarrage -- seule l'horloge murale reste
+comparable à travers un redémarrage du processus.
+
+`wallclock_deadline` vaut `None` pendant une pause/urgence (le décompte
+est gelé, aucune échéance à calculer) : `time_left` reste alors la
+valeur figée telle quelle, sans recalcul.
+
+La sauvegarde à chaque tick (plutôt que périodiquement, ex. toutes les
+5s) garde malgré tout sa valeur avec ce mécanisme : elle limite la
+fenêtre pendant laquelle un **changement d'étape complet** (fin de
+volée, passage à l'orange...) pourrait ne pas être capturé avant un
+plantage -- l'échéance recalculée donne un temps exact pour l'étape
+*enregistrée*, mais ne devine jamais qu'une étape différente aurait dû
+être active entre-temps.
+```
 
 ## Fonctionnement dégradé en cas de coupure réseau
 

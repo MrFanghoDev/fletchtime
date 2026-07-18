@@ -630,6 +630,66 @@ class TestMatchEngineSnapshotRestore(unittest.TestCase):
         engine2 = MatchEngine(IndoorMode(self._cfg()), restore=roundtripped)
         self.assertEqual(engine2.current_state, engine.current_state)
 
+    def test_restore_accounts_for_real_downtime_via_wallclock_deadline(self) -> None:
+        """Le cœur du mécanisme anti-retour-en-arrière : la reprise ne doit
+        pas se contenter de la valeur time_left telle qu'enregistrée (qui
+        devient périmée avec le temps), mais recalculer à partir de
+        l'échéance murale -- pour que le temps où le serveur était
+        indisponible (ex. redémarrage) soit lui aussi décompté, comme
+        l'écran d'affichage l'a déjà fait de son côté en extrapolant
+        localement pendant la coupure (voir display.html)."""
+        from unittest.mock import patch
+
+        with patch("fletchtime.engine.engine.time.time", return_value=1000.0):
+            engine1 = MatchEngine(IndoorMode(self._cfg()))
+            engine1.tick(10)  # RED -> GREEN
+            engine1.tick(15)  # 240 - 15 = 225s restantes
+            engine1.pop_pending_events()
+            snapshot = engine1.snapshot()
+
+        self.assertEqual(snapshot["wallclock_deadline"], 1225.0)
+
+        # 8 vraies secondes se sont écoulées (ex. temps de redémarrage du
+        # serveur) -- PAS via tick(), le temps qui passe réellement.
+        with patch("fletchtime.engine.engine.time.time", return_value=1008.0):
+            engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
+            self.assertEqual(engine2.current_state.time_left, 217.0)  # 225 - 8, pas 225
+
+    def test_restore_keeps_time_frozen_exactly_during_pause(self) -> None:
+        """Pendant une pause, le décompte est gelé -- aucune échéance
+        murale à calculer, et la reprise ne doit surtout pas décompter le
+        temps réel passé pendant l'indisponibilité comme si le décompte
+        avait continué."""
+        from unittest.mock import patch
+
+        with patch("fletchtime.engine.engine.time.time", return_value=1000.0):
+            engine1 = MatchEngine(IndoorMode(self._cfg()))
+            engine1.tick(10)
+            engine1.pause()
+            engine1.pop_pending_events()
+            snapshot = engine1.snapshot()
+
+        self.assertIsNone(snapshot["wallclock_deadline"])
+
+        with patch("fletchtime.engine.engine.time.time", return_value=1050.0):  # 50s plus tard
+            engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
+            self.assertEqual(engine2.current_state.time_left, 240.0)  # inchangé
+
+    def test_restore_clamps_to_zero_after_a_very_long_outage(self) -> None:
+        from unittest.mock import patch
+
+        with patch("fletchtime.engine.engine.time.time", return_value=2000.0):
+            engine1 = MatchEngine(IndoorMode(self._cfg()))
+            engine1.tick(10)
+            engine1.tick(20)  # 220s restantes
+            engine1.pop_pending_events()
+            snapshot = engine1.snapshot()
+
+        # 500 vraies secondes plus tard -- largement au-delà des 220s restantes
+        with patch("fletchtime.engine.engine.time.time", return_value=2500.0):
+            engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
+            self.assertEqual(engine2.current_state.time_left, 0.0)  # jamais négatif
+
 
 if __name__ == "__main__":
     unittest.main()
