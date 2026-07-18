@@ -76,16 +76,18 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   disproportionnée par rapport au risque réel pour ce projet).
 - ~~**Exécutable autoporteur**~~ -- fait : `fletchtime.spec` (PyInstaller) +
   `.github/workflows/release.yml` construisent automatiquement un `.zip`
-  Windows et un `.tar.gz` Linux **et macOS** à chaque tag de version (`git
-  tag v0.1.0 && git push --tags`), publiés en Release GitHub.
-  `fletchtime/__main__.py` détecte le mode empaqueté (`sys.frozen`) et
-  crée/pré-remplit automatiquement au premier lancement les dossiers
-  attendus (`web/assets/club/`, `banners/`, `targets/`, `sounds/packs/`)
-  s'ils manquent -- avec un vrai contenu par défaut pour les blasons et le
-  pack de sons "classic". **macOS jamais vérifié sur une vraie machine**
-  (seul le test de fumée en CI, `--headless`, confirme que ça démarre et
-  sert la page d'accueil) -- voir les limites connues dans
-  {doc}`dev-guide/index`.
+  Windows et un `.tar.gz` Linux à chaque tag de version (`git tag v0.1.0 &&
+  git push --tags`), publiés en Release GitHub. `fletchtime/__main__.py`
+  détecte le mode empaqueté (`sys.frozen`) et crée/pré-remplit
+  automatiquement au premier lancement les dossiers attendus
+  (`web/assets/club/`, `banners/`, `targets/`, `sounds/packs/`) s'ils
+  manquent -- avec un vrai contenu par défaut pour les blasons et le pack
+  de sons "classic". **macOS retiré de la matrice** après plusieurs
+  tentatives de correction infructueuses sur un bug d'empaquetage
+  reproductible (`ModuleNotFoundError` au lancement, cause exacte jamais
+  confirmée) -- voir le détail de l'investigation dans
+  {doc}`dev-guide/index`. Pas de besoin utilisateur macOS avéré à ce jour ;
+  à reconsidérer si ça change.
 - **Web app côté client (PWA)** : transformer `control.html`/`display.html`
   (voire `index.html`) en Progressive Web App -- `manifest.json` + service
   worker + icônes. Permettrait d'"installer" l'app sur l'écran d'accueil

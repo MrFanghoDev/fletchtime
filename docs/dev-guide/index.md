@@ -219,41 +219,67 @@ construction elle-même s'est terminée sans erreur apparente.
 ```
 
 ```{warning}
-**Piège PyInstaller + modules internes du paquet** : constaté sur un vrai
-build macOS -- `ModuleNotFoundError: No module named 'fletchtime.runtime'`
-au lancement, alors que ce module est importé sans condition en tête de
-`fletchtime/__main__.py`. Deux tentatives via `collect_submodules` (avec
-puis sans `sys.path.insert` préalable) n'ont pas réglé le problème : le
-journal de build complet d'un vrai run ne montrait qu'une seule ligne
-`Analyzing hidden import` pour l'un de nos modules
-(`fletchtime.web` -- via un mécanisme différent, sans lien avec
-`collect_submodules`), jamais pour `fletchtime.runtime` ni les autres --
-signe que la découverte dynamique ne fonctionnait pas comme attendu dans
-cet environnement précis, pour une raison qui reste floue.
+**macOS retiré de la matrice de build** après plusieurs tentatives de
+correction infructueuses -- historique complet ci-dessous pour qui
+voudrait reprendre l'investigation un jour.
 
-`fletchtime.spec` liste désormais chaque sous-module explicitement, en
-dur, dans `hiddenimports` -- plus rien laissé à un mécanisme de
-découverte dynamique. Liste vérifiée en énumérant réellement le paquet
-(`pkgutil.walk_packages`) : 17 modules, correspondance exacte confirmée.
-**À tenir à jour si de nouveaux modules sont ajoutés à `src/fletchtime/`**
--- un module ajouté sans être ajouté à cette liste reproduirait
-exactement ce bug.
+Symptôme constaté sur plusieurs runs réels : `ModuleNotFoundError: No
+module named 'fletchtime.runtime'` au lancement de l'exécutable macOS,
+alors que ce module est importé sans condition en tête de
+`fletchtime/__main__.py`. Windows et Linux n'ont jamais montré ce
+problème.
 
-**Pourquoi c'est plus grave qu'il n'y paraît** : ce même problème,
-survenant sur `fletchtime.gui` plutôt que `fletchtime.runtime`, échouerait
-**silencieusement** -- `fletchtime.gui` est importé dans un `try/except`
-(voir `main()`), donc son absence retomberait sur le mode terminal sans
-aucune erreur visible, sur toutes les plateformes, sans que personne ne
-s'en aperçoive avant qu'un utilisateur signale que la fenêtre ne s'ouvre
-jamais.
+Tentatives, dans l'ordre :
+1. `collect_submodules("fletchtime")` dans `hiddenimports` -- sans effet,
+   le journal de build ne montrait toujours aucune ligne `Analyzing
+   hidden import` pour nos modules.
+2. Ajout d'un `sys.path.insert(0, str(project_root / "src"))` avant cet
+   appel (hypothèse : `collect_submodules` a besoin que le paquet soit
+   importable au moment de l'interprétation du `.spec`, avant même la
+   construction de l'objet `Analysis`) -- toujours sans effet visible
+   dans le journal de build.
+3. Liste explicite de chaque sous-module en dur dans `hiddenimports`,
+   vérifiée par une comparaison automatique avec `pkgutil.walk_packages`
+   (17 modules, correspondance exacte confirmée) -- **a corrigé Windows
+   et Linux** (qui n'avaient pourtant jamais montré le problème...), mais
+   **macOS a échoué à l'identique**, avec exactement la même erreur.
+
+Ce dernier point est la donnée la plus importante : si une liste exhaustive
+et vérifiée ne change rien, le problème n'est probablement pas une
+histoire de modules manquants dans `hiddenimports` du tout, mais quelque
+chose de plus profond et spécifique à macOS/ARM64 -- pistes non
+explorées : la ré-écriture de version SDK et la re-signature ad-hoc que
+PyInstaller effectue automatiquement sur EXE en fin de build macOS
+(visibles dans le journal : *"Rewriting the executable's macOS SDK
+version"*, *"Re-signing the EXE"*), qui pourraient corrompre ou exclure
+une partie de l'archive Python embarquée sans que la construction
+elle-même ne signale d'erreur.
+
+Face à une cause qui résiste à plusieurs corrections ciblées et vérifiées,
+et sans utilisateur macOS avéré à ce jour, la décision a été de **revenir
+à `hiddenimports=["websockets", "customtkinter"]`** (la liste explicite
+n'apportait aucun bénéfice réel à Windows/Linux, qui fonctionnaient déjà
+sans elle -- seulement un risque de régression silencieuse si un nouveau
+module est ajouté sans être ajouté à la liste) et de **retirer macOS de
+la matrice** plutôt que de continuer à itérer à l'aveugle sans jamais
+pouvoir tester sur une vraie machine. Réintroduire macOS nécessiterait de
+reprendre cette investigation, idéalement avec accès à une vraie machine
+macOS pour tester en dehors du cycle CI complet.
+
+**Pourquoi le risque de module manquant reste important même sans
+macOS** : le même problème, survenant sur `fletchtime.gui` plutôt que
+`fletchtime.runtime`, échouerait **silencieusement** -- `fletchtime.gui`
+est importé dans un `try/except` (voir `main()`), donc son absence
+retomberait sur le mode terminal sans aucune erreur visible, sur Windows
+et Linux aussi, sans que personne ne s'en aperçoive avant qu'un
+utilisateur signale que la fenêtre ne s'ouvre jamais.
 
 **Pour déboguer ce genre de souci sans attendre une vraie release** :
 `release.yml` construit désormais aussi les exécutables sur chaque push
 touchant à l'empaquetage (`src/`, `fletchtime.spec`, `pyproject.toml`),
 sans publier de Release -- artefacts téléchargeables directement depuis
-la page du run (section "Artifacts"). `fail-fast: false` sur la matrice
-évite qu'un échec sur une plateforme n'annule les autres, pour pouvoir
-comparer leurs résultats.
+la page du run (section "Artifacts"). `fail-fast: false` reste en place
+sur la matrice (utile même à deux plateformes).
 ```
 
 ```{warning}
@@ -299,40 +325,18 @@ de la laisser remonter -- sans ça, le repli en mode terminal se heurterait
 ```
 
 ```{note}
-**macOS -- jamais vérifié sur une vraie machine**, contrairement à
-Windows et Linux dont les problèmes réels remontés ont pu être corrigés
-et re-testés. `macos-latest` est dans la matrice de `release.yml` (test
-de fumée `--headless` uniquement -- confirme le démarrage du serveur,
-pas le rendu de la fenêtre) depuis que ce point a été soulevé, mais
-plusieurs limites connues restent non résolues faute de machine
-disponible pour les traiter :
+**macOS** n'est plus dans la matrice de build -- voir l'encadré
+d'avertissement plus haut pour l'historique complet de l'investigation
+et pourquoi.
 
-- `fletchtime.spec` ne définit pas de cible `BUNDLE()` -- sans elle,
-  PyInstaller produit un simple dossier avec un exécutable dedans (comme
-  pour Linux), pas une vraie `.app` cliquable avec icône dans le Dock/
-  Applications. Fonctionnerait techniquement, mais pas une expérience
-  aussi soignée que sur Windows/Linux.
-- Gatekeeper (faute de certificat développeur Apple et de notarisation,
-  ni l'un ni l'autre en place ici) bloquera plus agressivement qu'un
-  simple SmartScreen Windows -- passage par *Réglages Système →
-  Confidentialité et sécurité → Ouvrir quand même* à prévoir dans la doc
-  utilisateur le jour où ce point sera traité.
-- Le runner `macos-latest` de GitHub Actions produit un binaire Apple
-  Silicon (ARM64) -- un Mac Intel pourrait nécessiter Rosetta 2 ou un
-  build séparé (`macos-13` reste en Intel au moment où ceci est écrit,
-  à vérifier sur la page officielle des runners GitHub le cas échéant).
-
-**Décision délibérée, pas un oubli** : ne pas construire d'artefact séparé
-par architecture (Windows/Linux ARM64, macOS Intel) tant qu'aucun
-utilisateur réel n'en a exprimé le besoin. Windows/Linux x86_64 couvrent
-l'écrasante majorité des PC de club ; Windows sait émuler x86_64 sur
-ARM64 nativement ; un besoin Linux ARM (ex. Raspberry Pi) passerait de
+**Décision délibérée, pas un oubli, sur les architectures** : ne pas
+construire d'artefact séparé par architecture (Windows/Linux ARM64) tant
+qu'aucun utilisateur réel n'en a exprimé le besoin. Windows/Linux x86_64
+couvrent l'écrasante majorité des PC de club ; Windows sait émuler x86_64
+sur ARM64 nativement ; un besoin Linux ARM (ex. Raspberry Pi) passerait de
 toute façon plus naturellement par `pip install fletchtime` (fonctionne
 sur n'importe quelle architecture) que par un exécutable PyInstaller
-dédié. Pour macOS, doubler la matrice (Intel + Apple Silicon) sans
-utilisateur Mac avéré ajouterait de la complexité CI pour un besoin
-encore hypothétique -- à reconsidérer si un vrai retour utilisateur le
-justifie.
+dédié.
 ```
 
 ```{note}

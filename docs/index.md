@@ -54,7 +54,7 @@ développeur.
 ## Liens utiles
 
 - **Code source** : [github.com/MrFanghoDev/fletchtime](https://github.com/MrFanghoDev/fletchtime)
-- **Releases** (exécutables Windows/Linux/macOS, historique des versions) :
+- **Releases** (exécutables Windows/Linux, historique des versions) :
   [github.com/MrFanghoDev/fletchtime/releases](https://github.com/MrFanghoDev/fletchtime/releases)
 
 ```{note}

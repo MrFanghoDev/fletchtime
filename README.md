@@ -38,24 +38,22 @@ pip install websockets     # ou : pip install -e .
 python run_server.py       # raccourci équivalent à `python -m fletchtime`
 ```
 
-### 2. Exécutable autoporteur (Windows / Linux / macOS) -- PC dédié, sans Python
+### 2. Exécutable autoporteur (Windows / Linux) -- PC dédié, sans Python
 
-Télécharge `FletchTime-<version>-windows.zip`,
-`FletchTime-<version>-linux.tar.gz` ou `FletchTime-<version>-macos.tar.gz`
-(ex. `FletchTime-v0.1.1-windows.zip`) depuis les
-[Releases GitHub](https://github.com/MrFanghoDev/fletchtime/releases),
-décompresse, lance `FletchTime.exe` (Windows) ou `./FletchTime` (Linux/macOS).
+Télécharge `FletchTime-<version>-windows.zip` ou
+`FletchTime-<version>-linux.tar.gz` (ex. `FletchTime-v0.1.1-windows.zip`)
+depuis les [Releases GitHub](https://github.com/MrFanghoDev/fletchtime/releases),
+décompresse, lance `FletchTime.exe` (Windows) ou `./FletchTime` (Linux).
 Aucune installation de Python nécessaire. Les dossiers `web/assets/...` et
 `config/` sont créés automatiquement à côté de l'exécutable au premier
 lancement s'ils manquent.
 
-**macOS -- jamais vérifié sur une vraie machine** (contrairement à Windows
-et Linux) : le build passe le test de fumée automatique en CI, mais pas de
-vraie `.app` cliquable (simple dossier avec exécutable, comme Linux) et
-Gatekeeper bloquera probablement au premier lancement faute de
-certificat/notarisation Apple -- passe par *Réglages Système →
-Confidentialité et sécurité → Ouvrir quand même*. Voir
-`docs/dev-guide/index.md` pour le détail des limites connues.
+**Pas d'exécutable macOS pour l'instant** : après plusieurs tentatives de
+correction infructueuses sur un bug d'empaquetage reproductible
+(`ModuleNotFoundError` au lancement), retiré de la matrice de build --
+voir `docs/dev-guide/index.md` pour le détail de l'investigation. Sur
+macOS, installe via `pip install fletchtime` (option 1 ci-dessus) en
+attendant.
 
 Chaque Release inclut aussi `FletchTime-<version>-docs.tar.gz` : la
 documentation technique (Sphinx) telle qu'elle était pour ce tag précis --
@@ -82,7 +80,7 @@ le 8765, les pages se chargent normalement mais restent bloquées sur "en
 attente de connexion" indéfiniment (la synchronisation temps réel ne peut
 jamais s'établir).
 
-Pour construire ces exécutables toi-même (ou ajouter macOS à la matrice) :
+Pour construire ces exécutables toi-même :
 voir `.github/workflows/release.yml` et `fletchtime.spec` (PyInstaller). Un
 `git tag v0.1.0 && git push --tags` déclenche la construction et publie les
 deux archives automatiquement.

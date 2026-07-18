@@ -38,44 +38,7 @@ a = Analysis(
         # projet customtkinter lui-même).
         *collect_data_files("customtkinter"),
     ],
-    hiddenimports=[
-        "websockets",
-        "customtkinter",
-        # Liste explicite de nos propres sous-modules, plutôt que de
-        # compter sur la détection automatique de PyInstaller : un vrai
-        # build macOS a montré que fletchtime.runtime (et vraisemblablement
-        # les autres) restait absent malgré collect_submodules("fletchtime")
-        # -- le journal de build ne mentionnait qu'un seul de nos modules
-        # ("Analyzing hidden import 'fletchtime.web'"), jamais les autres,
-        # signe que la découverte dynamique ne fonctionnait pas comme
-        # attendu dans cet environnement précis, pour une raison qui reste
-        # floue. Cette liste a été vérifiée en énumérant réellement le
-        # paquet (pkgutil.walk_packages) -- à tenir à jour si de nouveaux
-        # modules sont ajoutés à src/fletchtime/.
-        #
-        # C'est d'autant plus important pour fletchtime.gui : il est
-        # importé dans un try/except (voir main()), donc son absence
-        # échouerait SILENCIEUSEMENT -- retour au mode terminal sans
-        # aucune erreur visible, sur toutes les plateformes, sans que
-        # personne ne s'en aperçoive avant un signalement utilisateur.
-        "fletchtime.__main__",
-        "fletchtime.runtime",
-        "fletchtime.gui",
-        "fletchtime.engine",
-        "fletchtime.engine.engine",
-        "fletchtime.engine.models",
-        "fletchtime.engine.sequence",
-        "fletchtime.engine.turn_modes",
-        "fletchtime.engine.modes",
-        "fletchtime.engine.modes.base",
-        "fletchtime.engine.modes.indoor",
-        "fletchtime.engine.modes.flint",
-        "fletchtime.server",
-        "fletchtime.server.config_store",
-        "fletchtime.server.http_static",
-        "fletchtime.server.match_server",
-        "fletchtime.server.ws_server",
-    ],
+    hiddenimports=["websockets", "customtkinter"],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],

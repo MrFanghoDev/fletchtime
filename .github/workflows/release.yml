@@ -1,6 +1,6 @@
 name: Exécutables autoporteurs (release)
 
-# Construit un exécutable autoporteur pour Windows (.zip), Linux et macOS
+# Construit un exécutable autoporteur pour Windows (.zip) et Linux
 # (.tar.gz) via PyInstaller, sur les runners natifs de GitHub Actions
 # (PyInstaller ne fait pas de cross-compilation : chaque binaire est
 # produit par un runner de la plateforme correspondante). Construit aussi
@@ -12,7 +12,7 @@ name: Exécutables autoporteurs (release)
 # docs/roadmap.md).
 #
 # Déclenchement : push d'un tag de version (ex. v0.1.0) publie une vraie
-# Release GitHub avec les quatre archives (Windows, Linux, macOS, doc).
+# Release GitHub avec les trois archives (Windows, Linux, doc).
 # Un push de branche touchant à l'empaquetage (src/, fletchtime.spec,
 # pyproject.toml) ou un lancement manuel depuis l'onglet Actions
 # construisent aussi les exécutables, mais SANS publier de Release --
@@ -20,17 +20,19 @@ name: Exécutables autoporteurs (release)
 # "Artifacts" en bas de page). Objectif : détecter un souci d'empaquetage
 # (ex. module manquant à l'exécution) sans attendre une vraie release.
 #
-# macOS -- limites connues, jamais vérifiées sur une vraie machine (voir
-# docs/dev-guide/index.md) : fletchtime.spec ne définit pas de cible
-# BUNDLE(), donc ce build produit un simple dossier (comme Linux), pas une
-# vraie .app cliquable avec icône dans le Dock. Gatekeeper bloquera aussi
-# plus agressivement qu'un simple SmartScreen Windows, faute de
-# certificat/notarisation Apple (absent ici). Runner GitHub Actions en
-# Apple Silicon (ARM64) par défaut -- un Mac Intel pourrait nécessiter
-# Rosetta 2 ou un build séparé.
+# macOS -- retiré de la matrice après plusieurs tentatives de correction
+# infructueuses (voir docs/dev-guide/index.md pour le détail complet) :
+# `ModuleNotFoundError: No module named 'fletchtime.runtime'` au
+# lancement, reproductible sur plusieurs runs, qui a résisté à une liste
+# de hiddenimports explicite et vérifiée -- signe que la cause réelle est
+# ailleurs (probablement liée à la signature de code / réécriture de
+# version SDK spécifique à macOS ARM64, jamais confirmé). Pas de besoin
+# utilisateur macOS avéré à ce jour, donc pas justifié d'investir plus de
+# temps dessus pour l'instant. Réintroduire macOS à la matrice
+# nécessiterait de reprendre l'investigation depuis le début.
 permissions:
   contents: write
-  
+
 on:
   push:
     tags:
@@ -64,9 +66,6 @@ jobs:
 
           - os: ubuntu-latest
             archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-linux.tar.gz
-
-          - os: macos-latest
-            archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-macos.tar.gz
 
     runs-on: ${{ matrix.os }}
 
@@ -104,7 +103,7 @@ jobs:
           pwd
           ls -R dist
 
-      - name: Test de fumée -- l'exécutable démarre et sert la vraie page d'accueil (Linux/macOS)
+      - name: Test de fumée -- l'exécutable démarre et sert la vraie page d'accueil (Linux)
         if: runner.os != 'Windows'
         shell: bash
         run: |
@@ -153,7 +152,7 @@ jobs:
            -Path dist/FletchTime/* `
            -DestinationPath dist/${{ matrix.archive_name }}
 
-      - name: Créer l'archive Linux/macOS
+      - name: Créer l'archive Linux
         if: runner.os != 'Windows'
         shell: bash
         run: |
