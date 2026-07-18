@@ -11,9 +11,14 @@ name: Exécutables autoporteurs (release)
 # voir docs.yml et le point d'attention "/latest/" du backlog dans
 # docs/roadmap.md).
 #
-# Déclenchement : push d'un tag de version (ex. v0.1.0), ou manuellement
-# depuis l'onglet Actions. Les quatre archives (Windows, Linux, macOS, doc)
-# sont jointes à une Release GitHub créée automatiquement.
+# Déclenchement : push d'un tag de version (ex. v0.1.0) publie une vraie
+# Release GitHub avec les quatre archives (Windows, Linux, macOS, doc).
+# Un push de branche touchant à l'empaquetage (src/, fletchtime.spec,
+# pyproject.toml) ou un lancement manuel depuis l'onglet Actions
+# construisent aussi les exécutables, mais SANS publier de Release --
+# artefacts téléchargeables directement depuis la page du run (section
+# "Artifacts" en bas de page). Objectif : détecter un souci d'empaquetage
+# (ex. module manquant à l'exécution) sans attendre une vraie release.
 #
 # macOS -- limites connues, jamais vérifiées sur une vraie machine (voir
 # docs/dev-guide/index.md) : fletchtime.spec ne définit pas de cible
@@ -30,6 +35,19 @@ on:
   push:
     tags:
       - "v*.*.*"
+    branches: [main, master]
+    paths:
+      - "src/**"
+      - "fletchtime.spec"
+      - "pyproject.toml"
+      - ".github/workflows/release.yml"
+      # Ne construit QUE les exécutables sur un push de branche (le job
+      # `release`, qui publie une vraie Release GitHub, reste réservé aux
+      # tags -- voir son `if:` plus bas). Objectif : donner un artefact
+      # téléchargeable à chaque changement touchant potentiellement
+      # l'empaquetage, sans attendre une release pour détecter un souci
+      # PyInstaller (ex. module manquant à l'exécution, jamais détecté par
+      # `ci.yml` qui ne construit pas d'exécutable du tout).
   workflow_dispatch:
 
 jobs:
