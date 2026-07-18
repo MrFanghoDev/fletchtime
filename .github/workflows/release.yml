@@ -53,6 +53,10 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false  # une plateforme qui échoue ne doit pas annuler les
+                         # autres -- important pour comparer leurs résultats
+                         # en cas de souci d'empaquetage spécifique à l'une
+                         # d'elles (voir docs/dev-guide/index.md)
       matrix:
         include:
           - os: windows-latest

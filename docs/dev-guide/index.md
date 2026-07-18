@@ -222,23 +222,22 @@ construction elle-même s'est terminée sans erreur apparente.
 **Piège PyInstaller + modules internes du paquet** : constaté sur un vrai
 build macOS -- `ModuleNotFoundError: No module named 'fletchtime.runtime'`
 au lancement, alors que ce module est importé sans condition en tête de
-`fletchtime/__main__.py`. `fletchtime.spec` embarque désormais tous les
-sous-modules du paquet de façon exhaustive via
-`collect_submodules("fletchtime")`, plutôt que de compter sur la
-détection automatique au cas par cas -- **mais ça ne suffit pas à soi
-seul** : `collect_submodules("fletchtime")` s'exécute immédiatement, à
-l'interprétation du fichier `.spec`, *avant* la construction de l'objet
-`Analysis` -- le `pathex` qu'on lui passe plus bas ne s'applique donc pas
-à cet appel, seulement à l'analyse de l'exécutable lui-même. Si
-`fletchtime` n'est pas importable dans l'environnement exact où tourne
-`pyinstaller` à cet instant précis, `collect_submodules` ne trouve
-silencieusement rien à embarquer -- confirmé en testant en local : un
-`import fletchtime` sans aucune configuration de chemin échoue
-entièrement (`ModuleNotFoundError`), reproduisant exactement le
-symptôme. D'où le `sys.path.insert(0, str(project_root / "src"))` ajouté
-en toute tête du `.spec`, avant l'appel à `collect_submodules` -- rend le
-résultat indépendant de si `pip install -e .` a été fait au préalable
-dans cet environnement.
+`fletchtime/__main__.py`. Deux tentatives via `collect_submodules` (avec
+puis sans `sys.path.insert` préalable) n'ont pas réglé le problème : le
+journal de build complet d'un vrai run ne montrait qu'une seule ligne
+`Analyzing hidden import` pour l'un de nos modules
+(`fletchtime.web` -- via un mécanisme différent, sans lien avec
+`collect_submodules`), jamais pour `fletchtime.runtime` ni les autres --
+signe que la découverte dynamique ne fonctionnait pas comme attendu dans
+cet environnement précis, pour une raison qui reste floue.
+
+`fletchtime.spec` liste désormais chaque sous-module explicitement, en
+dur, dans `hiddenimports` -- plus rien laissé à un mécanisme de
+découverte dynamique. Liste vérifiée en énumérant réellement le paquet
+(`pkgutil.walk_packages`) : 17 modules, correspondance exacte confirmée.
+**À tenir à jour si de nouveaux modules sont ajoutés à `src/fletchtime/`**
+-- un module ajouté sans être ajouté à cette liste reproduirait
+exactement ce bug.
 
 **Pourquoi c'est plus grave qu'il n'y paraît** : ce même problème,
 survenant sur `fletchtime.gui` plutôt que `fletchtime.runtime`, échouerait
@@ -246,10 +245,15 @@ survenant sur `fletchtime.gui` plutôt que `fletchtime.runtime`, échouerait
 (voir `main()`), donc son absence retomberait sur le mode terminal sans
 aucune erreur visible, sur toutes les plateformes, sans que personne ne
 s'en aperçoive avant qu'un utilisateur signale que la fenêtre ne s'ouvre
-jamais. Si tu ajoutes un nouveau module au paquet `fletchtime` et que son
-import est conditionnel/protégé quelque part, vérifie particulièrement
-qu'il apparaît bien dans un vrai `dist/FletchTime/` construit, pas
-seulement que la construction se termine sans erreur.
+jamais.
+
+**Pour déboguer ce genre de souci sans attendre une vraie release** :
+`release.yml` construit désormais aussi les exécutables sur chaque push
+touchant à l'empaquetage (`src/`, `fletchtime.spec`, `pyproject.toml`),
+sans publier de Release -- artefacts téléchargeables directement depuis
+la page du run (section "Artifacts"). `fail-fast: false` sur la matrice
+évite qu'un échec sur une plateforme n'annule les autres, pour pouvoir
+comparer leurs résultats.
 ```
 
 ```{warning}

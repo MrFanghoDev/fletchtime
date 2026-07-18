@@ -19,23 +19,11 @@
 # -- voir .github/workflows/release.yml qui construit les deux séparément
 # via les runners windows-latest/ubuntu-latest de GitHub Actions.
 
-import sys
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files
 
 project_root = Path(SPECPATH)
-
-# Nécessaire pour que collect_submodules("fletchtime") ci-dessous puisse
-# réellement importer et énumérer le paquet : cet appel s'exécute
-# immédiatement, à l'interprétation de ce fichier .spec -- avant même la
-# construction de l'objet Analysis -- donc le `pathex` qu'on lui passe
-# plus bas ne s'applique pas ici, seulement à l'analyse de l'exécutable
-# lui-même. Sans ce sys.path.insert, collect_submodules échoue à trouver
-# fletchtime si le paquet n'a pas été pip-installé au préalable dans cet
-# environnement précis (ex. build local sans `pip install -e .` -- voir
-# release.yml, qui le fait, mais un lancement manuel pourrait l'omettre).
-sys.path.insert(0, str(project_root / "src"))
 
 a = Analysis(
     [str(project_root / "src" / "fletchtime" / "__main__.py")],
@@ -53,18 +41,40 @@ a = Analysis(
     hiddenimports=[
         "websockets",
         "customtkinter",
-        # Filet de sécurité pour nos propres modules : l'analyse statique
-        # de PyInstaller a manqué fletchtime.runtime en pratique (constaté
-        # sur un vrai build macOS -- ModuleNotFoundError au lancement, alors
-        # que le module est bien importé sans condition en tête de
-        # __main__.py). Plutôt que de chasser les imports un par un,
-        # collect_submodules embarque tout le paquet de façon exhaustive.
+        # Liste explicite de nos propres sous-modules, plutôt que de
+        # compter sur la détection automatique de PyInstaller : un vrai
+        # build macOS a montré que fletchtime.runtime (et vraisemblablement
+        # les autres) restait absent malgré collect_submodules("fletchtime")
+        # -- le journal de build ne mentionnait qu'un seul de nos modules
+        # ("Analyzing hidden import 'fletchtime.web'"), jamais les autres,
+        # signe que la découverte dynamique ne fonctionnait pas comme
+        # attendu dans cet environnement précis, pour une raison qui reste
+        # floue. Cette liste a été vérifiée en énumérant réellement le
+        # paquet (pkgutil.walk_packages) -- à tenir à jour si de nouveaux
+        # modules sont ajoutés à src/fletchtime/.
+        #
         # C'est d'autant plus important pour fletchtime.gui : il est
-        # importé dans un try/except (voir main()), donc le même problème
-        # y échouerait SILENCIEUSEMENT -- retour au mode terminal sans
+        # importé dans un try/except (voir main()), donc son absence
+        # échouerait SILENCIEUSEMENT -- retour au mode terminal sans
         # aucune erreur visible, sur toutes les plateformes, sans que
         # personne ne s'en aperçoive avant un signalement utilisateur.
-        *collect_submodules("fletchtime"),
+        "fletchtime.__main__",
+        "fletchtime.runtime",
+        "fletchtime.gui",
+        "fletchtime.engine",
+        "fletchtime.engine.engine",
+        "fletchtime.engine.models",
+        "fletchtime.engine.sequence",
+        "fletchtime.engine.turn_modes",
+        "fletchtime.engine.modes",
+        "fletchtime.engine.modes.base",
+        "fletchtime.engine.modes.indoor",
+        "fletchtime.engine.modes.flint",
+        "fletchtime.server",
+        "fletchtime.server.config_store",
+        "fletchtime.server.http_static",
+        "fletchtime.server.match_server",
+        "fletchtime.server.ws_server",
     ],
     hookspath=[],
     runtime_hooks=[],
