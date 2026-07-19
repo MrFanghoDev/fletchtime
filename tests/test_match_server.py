@@ -1117,11 +1117,33 @@ class TestMatchServerLogging(unittest.IsolatedAsyncioTestCase):
     mot de passe dans les journaux."""
 
     async def asyncSetUp(self) -> None:
+        # Efface tout instantané laissé par un test précédent -- voir
+        # setUpModule/tearDownModule plus haut, qui isole déjà le chemin
+        # lui-même, mais pas son contenu entre deux tests de ce fichier.
         config_store.clear_match_snapshot()
+        # Isole aussi INDOOR_TOML/FLINT_TOML/APP_TOML -- un des tests de
+        # cette classe appelle une vraie sauvegarde de config (mode
+        # indoor, shoot_time=10.0) : sans cette isolation, cet appel
+        # écrivait directement dans le vrai config/indoor.toml du projet
+        # à chaque exécution de la suite de tests (bug réel constaté,
+        # pas hypothétique -- voir l'historique de ce fichier).
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._original_indoor = config_store.INDOOR_TOML
+        self._original_flint = config_store.FLINT_TOML
+        self._original_app = config_store.APP_TOML
+        config_store.INDOOR_TOML = Path(self._tmpdir.name) / "indoor.toml"
+        config_store.FLINT_TOML = Path(self._tmpdir.name) / "flint.toml"
+        config_store.APP_TOML = Path(self._tmpdir.name) / "app.toml"
+
         self.server = MatchServer()
         self.control = FakeWebSocket()
 
     async def asyncTearDown(self) -> None:
+        config_store.clear_match_snapshot()
+        config_store.INDOOR_TOML = self._original_indoor
+        config_store.FLINT_TOML = self._original_flint
+        config_store.APP_TOML = self._original_app
+        self._tmpdir.cleanup()
         config_store.clear_match_snapshot()
 
     async def test_received_command_is_logged(self) -> None:
