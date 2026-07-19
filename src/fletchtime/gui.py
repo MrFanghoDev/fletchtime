@@ -55,6 +55,7 @@ _TRANSLATIONS = {
         "status_running": "Serveur en cours -- {ip}",
         "log_title": "Journal",
         "club_data": "Données du club :",
+        "addressCaption": "Adresse :",
     },
     "en": {
         "title": "FletchTime -- Server",
@@ -68,6 +69,7 @@ _TRANSLATIONS = {
         "status_running": "Server running -- {ip}",
         "log_title": "Log",
         "club_data": "Club data:",
+        "addressCaption": "Address:",
     },
 }
 
@@ -290,6 +292,29 @@ class FletchTimeApp(ctk.CTk):
         )
         self.display_button.pack(side="left", padx=(0, 12), pady=10, expand=True, fill="x")
 
+        # -- adresse du serveur -----------------------------------------
+        # CTkEntry (désactivée après affichage) plutôt qu'un simple
+        # libellé : l'intention est de permettre de sélectionner/copier
+        # l'adresse (utile pour la retaper à la main sur un appareil sans
+        # bouton de raccourci, ex. un téléphone d'archer) -- non vérifié
+        # visuellement si "disabled" préserve la sélection de texte sur
+        # toutes les plateformes ; à confirmer en conditions réelles.
+        address_frame = ctk.CTkFrame(self)
+        address_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        self.address_caption = ctk.CTkLabel(
+            address_frame,
+            text=self._t("addressCaption"),
+            font=ctk.CTkFont(size=11),
+            text_color="gray60",
+        )
+        self.address_caption.pack(side="left", padx=(12, 8), pady=8)
+
+        self.address_entry = ctk.CTkEntry(
+            address_frame, font=ctk.CTkFont(family="monospace", size=12)
+        )
+        self.address_entry.pack(side="left", padx=(0, 12), pady=8, expand=True, fill="x")
+
         # -- journal ----------------------------------------------------
         self.log_label = ctk.CTkLabel(self, text=self._t("log_title"), anchor="w")
         self.log_label.pack(fill="x", padx=20, pady=(8, 0))
@@ -341,6 +366,21 @@ class FletchTimeApp(ctk.CTk):
         else:
             self.status_dot.configure(text_color="gray50")
             self.status_label.configure(text=self._t("status_stopped"))
+        self._refresh_address()
+
+    def _refresh_address(self) -> None:
+        """L'adresse ne dépend pas de si le serveur tourne réellement --
+        affichée dans tous les cas (utile même à l'arrêt, pour préparer
+        la config réseau à l'avance sur un autre appareil)."""
+        address = f"http://{local_ip()}:{HTTP_PORT}/"
+        # CTkEntry ne supporte que "normal"/"disabled" (contrairement à
+        # ttk.Entry, qui a un vrai état "readonly") -- il faut donc la
+        # débloquer temporairement pour la mettre à jour, puis la
+        # reverrouiller aussitôt après.
+        self.address_entry.configure(state="normal")
+        self.address_entry.delete(0, "end")
+        self.address_entry.insert(0, address)
+        self.address_entry.configure(state="disabled")
 
     def _on_language_change(self, value: str) -> None:
         self.language = value.lower()
@@ -350,6 +390,7 @@ class FletchTimeApp(ctk.CTk):
         self.home_button.configure(text=self._t("home"))
         self.control_button.configure(text=self._t("control"))
         self.display_button.configure(text=self._t("display"))
+        self.address_caption.configure(text=self._t("addressCaption"))
         self.log_label.configure(text=self._t("log_title"))
         self.quit_button.configure(text=self._t("quit"))
         self.footer_label.configure(text=f"{self._t('club_data')} {self.data_root}")

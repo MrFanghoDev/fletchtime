@@ -83,9 +83,12 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   - Paramétrage du serveur (ports, etc.) et de l'adresse IP exposée sur le
     réseau local, directement depuis la fenêtre plutôt que fichiers de
     config seuls.
-  - Affichage des adresses exposées (accueil/contrôle/affichage) dans la
-    fenêtre elle-même, pas seulement via les boutons de raccourci
-    actuels.
+  - ~~Affichage des adresses exposées~~ -- fait : champ dédié (adresse
+    d'accueil) dans la fenêtre elle-même, en plus des boutons de
+    raccourci -- utile pour retaper l'adresse à la main sur un appareil
+    sans bouton de raccourci. Non vérifié visuellement si le texte reste
+    bien sélectionnable/copiable une fois le champ désactivé (`CTkEntry`
+    n'a pas de vrai état "readonly" contrairement à `ttk.Entry`).
   - Choix du thème clair/sombre dans la fenêtre -- actuellement forcé en
     sombre (`ctk.set_appearance_mode("dark")`), cohérent avec
     `display.html` mais pas ajustable par l'utilisateur comme le sont les
