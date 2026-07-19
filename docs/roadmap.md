@@ -58,9 +58,18 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
 
 ## ⬜ Étape 7 — Partage FFTL
 
-- Nettoyage, licence open source claire, README d'accueil.
-- Contact fédération pour retour d'expérience / adoption éventuelle par d'autres
-  clubs.
+- ~~Licence open source claire~~ -- déjà en place : `LICENSE`
+  (GPL-3.0-or-later), cohérent avec `pyproject.toml`.
+- ~~Guide de contribution~~ -- fait : `CONTRIBUTING.md` (français/anglais),
+  flux classique fork/branche/Pull Request, volontairement simple.
+- Nettoyage : vérifier qu'aucun contenu spécifique au club (nom, logo,
+  détails propres à Les Aigles 77) ne traîne en dur dans le code ou la
+  doc, en dehors de `web/assets/` où c'est normal et attendu.
+- Un vrai guide "premier club" : point d'entrée pour quelqu'un qui
+  découvre l'outil sans le contexte déjà connu (c'est quoi, pourquoi
+  l'utiliser, comment démarrer).
+- Contact fédération pour retour d'expérience / adoption éventuelle par
+  d'autres clubs -- démarche humaine, hors du champ du dépôt lui-même.
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 

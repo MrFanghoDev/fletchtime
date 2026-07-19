@@ -101,6 +101,12 @@ from fletchtime.engine import IndoorMode, IndoorConfig, MatchEngine
 engine = MatchEngine(IndoorMode(IndoorConfig()))
 ```
 
+## Contribuer
+
+Envie de proposer un correctif, une idée, ou juste signaler un bug ? Voir
+[CONTRIBUTING.md](CONTRIBUTING.md) (français/anglais) -- processus
+volontairement simple, flux classique fork/branche/Pull Request.
+
 ## Qualité continue
 
 Chaque push et pull request déclenche `.github/workflows/test.yml` :
