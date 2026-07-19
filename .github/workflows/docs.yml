@@ -103,6 +103,13 @@ jobs:
       - name: Construire la doc HTML
         run: sphinx-build -b html docs docs/_build/html
 
+      - name: Vérifier la documentation générée
+        run: |
+          VERSION=$(python -c "from importlib.metadata import version; print(version('fletchtime'))")
+          echo "Version attendue : $VERSION"
+
+          grep -R "$VERSION" docs/_build/html | head -20 || true
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/_build/html
