@@ -1154,6 +1154,56 @@ class TestMatchServerLogging(unittest.IsolatedAsyncioTestCase):
         joined = "\n".join(ctx.output)
         self.assertNotIn(secret, joined)
 
+    async def test_state_transition_is_logged_with_context(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}), self.control)
+        self.server.engine.tick(10)  # RED -> GREEN
+        self.server.engine.pop_pending_events()
+
+        with self.assertLogs("fletchtime.server", level="INFO") as ctx:
+            await self.server.handle_command(json.dumps({"action": "next"}), self.control)
+            task = asyncio.ensure_future(self.server.tick_loop())
+            await asyncio.sleep(0.3)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        joined = "\n".join(ctx.output)
+        self.assertIn("Transition", joined)
+        self.assertIn("prep_start", joined)
+
+    async def test_countdown_tick_is_never_logged(self) -> None:
+        """countdown_tick se déclenche une fois par seconde dans les
+        dernières secondes de chaque volée -- noierait le journal sans
+        valeur diagnostique ajoutée (contrairement à warning_orange, qui
+        lui doit apparaître)."""
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "indoor",
+                    "values": {"shoot_time": 10.0, "orange_warning_time": 3.0},
+                }
+            )
+        )
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}), self.control)
+        self.server.engine.tick(10)  # RED -> GREEN(10s)
+        self.server.engine.pop_pending_events()
+        self.server.engine.tick(7.5)  # 2.5s restantes -- franchit orange et des ticks
+
+        with self.assertLogs("fletchtime.server", level="INFO") as ctx:
+            task = asyncio.ensure_future(self.server.tick_loop())
+            await asyncio.sleep(0.3)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        joined = "\n".join(ctx.output)
+        self.assertNotIn("countdown_tick", joined)
+
 
 if __name__ == "__main__":
     unittest.main()

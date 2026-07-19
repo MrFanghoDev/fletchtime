@@ -359,7 +359,16 @@ volatile de la fenêtre.
 - chaque connexion/déconnexion, avec le nombre de clients restants ;
 - les pertes de connexion réseau détectées (WiFi, mise en veille...),
   distinguées d'une fermeture normale ;
-- les messages malformés reçus (JSON invalide).
+- les messages malformés reçus (JSON invalide) ;
+- les transitions d'état significatives (`prep_start`, `shoot_start`,
+  `warning_orange`, `end_of_volee`, `pause_start`/`pause_end`,
+  `emergency_start`/`emergency_end`, `end_of_match`), avec le contexte
+  (unité, volée, tour, phase) -- qu'elles soient déclenchées naturellement
+  par le décompte ou manuellement (`next`, `goto`...), puisque les deux
+  passent par le même mécanisme de collecte d'événements. `countdown_tick`
+  est volontairement exclu (se déclenche une fois par seconde dans les
+  dernières secondes de chaque volée -- noierait le journal sans valeur
+  diagnostique ajoutée).
 
 ```{important}
 Le mot de passe (action `authenticate`) n'est **jamais** journalisé -- le

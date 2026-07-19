@@ -429,6 +429,25 @@ class MatchServer:
                 if self.engine is not None:
                     self.engine.tick(elapsed)
                     events = self.engine.pop_pending_events()
+                    if events:
+                        state = self.engine.current_state
+                        for event in events:
+                            # countdown_tick exclu volontairement : se
+                            # déclenche une fois par seconde dans les
+                            # dernières secondes de CHAQUE volée --
+                            # noierait le journal sans valeur diagnostique
+                            # ajoutée (le passage à l'orange, lui, est déjà
+                            # journalisé séparément via warning_orange).
+                            if event == "countdown_tick":
+                                continue
+                            logger.info(
+                                "Transition : %s (unité %d, volée %d%s, phase=%s)",
+                                event,
+                                state.unit_number,
+                                state.end_number,
+                                f", {state.current_turn}" if state.current_turn else "",
+                                state.phase.value,
+                            )
                     # À chaque tick (~5x/seconde), pas seulement
                     # périodiquement : un instantané périodique trop
                     # espacé (auparavant toutes les 5s) peut être visible
