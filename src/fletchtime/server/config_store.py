@@ -47,12 +47,22 @@ AUTH_TOML = CONFIG_DIR / "auth.toml"
 # (voir .gitignore) : propre à une session de match en cours, pas un
 # réglage du club.
 MATCH_STATE_JSON = CONFIG_DIR / "match_state.json"
+# Préférences de la fenêtre graphique (thème...) -- fichier séparé de
+# app.toml exprès : ce ne sont pas des réglages du match/serveur diffusés
+# aux écrans web, juste des préférences purement locales à qui lance la
+# fenêtre sur cette machine précise.
+GUI_TOML = CONFIG_DIR / "gui.toml"
 
 APP_COMMENTS: dict[str, str] = {
     "sound_pack": "Nom du dossier dans web/assets/sounds/packs/ à utiliser (ex. classic)",
     "countdown_tick_seconds": "Nombre de secondes avant la fin d'un décompte où countdown_tick est émis (0 = désactivé)",
 }
 DEFAULT_APP_CONFIG: dict[str, Any] = {"sound_pack": "classic", "countdown_tick_seconds": 5}
+
+GUI_COMMENTS: dict[str, str] = {
+    "theme": 'Thème de la fenêtre : "system" (suit le thème du système), "light" ou "dark"',
+}
+DEFAULT_GUI_CONFIG: dict[str, Any] = {"theme": "system"}
 
 AUTH_COMMENTS: dict[str, str] = {
     "password": (
@@ -145,6 +155,25 @@ def save_app_config(overrides: dict[str, Any]) -> dict[str, Any]:
             "countdown_tick_seconds must be >= 0, got " f"{merged['countdown_tick_seconds']}"
         )
     _write_toml(APP_TOML, merged, APP_COMMENTS)
+    return merged
+
+
+def load_gui_config() -> dict[str, Any]:
+    """Préférences de la fenêtre graphique -- voir GUI_TOML. Comme
+    load_app_config, un plain dict plutôt qu'une dataclass formelle : un
+    seul champ aujourd'hui, peut grandir."""
+    data = _load_toml(GUI_TOML)
+    merged = dict(DEFAULT_GUI_CONFIG)
+    merged.update({k: v for k, v in data.items() if k in DEFAULT_GUI_CONFIG})
+    return merged
+
+
+def save_gui_config(overrides: dict[str, Any]) -> dict[str, Any]:
+    merged = load_gui_config()
+    merged.update({k: v for k, v in overrides.items() if k in DEFAULT_GUI_CONFIG})
+    if merged["theme"] not in ("system", "light", "dark"):
+        raise ValueError(f'theme must be "system", "light" or "dark", got {merged["theme"]!r}')
+    _write_toml(GUI_TOML, merged, GUI_COMMENTS)
     return merged
 
 

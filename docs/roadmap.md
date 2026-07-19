@@ -89,10 +89,11 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
     sans bouton de raccourci. Non vérifié visuellement si le texte reste
     bien sélectionnable/copiable une fois le champ désactivé (`CTkEntry`
     n'a pas de vrai état "readonly" contrairement à `ttk.Entry`).
-  - Choix du thème clair/sombre dans la fenêtre -- actuellement forcé en
-    sombre (`ctk.set_appearance_mode("dark")`), cohérent avec
-    `display.html` mais pas ajustable par l'utilisateur comme le sont les
-    autres pages web.
+  - ~~Choix du thème clair/sombre dans la fenêtre~~ -- fait : sélecteur
+    Système/Clair/Sombre dans l'en-tête, préférence persistée dans
+    `config/gui.toml` (jamais versionné, propre à la machine -- voir
+    `.gitignore`). Indépendant de `display.html`, qui reste lui, par
+    choix délibéré, toujours sombre.
   - ~~Couleur du bouton Quitter à revoir~~ -- fait : couleur pleine
     (`#3a4354`) au lieu de transparent+contour, visible sans être
     alarmante (distincte du rouge d'Arrêter et du doré de Démarrer).

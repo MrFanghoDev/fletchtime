@@ -27,6 +27,10 @@ docs/_build/
 # vrai secret et ne doit jamais être versionné.
 config/auth.toml
 
+# Préférences de la fenêtre graphique (thème...) -- propres à la machine/
+# personne qui lance la fenêtre, pas un réglage de club à partager.
+config/gui.toml
+
 # Instantané du match en cours (récupération après crash) -- propre à une
 # session de match en cours, pas un réglage du club à partager/versionner.
 config/match_state.json

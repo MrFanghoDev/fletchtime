@@ -41,6 +41,7 @@ from fletchtime.__main__ import (
 )
 from fletchtime.logging_setup import configure_logging
 from fletchtime.runtime import ServerRuntime
+from fletchtime.server import config_store
 
 _TRANSLATIONS = {
     "fr": {
@@ -56,6 +57,9 @@ _TRANSLATIONS = {
         "log_title": "Journal",
         "club_data": "Données du club :",
         "addressCaption": "Adresse :",
+        "themeSystem": "Système",
+        "themeLight": "Clair",
+        "themeDark": "Sombre",
     },
     "en": {
         "title": "FletchTime -- Server",
@@ -70,6 +74,9 @@ _TRANSLATIONS = {
         "log_title": "Log",
         "club_data": "Club data:",
         "addressCaption": "Address:",
+        "themeSystem": "System",
+        "themeLight": "Light",
+        "themeDark": "Dark",
     },
 }
 
@@ -160,10 +167,7 @@ class FletchTimeApp(ctk.CTk):
         # Doit être fait AVANT super().__init__() : customtkinter applique
         # le thème au moment de la construction de chaque widget, fenêtre
         # racine comprise -- appelé après, la fenêtre elle-même garderait
-        # le thème par défaut. Mode sombre forcé (pas "system") : reprend
-        # la même palette que les pages web en thème sombre, cohérent
-        # avec display.html qui reste lui aussi toujours sombre par choix
-        # délibéré (voir docs/architecture.md).
+        # le thème par défaut.
         #
         # Part d'un thème intégré à customtkinter ("dark-blue" -- garanti
         # complet pour la version installée) plutôt qu'un JSON entièrement
@@ -174,7 +178,18 @@ class FletchTimeApp(ctk.CTk):
         # les couleurs sont ensuite surchargées (voir _apply_brand_colors),
         # tout le reste (rayons, épaisseurs de bordure...) reste celui,
         # déjà testé, du thème intégré.
-        ctk.set_appearance_mode("dark")
+        #
+        # Thème choisi par la personne qui lance la fenêtre (voir
+        # config/gui.toml, config_store.load_gui_config) -- "system" par
+        # défaut, qui suit le thème du système d'exploitation (sauf sous
+        # Linux, limitation connue de customtkinter -- retombe sur
+        # "light"). Indépendant de display.html, qui reste lui, par choix
+        # délibéré, toujours sombre (voir docs/architecture.md) : l'écran
+        # vu par les archers et la fenêtre de contrôle du responsable du
+        # chronométrage sont deux préoccupations distinctes.
+        gui_config = config_store.load_gui_config()
+        self.theme = gui_config["theme"]
+        ctk.set_appearance_mode(self.theme)
         ctk.set_default_color_theme("dark-blue")
         _apply_brand_colors()
 
@@ -235,6 +250,15 @@ class FletchTimeApp(ctk.CTk):
             font=ctk.CTkFont(size=13),
             text_color="gray60",
         ).pack(side="left", padx=(0, 16), pady=12)
+
+        self.theme_menu = ctk.CTkOptionMenu(
+            header,
+            values=[self._t("themeSystem"), self._t("themeLight"), self._t("themeDark")],
+            width=110,
+            command=self._on_theme_change,
+        )
+        self.theme_menu.set(self._theme_label(self.theme))
+        self.theme_menu.pack(side="right", padx=(0, 8), pady=12)
 
         self.lang_menu = ctk.CTkOptionMenu(
             header, values=["FR", "EN"], width=70, command=self._on_language_change
@@ -394,7 +418,33 @@ class FletchTimeApp(ctk.CTk):
         self.log_label.configure(text=self._t("log_title"))
         self.quit_button.configure(text=self._t("quit"))
         self.footer_label.configure(text=f"{self._t('club_data')} {self.data_root}")
+        # Les valeurs du menu de thème sont des libellés traduits (pas des
+        # codes internes comme "FR"/"EN") -- il faut donc reconstruire la
+        # liste ET repositionner la sélection sur le thème actuel, pas
+        # juste changer le texte d'un widget existant.
+        self.theme_menu.configure(
+            values=[self._t("themeSystem"), self._t("themeLight"), self._t("themeDark")]
+        )
+        self.theme_menu.set(self._theme_label(self.theme))
         self._refresh_status()
+
+    def _theme_label(self, theme: str) -> str:
+        return {
+            "system": self._t("themeSystem"),
+            "light": self._t("themeLight"),
+            "dark": self._t("themeDark"),
+        }.get(theme, self._t("themeSystem"))
+
+    def _on_theme_change(self, label: str) -> None:
+        reverse = {
+            self._t("themeSystem"): "system",
+            self._t("themeLight"): "light",
+            self._t("themeDark"): "dark",
+        }
+        theme = reverse.get(label, "system")
+        self.theme = theme
+        ctk.set_appearance_mode(theme)
+        config_store.save_gui_config({"theme": theme})
 
     def _on_quit(self) -> None:
         self.runtime.stop()
