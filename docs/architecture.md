@@ -433,15 +433,29 @@ comparable à travers un redémarrage du processus.
 `wallclock_deadline` vaut `None` pendant une pause/urgence (le décompte
 est gelé, aucune échéance à calculer) : `time_left` reste alors la
 valeur figée telle quelle, sans recalcul.
+```
+
+```{important}
+**Si l'échéance est déjà dépassée à la restauration** (le temps
+réellement écoulé pendant l'indisponibilité dépasse ce qui restait sur
+l'étape en cours), le match est marqué **terminé** plutôt que de figer
+`time_left` à 0. Sans ça, le tick normal suivant (`MatchEngine.tick()`,
+voir plus haut) aurait déclenché son rattrapage automatique -- pensé
+pour un simple ralentissement passager du serveur, pas une coupure de
+plusieurs minutes -- et avancé à l'étape suivante avec une durée
+fraîche : le chrono semblait alors "redémarrer" du point de vue des
+archers, alors qu'en réalité bien plus de temps s'était écoulé que ce
+que l'étape en cours pouvait raisonnablement absorber. Une coupure trop
+longue pour être absorbée dans l'étape en cours demande donc une
+intervention explicite du responsable du chronométrage (`restart`/
+`goto`) plutôt qu'une reprise automatique qui devinerait une position
+dans une coupure d'une durée arbitraire.
+```
 
 La sauvegarde à chaque tick (plutôt que périodiquement, ex. toutes les
 5s) garde malgré tout sa valeur avec ce mécanisme : elle limite la
-fenêtre pendant laquelle un **changement d'étape complet** (fin de
-volée, passage à l'orange...) pourrait ne pas être capturé avant un
-plantage -- l'échéance recalculée donne un temps exact pour l'étape
-*enregistrée*, mais ne devine jamais qu'une étape différente aurait dû
-être active entre-temps.
-```
+fenêtre pendant laquelle un changement d'étape aurait pu se produire
+juste avant un plantage sans jamais être capturé dans l'instantané.
 
 ## Fonctionnement dégradé en cas de coupure réseau
 

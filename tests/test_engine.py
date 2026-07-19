@@ -675,7 +675,15 @@ class TestMatchEngineSnapshotRestore(unittest.TestCase):
             engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
             self.assertEqual(engine2.current_state.time_left, 240.0)  # inchangé
 
-    def test_restore_clamps_to_zero_after_a_very_long_outage(self) -> None:
+    def test_restore_marks_match_finished_after_an_outage_longer_than_time_left(self) -> None:
+        """Une coupure plus longue que ce qui restait sur l'étape en cours
+        marque le match terminé, plutôt que de figer time_left à 0 --
+        sans ça, le tick normal suivant aurait déclenché le rattrapage
+        automatique de tick() (pensé pour un simple ralentissement
+        passager, pas une coupure de plusieurs minutes) et fait
+        redémarrer le chrono sur l'étape suivante avec une durée fraîche,
+        ce qui ressemblait exactement à "le chrono repart" du point de
+        vue des archers."""
         from unittest.mock import patch
 
         with patch("fletchtime.engine.engine.time.time", return_value=2000.0):
@@ -688,7 +696,12 @@ class TestMatchEngineSnapshotRestore(unittest.TestCase):
         # 500 vraies secondes plus tard -- largement au-delà des 220s restantes
         with patch("fletchtime.engine.engine.time.time", return_value=2500.0):
             engine2 = MatchEngine(IndoorMode(self._cfg()), restore=snapshot)
-            self.assertEqual(engine2.current_state.time_left, 0.0)  # jamais négatif
+            self.assertTrue(engine2.current_state.finished)
+            self.assertEqual(engine2.current_state.time_left, 0.0)
+            # Un tick normal supplémentaire ne doit rien faire avancer :
+            # un match terminé reste terminé, pas de redémarrage du chrono.
+            engine2.tick(0.2)
+            self.assertTrue(engine2.current_state.finished)
 
 
 if __name__ == "__main__":

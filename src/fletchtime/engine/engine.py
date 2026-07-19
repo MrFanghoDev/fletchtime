@@ -71,7 +71,28 @@ class MatchEngine:
             # ce cas, le temps reste gelé tel quel.
             deadline = restore.get("wallclock_deadline")
             if deadline is not None:
-                self._time_left = max(0.0, deadline - time.time())
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    # Le temps réellement écoulé pendant l'indisponibilité
+                    # dépasse ce qui restait sur cette étape -- ne PAS se
+                    # contenter de figer time_left à 0 : le tick normal
+                    # suivant aurait alors déclenché le rattrapage
+                    # automatique de tick() (comportement volontaire et
+                    # préexistant, pensé pour un simple ralentissement
+                    # passager, pas une coupure de plusieurs secondes/
+                    # minutes) et avancé à l'étape suivante avec une durée
+                    # fraîche -- exactement ce qui ressemblait à "le
+                    # chrono repart" du point de vue des archers. Une
+                    # coupure trop longue pour être absorbée dans l'étape
+                    # en cours marque le match terminé : au responsable du
+                    # chronométrage de décider explicitement de la suite
+                    # (restart/goto), plutôt qu'une reprise automatique
+                    # qui devine une position dans une coupure qui a pu
+                    # durer n'importe combien de temps.
+                    self._finished = True
+                    self._time_left = 0.0
+                else:
+                    self._time_left = remaining
             # Pas d'appel à _emit_current_step_event() ici, volontairement :
             # une reprise après crash doit être silencieuse (pas de
             # prep_start/shoot_start rejoué comme si l'étape venait de
