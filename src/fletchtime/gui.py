@@ -39,6 +39,7 @@ from fletchtime.__main__ import (
     ensure_directories,
     local_ip,
 )
+from fletchtime.logging_setup import configure_logging
 from fletchtime.runtime import ServerRuntime
 
 _TRANSLATIONS = {
@@ -192,6 +193,14 @@ class FletchTimeApp(ctk.CTk):
         # tout print() du reste de l'appli dans le widget de journal.
         sys.stdout = _QueueWriter(sys.stdout, self.log_queue)
         sys.stderr = _QueueWriter(sys.stderr, self.log_queue)
+
+        # Appelé APRÈS la redirection ci-dessus, volontairement : le
+        # StreamHandler créé par configure_logging() se lie au sys.stderr
+        # courant au moment de sa création -- fait après le remplacement,
+        # les journaux applicatifs (commandes reçues, pertes de connexion...)
+        # apparaissent donc aussi dans le widget de journal de la fenêtre,
+        # pas seulement dans le fichier persistant.
+        self.log_file = configure_logging(self.data_root / "logs")
 
         self.title(self._t("title"))
         self.geometry("820x600")

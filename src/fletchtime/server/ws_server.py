@@ -9,8 +9,11 @@ pages) is served separately by ``fletchtime.server.http_static``.
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from .match_server import MatchServer
+
+logger = logging.getLogger("fletchtime.server")
 
 
 async def run_ws_server(
@@ -38,8 +41,11 @@ async def run_ws_server(
             # Expected when a phone/tablet screen locks or the browser tab
             # is backgrounded: Android suspends network activity, the
             # client stops answering keepalive pings, and the connection
-            # times out. Not an error condition worth a traceback.
-            pass
+            # times out. Not an error condition worth a traceback, mais
+            # utile à journaliser : distingue une perte de connexion réseau
+            # abrupte d'une fermeture normale (onglet fermé proprement),
+            # voir aussi le journal générique de MatchServer.unregister.
+            logger.warning("Perte de connexion réseau détectée (WiFi, veille...)")
         finally:
             await server_state.unregister(websocket)
 

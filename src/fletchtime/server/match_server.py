@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 from dataclasses import asdict, replace
 
@@ -24,6 +25,8 @@ from fletchtime.engine import (
 from . import config_store
 
 TICK_INTERVAL = 0.2  # seconds between engine ticks / broadcasts
+
+logger = logging.getLogger("fletchtime.server")
 
 # Actions qui changent l'état du match ou son affichage -- protégées par mot
 # de passe si un mot de passe est configuré (voir _auth_required). Tout le
@@ -110,12 +113,19 @@ class MatchServer:
 
     async def register(self, websocket) -> None:
         self.clients.add(websocket)
+        logger.info("Connexion établie (total: %d client(s))", len(self.clients))
         await self._send_state_to(websocket)
 
     async def unregister(self, websocket) -> None:
+        lane = self._display_lanes.get(websocket)
         self.clients.discard(websocket)
         self._display_lanes.pop(websocket, None)
         self._authenticated_connections.discard(websocket)
+        logger.info(
+            "Connexion perdue%s (total: %d client(s) restant(s))",
+            f" (lane={lane})" if lane else "",
+            len(self.clients),
+        )
 
     # -- authentication -------------------------------------------------------
 
@@ -148,8 +158,16 @@ class MatchServer:
         try:
             data = json.loads(raw_message)
         except json.JSONDecodeError:
+            logger.warning("Message reçu invalide (pas du JSON) : %r", raw_message[:200])
             return
         action = data.get("action")
+
+        # Ne jamais journaliser `data` tel quel : l'action "authenticate"
+        # transporte le mot de passe en clair, qui n'a rien à faire dans un
+        # fichier de log. Le nom de l'action et la lane (si connue) suffisent
+        # amplement pour comprendre après coup ce qui s'est passé.
+        lane = self._display_lanes.get(websocket)
+        logger.info("Commande reçue : %s%s", action, f" (lane={lane})" if lane else "")
 
         if action == "authenticate":
             await self._handle_authenticate(data, websocket)

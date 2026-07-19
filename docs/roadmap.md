@@ -73,6 +73,12 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 
+- ~~**Journal applicatif persistant**~~ -- fait : `MatchServer` journalise
+  désormais chaque commande reçue, (dé)connexion, perte de connexion
+  réseau et message malformé dans un fichier avec rotation
+  (`logs/fletchtime.log`), en plus du journal déjà affiché dans la
+  fenêtre (en mémoire, perdu à la fermeture). Voir {doc}`architecture`,
+  section dédiée -- vérifié que le mot de passe ne s'y retrouve jamais.
 - **Fenêtre graphique -- améliorations restant à faire** :
   - Paramétrage du serveur (ports, etc.) et de l'adresse IP exposée sur le
     réseau local, directement depuis la fenêtre plutôt que fichiers de
@@ -85,15 +91,18 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
     `display.html` mais pas ajustable par l'utilisateur comme le sont les
     autres pages web.
   - Couleur du bouton Quitter à revoir (actuellement neutre/transparent).
-- ~~**Récupération après plantage/redémarrage du serveur**~~ -- fait :
-  `MatchServer` persiste un instantané JSON de l'état du match
-  (`config/match_state.json`, jamais versionné) à chaque commande qui
-  change l'état et périodiquement pendant le décompte, et tente une
+- ~~**Récupération après plantage/redémarrage du serveur**~~ -- fait et
+  **confirmé en conditions réelles avec la v0.2.0** (synchronisation du
+  temps testée, plus de retour en arrière du chrono ; reconnexion
+  vérifiée) : `MatchServer` persiste un instantané JSON de l'état du
+  match (`config/match_state.json`, jamais versionné) à chaque commande
+  qui change l'état et périodiquement pendant le décompte, et tente une
   restauration silencieuse à la construction -- avant ça, un plantage en
   plein match perdait toute la progression (série, volée, temps écoulé).
   Voir {doc}`architecture`, section dédiée, pour le détail complet
-  (écriture atomique, repli silencieux sur un démarrage normal si la
-  reprise échoue).
+  (échéance en horloge murale pour un temps exact quelle que soit la
+  durée de l'indisponibilité, écriture atomique, repli silencieux sur un
+  démarrage normal si la reprise échoue).
 - ~~**Revamping du logo**~~ -- fait : nouveau logo cadran/flèche noir-or-blanc,
   wordmark "FletchTime" bicolore Fletch/Time, cohérent avec le thème clair/sombre.
 - ~~**Sécurisation cyber**~~ -- en partie fait : mot de passe optionnel

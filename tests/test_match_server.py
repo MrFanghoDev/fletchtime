@@ -1111,5 +1111,49 @@ class TestMatchServerCrashRecovery(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(server.engine)
 
 
+class TestMatchServerLogging(unittest.IsolatedAsyncioTestCase):
+    """Couvre le journal applicatif (voir fletchtime.logging_setup) --
+    commandes reçues, (dé)connexions, et surtout l'absence de fuite du
+    mot de passe dans les journaux."""
+
+    async def asyncSetUp(self) -> None:
+        config_store.clear_match_snapshot()
+        self.server = MatchServer()
+        self.control = FakeWebSocket()
+
+    async def asyncTearDown(self) -> None:
+        config_store.clear_match_snapshot()
+
+    async def test_received_command_is_logged(self) -> None:
+        with self.assertLogs("fletchtime.server", level="INFO") as ctx:
+            await self.server.handle_command(json.dumps({"action": "start_indoor"}), self.control)
+        self.assertTrue(any("start_indoor" in line for line in ctx.output))
+
+    async def test_connect_and_disconnect_are_logged(self) -> None:
+        with self.assertLogs("fletchtime.server", level="INFO") as ctx:
+            await self.server.register(self.control)
+            await self.server.unregister(self.control)
+        joined = "\n".join(ctx.output)
+        self.assertIn("établie", joined)
+        self.assertIn("perdue", joined)
+
+    async def test_invalid_json_message_is_logged_as_warning(self) -> None:
+        with self.assertLogs("fletchtime.server", level="WARNING") as ctx:
+            await self.server.handle_command("pas du json {{{", self.control)
+        self.assertTrue(any("invalide" in line for line in ctx.output))
+
+    async def test_password_never_appears_in_logs(self) -> None:
+        """Test de sécurité : l'action authenticate transporte le mot de
+        passe en clair -- il ne doit jamais se retrouver dans un message
+        de journal, où il traînerait en clair dans un fichier persistant."""
+        secret = "SUPER_SECRET_PASSWORD_xyz789"
+        with self.assertLogs("fletchtime.server", level="INFO") as ctx:
+            await self.server.handle_command(
+                json.dumps({"action": "authenticate", "password": secret}), self.control
+            )
+        joined = "\n".join(ctx.output)
+        self.assertNotIn(secret, joined)
+
+
 if __name__ == "__main__":
     unittest.main()

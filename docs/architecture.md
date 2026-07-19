@@ -343,6 +343,32 @@ confirmer le rendu et l'ergonomie tactile -- voir aussi le piège
 PyInstaller/`customtkinter` documenté dans {doc}`dev-guide/index`.
 ```
 
+## Journal applicatif persistant
+
+En plus du journal affiché dans la fenêtre graphique (en mémoire,
+perdu à la fermeture -- voir `fletchtime.gui._QueueWriter`),
+`fletchtime.logging_setup.configure_logging` écrit un fichier de journal
+persistant (`<données du club>/logs/fletchtime.log`, avec rotation --
+1 Mo par fichier, 5 fichiers conservés) : utile pour comprendre après
+coup ce qui s'est passé pendant un concours, sans dépendre de la mémoire
+volatile de la fenêtre.
+
+`MatchServer` y journalise :
+- chaque commande reçue (`next`, `stop`, `start_indoor`...), avec la lane
+  d'origine si connue ;
+- chaque connexion/déconnexion, avec le nombre de clients restants ;
+- les pertes de connexion réseau détectées (WiFi, mise en veille...),
+  distinguées d'une fermeture normale ;
+- les messages malformés reçus (JSON invalide).
+
+```{important}
+Le mot de passe (action `authenticate`) n'est **jamais** journalisé -- le
+code ne journalise jamais `data` tel quel, seulement le nom de l'action
+et la lane, précisément pour éviter qu'un secret ne traîne en clair dans
+un fichier qui persiste sur disque. Vérifié par un test dédié
+(`test_password_never_appears_in_logs`).
+```
+
 ## Récupération après un plantage ou redémarrage du serveur
 
 Avant ce mécanisme, un plantage ou un redémarrage du serveur en plein

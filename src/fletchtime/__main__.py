@@ -28,6 +28,7 @@ from importlib import resources
 from pathlib import Path
 
 from fletchtime import __version__
+from fletchtime.logging_setup import configure_logging
 from fletchtime.runtime import ServerRuntime
 
 HTTP_PORT = 8000
@@ -151,6 +152,9 @@ def _run_headless() -> None:
     app_web_dir = _app_web_dir()
     ensure_directories(data_root, app_web_dir)
     assets_dir = data_root / "web" / "assets"
+
+    log_file = configure_logging(data_root / "logs")
+    print(f"Journal détaillé / Detailed log: {log_file}")
 
     _print_banner(local_ip(), data_root)
 
