@@ -30,9 +30,15 @@ from pathlib import Path
 from fletchtime import __version__
 from fletchtime.logging_setup import configure_logging
 from fletchtime.runtime import ServerRuntime
+from fletchtime.server import config_store
 
-HTTP_PORT = 8000
-WS_PORT = 8765
+# Anciennement des constantes HTTP_PORT/WS_PORT figées ici -- les ports
+# par défaut vivent maintenant uniquement dans
+# config_store.DEFAULT_GUI_CONFIG, seule source de vérité (voir
+# _run_headless ci-dessous et fletchtime.gui, qui lisent tous deux
+# config_store.load_gui_config() plutôt qu'une constante figée). Permet
+# de faire tourner plusieurs salles de compétition sur un même PC : une
+# copie de dossier par salle, chacune avec son propre config/gui.toml.
 
 # Dossiers pré-remplis avec un contenu par défaut fourni avec FletchTime
 # (copié une seule fois, au tout premier lancement -- jamais écrasé
@@ -113,14 +119,14 @@ def local_ip() -> str:
         s.close()
 
 
-def _print_banner(ip: str, data_root: Path) -> None:
+def _print_banner(ip: str, data_root: Path, http_port: int) -> None:
     print("=" * 60)
     print(f"  FletchTime {__version__} -- serveur de contrôle et d'affichage")
     print(f"  FletchTime {__version__} -- control and display server")
     print("=" * 60)
-    print(f"  Accueil / Home      : http://{ip}:{HTTP_PORT}/")
-    print(f"  Contrôle / Control  : http://{ip}:{HTTP_PORT}/control.html")
-    print(f"  Affichage / Display : http://{ip}:{HTTP_PORT}/display.html?lane=1")
+    print(f"  Accueil / Home      : http://{ip}:{http_port}/")
+    print(f"  Contrôle / Control  : http://{ip}:{http_port}/control.html")
+    print(f"  Affichage / Display : http://{ip}:{http_port}/display.html?lane=1")
     print()
     print("  Depuis CET appareil, remplace l'IP par 127.0.0.1 si besoin.")
     print("  From THIS device, replace the IP with 127.0.0.1 if needed.")
@@ -156,9 +162,19 @@ def _run_headless() -> None:
     log_file = configure_logging(data_root / "logs")
     print(f"Journal détaillé / Detailed log: {log_file}")
 
-    _print_banner(local_ip(), data_root)
+    # Ports lus depuis config/gui.toml (mêmes préférences que la fenêtre
+    # graphique, voir config_store.load_gui_config) -- permet de faire
+    # tourner plusieurs salles de compétition sur le même PC : une copie
+    # de dossier par salle, chacune avec son propre gui.toml donnant des
+    # ports différents. "gui.toml" malgré le nom concerne aussi ce mode
+    # terminal, pour que les deux se comportent de façon cohérente.
+    gui_config = config_store.load_gui_config()
+    http_port = gui_config["http_port"]
+    ws_port = gui_config["ws_port"]
 
-    runtime = ServerRuntime(str(app_web_dir), str(assets_dir), HTTP_PORT, WS_PORT)
+    _print_banner(local_ip(), data_root, http_port)
+
+    runtime = ServerRuntime(str(app_web_dir), str(assets_dir), http_port, ws_port)
     runtime.start()
 
     stop_event = threading.Event()

@@ -106,6 +106,29 @@ from fletchtime.engine import IndoorMode, IndoorConfig, MatchEngine
 engine = MatchEngine(IndoorMode(IndoorConfig()))
 ```
 
+## Plusieurs salles de compétition sur un même PC
+
+Chaque installation de FletchTime (dossier `pip install`, ou dossier de
+l'exécutable autoporteur) fait tourner **une seule salle** -- son propre
+match, sa propre urgence, sa propre config. Pour plusieurs salles en
+parallèle sur le même PC :
+
+1. **Copie le dossier FletchTime une fois par salle** (ex. `salle-A/`,
+   `salle-B/`) -- ça isole automatiquement `config/` (temps de tir,
+   urgence...), les journaux, et l'instantané de récupération après
+   plantage : chaque copie a sa propre urgence, indépendante des autres.
+2. Dans la fenêtre de chaque copie, section **Ports (HTTP/WS)** : donne
+   des ports différents à chaque salle (ex. salle A garde `8000`/`8765`
+   par défaut, salle B passe à `8001`/`8766`) -- **Appliquer** redémarre
+   le serveur automatiquement si besoin.
+3. Lance chaque copie séparément. Les écrans de chaque salle se
+   connectent à l'adresse (IP + port) affichée dans la fenêtre de leur
+   salle respective.
+
+**Windows** : le pare-feu autorise généralement par chemin d'exécutable --
+avec des copies de dossier séparées, prévoir de valider l'alerte une fois
+par copie au premier lancement.
+
 ## Contribuer
 
 Envie de proposer un correctif, une idée, ou juste signaler un bug ? Voir

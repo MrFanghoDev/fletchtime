@@ -32,8 +32,6 @@ import customtkinter as ctk
 
 from fletchtime import __version__
 from fletchtime.__main__ import (
-    HTTP_PORT,
-    WS_PORT,
     _app_web_dir,
     _data_root,
     ensure_directories,
@@ -60,6 +58,12 @@ _TRANSLATIONS = {
         "themeSystem": "Système",
         "themeLight": "Clair",
         "themeDark": "Sombre",
+        "networkCaption": "Ports (HTTP/WS) :",
+        "apply": "Appliquer",
+        "networkErrorNotANumber": "Les ports doivent être des nombres",
+        "networkErrorRange": "Les ports doivent être entre 1 et 65535",
+        "networkErrorSame": "Les deux ports doivent être différents",
+        "networkApplied": "Appliqué",
     },
     "en": {
         "title": "FletchTime -- Server",
@@ -77,6 +81,12 @@ _TRANSLATIONS = {
         "themeSystem": "System",
         "themeLight": "Light",
         "themeDark": "Dark",
+        "networkCaption": "Ports (HTTP/WS):",
+        "apply": "Apply",
+        "networkErrorNotANumber": "Ports must be numbers",
+        "networkErrorRange": "Ports must be between 1 and 65535",
+        "networkErrorSame": "Both ports must be different",
+        "networkApplied": "Applied",
     },
 }
 
@@ -189,6 +199,8 @@ class FletchTimeApp(ctk.CTk):
         # chronométrage sont deux préoccupations distinctes.
         gui_config = config_store.load_gui_config()
         self.theme = gui_config["theme"]
+        self.http_port = gui_config["http_port"]
+        self.ws_port = gui_config["ws_port"]
         ctk.set_appearance_mode(self.theme)
         ctk.set_default_color_theme("dark-blue")
         _apply_brand_colors()
@@ -203,7 +215,7 @@ class FletchTimeApp(ctk.CTk):
         ensure_directories(self.data_root, self.app_web_dir)
         self.assets_dir = self.data_root / "web" / "assets"
         self.runtime = ServerRuntime(
-            str(self.app_web_dir), str(self.assets_dir), HTTP_PORT, WS_PORT
+            str(self.app_web_dir), str(self.assets_dir), self.http_port, self.ws_port
         )
 
         # Capte le journal d'accès HTTP (http.server écrit sur stderr) et
@@ -339,6 +351,43 @@ class FletchTimeApp(ctk.CTk):
         )
         self.address_entry.pack(side="left", padx=(0, 12), pady=8, expand=True, fill="x")
 
+        # -- réseau (ports) -----------------------------------------------
+        # Ports modifiables plutôt que figés : permet de faire tourner
+        # plusieurs salles de compétition sur le même PC -- une copie de
+        # dossier par salle, chacune avec des ports différents (voir
+        # config/gui.toml, config_store). Changer un port ici redémarre le
+        # serveur automatiquement s'il tournait déjà, pour que le
+        # changement prenne effet immédiatement (voir _on_apply_network).
+        network_frame = ctk.CTkFrame(self)
+        network_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        self.network_caption = ctk.CTkLabel(
+            network_frame,
+            text=self._t("networkCaption"),
+            font=ctk.CTkFont(size=11),
+            text_color="gray60",
+        )
+        self.network_caption.pack(side="left", padx=(12, 8), pady=8)
+
+        self.http_port_entry = ctk.CTkEntry(network_frame, width=70, justify="center")
+        self.http_port_entry.insert(0, str(self.http_port))
+        self.http_port_entry.pack(side="left", padx=(0, 4), pady=8)
+
+        self.network_separator = ctk.CTkLabel(network_frame, text="/", text_color="gray60")
+        self.network_separator.pack(side="left", padx=2, pady=8)
+
+        self.ws_port_entry = ctk.CTkEntry(network_frame, width=70, justify="center")
+        self.ws_port_entry.insert(0, str(self.ws_port))
+        self.ws_port_entry.pack(side="left", padx=(4, 12), pady=8)
+
+        self.network_apply_button = ctk.CTkButton(
+            network_frame, text=self._t("apply"), width=90, command=self._on_apply_network
+        )
+        self.network_apply_button.pack(side="left", padx=(0, 8), pady=8)
+
+        self.network_status_label = ctk.CTkLabel(network_frame, text="", text_color="gray60")
+        self.network_status_label.pack(side="left", padx=(4, 12), pady=8, fill="x", expand=True)
+
         # -- journal ----------------------------------------------------
         self.log_label = ctk.CTkLabel(self, text=self._t("log_title"), anchor="w")
         self.log_label.pack(fill="x", padx=20, pady=(8, 0))
@@ -369,7 +418,7 @@ class FletchTimeApp(ctk.CTk):
     # -- actions ---------------------------------------------------------
 
     def _open_link(self, path: str) -> None:
-        webbrowser.open(f"http://127.0.0.1:{HTTP_PORT}{path}")
+        webbrowser.open(f"http://127.0.0.1:{self.http_port}{path}")
 
     def _start_server(self) -> None:
         if self.runtime.is_running:
@@ -396,7 +445,7 @@ class FletchTimeApp(ctk.CTk):
         """L'adresse ne dépend pas de si le serveur tourne réellement --
         affichée dans tous les cas (utile même à l'arrêt, pour préparer
         la config réseau à l'avance sur un autre appareil)."""
-        address = f"http://{local_ip()}:{HTTP_PORT}/"
+        address = f"http://{local_ip()}:{self.http_port}/"
         # CTkEntry ne supporte que "normal"/"disabled" (contrairement à
         # ttk.Entry, qui a un vrai état "readonly") -- il faut donc la
         # débloquer temporairement pour la mettre à jour, puis la
@@ -426,6 +475,8 @@ class FletchTimeApp(ctk.CTk):
             values=[self._t("themeSystem"), self._t("themeLight"), self._t("themeDark")]
         )
         self.theme_menu.set(self._theme_label(self.theme))
+        self.network_caption.configure(text=self._t("networkCaption"))
+        self.network_apply_button.configure(text=self._t("apply"))
         self._refresh_status()
 
     def _theme_label(self, theme: str) -> str:
@@ -445,6 +496,60 @@ class FletchTimeApp(ctk.CTk):
         self.theme = theme
         ctk.set_appearance_mode(theme)
         config_store.save_gui_config({"theme": theme})
+
+    def _on_apply_network(self) -> None:
+        """Change les ports HTTP/WebSocket -- reconstruit ServerRuntime
+        avec les nouvelles valeurs (les ports sont figés à la
+        construction, voir fletchtime.runtime.ServerRuntime) et
+        redémarre automatiquement si le serveur tournait déjà, pour que
+        le changement prenne effet tout de suite plutôt que de laisser
+        la fenêtre dans un état incohérent (ports affichés différents de
+        ceux réellement utilisés par le serveur en cours)."""
+        try:
+            http_port = int(self.http_port_entry.get())
+            ws_port = int(self.ws_port_entry.get())
+        except ValueError:
+            self.network_status_label.configure(
+                text=self._t("networkErrorNotANumber"), text_color="#d6534a"
+            )
+            return
+
+        if not (1 <= http_port <= 65535) or not (1 <= ws_port <= 65535):
+            self.network_status_label.configure(
+                text=self._t("networkErrorRange"), text_color="#d6534a"
+            )
+            return
+        if http_port == ws_port:
+            self.network_status_label.configure(
+                text=self._t("networkErrorSame"), text_color="#d6534a"
+            )
+            return
+
+        try:
+            config_store.save_gui_config({"http_port": http_port, "ws_port": ws_port})
+        except ValueError:
+            # Filet de sécurité seulement -- les cas attendus sont déjà
+            # couverts par les vérifications ci-dessus, donc ce chemin ne
+            # devrait normalement jamais s'exécuter.
+            self.network_status_label.configure(
+                text=self._t("networkErrorRange"), text_color="#d6534a"
+            )
+            return
+
+        was_running = self.runtime.is_running
+        if was_running:
+            self.runtime.stop()
+
+        self.http_port = http_port
+        self.ws_port = ws_port
+        self.runtime = ServerRuntime(
+            str(self.app_web_dir), str(self.assets_dir), self.http_port, self.ws_port
+        )
+        if was_running:
+            self.runtime.start()
+
+        self.network_status_label.configure(text=self._t("networkApplied"), text_color="#2fb344")
+        self._refresh_status()
 
     def _on_quit(self) -> None:
         self.runtime.stop()

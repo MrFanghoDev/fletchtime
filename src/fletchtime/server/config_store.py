@@ -61,8 +61,10 @@ DEFAULT_APP_CONFIG: dict[str, Any] = {"sound_pack": "classic", "countdown_tick_s
 
 GUI_COMMENTS: dict[str, str] = {
     "theme": 'Thème de la fenêtre : "system" (suit le thème du système), "light" ou "dark"',
+    "http_port": "Port HTTP (pages web) -- change ceci pour faire tourner plusieurs salles sur le même PC",
+    "ws_port": "Port WebSocket (temps réel) -- doit être différent du port HTTP",
 }
-DEFAULT_GUI_CONFIG: dict[str, Any] = {"theme": "system"}
+DEFAULT_GUI_CONFIG: dict[str, Any] = {"theme": "system", "http_port": 8000, "ws_port": 8765}
 
 AUTH_COMMENTS: dict[str, str] = {
     "password": (
@@ -173,6 +175,12 @@ def save_gui_config(overrides: dict[str, Any]) -> dict[str, Any]:
     merged.update({k: v for k, v in overrides.items() if k in DEFAULT_GUI_CONFIG})
     if merged["theme"] not in ("system", "light", "dark"):
         raise ValueError(f'theme must be "system", "light" or "dark", got {merged["theme"]!r}')
+    for key in ("http_port", "ws_port"):
+        port = merged[key]
+        if not isinstance(port, int) or not (1 <= port <= 65535):
+            raise ValueError(f"{key} must be an integer between 1 and 65535, got {port!r}")
+    if merged["http_port"] == merged["ws_port"]:
+        raise ValueError("http_port and ws_port must be different")
     _write_toml(GUI_TOML, merged, GUI_COMMENTS)
     return merged
 

@@ -79,10 +79,18 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   (`logs/fletchtime.log`), en plus du journal déjà affiché dans la
   fenêtre (en mémoire, perdu à la fermeture). Voir {doc}`architecture`,
   section dédiée -- vérifié que le mot de passe ne s'y retrouve jamais.
-- **Fenêtre graphique -- améliorations restant à faire** :
-  - Paramétrage du serveur (ports, etc.) et de l'adresse IP exposée sur le
-    réseau local, directement depuis la fenêtre plutôt que fichiers de
-    config seuls.
+- ~~**Fenêtre graphique -- améliorations**~~ -- toutes faites (paramétrage
+  réseau, affichage des adresses, thème, couleur du bouton Quitter) :
+  - ~~Paramétrage du serveur et de l'adresse IP exposée~~ -- fait :
+    ports HTTP/WebSocket modifiables directement dans la fenêtre
+    (`config/gui.toml`), avec redémarrage automatique du serveur si les
+    ports changent pendant qu'il tourne. Objectif principal : plusieurs
+    salles de compétition sur un même PC -- copier le dossier FletchTime
+    une fois par salle (isole aussi `config/`, `logs/`, l'instantané de
+    récupération, donc des urgences bien séparées), donner des ports
+    différents à chaque copie, lancer chacune séparément. Testé
+    concrètement : deux instances simultanées sur le même processus,
+    ports différents, contenu totalement isolé entre les deux.
   - ~~Affichage des adresses exposées~~ -- fait : champ dédié (adresse
     d'accueil) dans la fenêtre elle-même, en plus des boutons de
     raccourci -- utile pour retaper l'adresse à la main sur un appareil
