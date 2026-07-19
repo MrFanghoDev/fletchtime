@@ -312,8 +312,8 @@ class FletchTimeApp(ctk.CTk):
             self,
             text=self._t("quit"),
             command=self._on_quit,
-            fg_color="transparent",
-            border_width=1,
+            fg_color="#3a4354",
+            hover_color="#4a5568",
         )
         self.quit_button.pack(padx=16, pady=(0, 12))
 

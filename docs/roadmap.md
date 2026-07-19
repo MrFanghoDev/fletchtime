@@ -90,7 +90,9 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
     sombre (`ctk.set_appearance_mode("dark")`), cohérent avec
     `display.html` mais pas ajustable par l'utilisateur comme le sont les
     autres pages web.
-  - Couleur du bouton Quitter à revoir (actuellement neutre/transparent).
+  - ~~Couleur du bouton Quitter à revoir~~ -- fait : couleur pleine
+    (`#3a4354`) au lieu de transparent+contour, visible sans être
+    alarmante (distincte du rouge d'Arrêter et du doré de Démarrer).
 - ~~**Récupération après plantage/redémarrage du serveur**~~ -- fait et
   **confirmé en conditions réelles avec la v0.2.0** (synchronisation du
   temps testée, plus de retour en arrière du chrono ; reconnexion
