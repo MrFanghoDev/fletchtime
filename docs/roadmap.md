@@ -129,20 +129,16 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   confirmée) -- voir le détail de l'investigation dans
   {doc}`dev-guide/index`. Pas de besoin utilisateur macOS avéré à ce jour ;
   à reconsidérer si ça change.
-- **Web app côté client (PWA)** : transformer `control.html`/`display.html`
-  (voire `index.html`) en Progressive Web App -- `manifest.json` + service
-  worker + icônes. Permettrait d'"installer" l'app sur l'écran d'accueil
-  d'une tablette/téléphone (lancement direct, sans retaper l'URL ni passer
-  par le navigateur), et de mettre en cache les fichiers statiques (HTML/CSS/
-  JS/logo) pour un chargement instantané même en cas de WiFi capricieux --
-  le WebSocket, lui, resterait bien sûr en temps réel, seul l'habillage
-  statique serait mis en cache. Chantier indépendant du reste, à ne traiter
-  qu'une fois l'interface stabilisée.
-- **Documentation Sphinx versionnée** : `docs.yml` publie aujourd'hui une
-  seule version de la doc sur GitHub Pages, écrasée à chaque nouveau tag
-  (voir plus bas pourquoi ce n'est plus à chaque push depuis peu) -- pas
-  de moyen de consulter la doc telle qu'elle était pour une release
-  précédente (ex. v0.1.2) si le code a changé depuis. À terme : une doc
-  par tag de version (ex. `/v0.1.2/`, `/v0.1.3/`) en plus d'une version
-  `/latest/`, avec un sélecteur de version dans le thème Furo (voir
-  `sphinx-multiversion` ou équivalent).
+- ~~**Web app côté client (PWA)**~~ -- abandonné délibérément : pas jugé
+  utile pour l'usage réel du club. (Aurait transformé
+  `control.html`/`display.html` en Progressive Web App -- installation
+  sur écran d'accueil, mise en cache des fichiers statiques.)
+- ~~**Documentation Sphinx versionnée**~~ -- abandonné délibérément : les
+  archives `.tar.gz` jointes à chaque Release GitHub suffisent pour
+  consulter la doc d'une version précédente, pas besoin d'un système de
+  versionnage complet côté GitHub Pages.
+- ~~**Termux / lancer FletchTime sur Android sans Pydroid**~~ -- abandonné
+  délibérément pour l'instant : usage réel actuel = téléphone en simple
+  client (accès réseau local), PC pour héberger le serveur. Pas de besoin
+  d'exécuter le serveur lui-même sur Android dans ces conditions. À
+  reconsidérer si l'usage change.
