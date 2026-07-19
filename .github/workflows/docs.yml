@@ -2,18 +2,24 @@ name: Documentation (construction, publication, archivage)
 
 # Un seul workflow pour tout le cycle de vie de la documentation Sphinx :
 # - construction à chaque push touchant à la doc ou au code (docs/, src/)
-# - publication sur GitHub Pages à la suite
+#   -- attrape une erreur de construction tôt, sans attendre un tag
+# - publication sur GitHub Pages UNIQUEMENT sur un tag ou un lancement
+#   manuel -- jamais sur un simple push de branche (voir le commentaire du
+#   job deploy-pages plus bas pour l'explication complète : GitHub Pages
+#   ignore silencieusement un second déploiement pour un même SHA de
+#   commit, confirmé par leur support -- ce qui rendait le déploiement
+#   d'un tag inopérant s'il avait déjà été déployé juste avant via un
+#   simple push de branche vers main)
 # - archivage (.tar.gz joint à la Release GitHub) uniquement sur un tag
 #
 # Ne concerne QUE la doc développeur -- le manuel utilisateur
 # (web/manual.html) est servi localement par le serveur FletchTime
 # lui-même, jamais publié ici.
 #
-# Sur un tag, la doc publiée sur GitHub Pages ("/latest/" au sens large,
-# pas une version figée par tag -- voir le point d'attention associé dans
-# docs/roadmap.md) et l'archive jointe à la Release contiennent le même
-# contenu : c'est le même artefact de construction, réutilisé pour les
-# deux, pas reconstruit deux fois.
+# Conséquence du point ci-dessus : la doc publiée sur GitHub Pages ne
+# reflète plus en continu le dernier commit de `main` comme avant -- elle
+# ne se met à jour qu'à chaque nouveau tag (ou lancement manuel explicite).
+# Voir aussi le point d'attention associé dans docs/roadmap.md.
 #
 # Configuration ponctuelle nécessaire (une seule fois, sur GitHub) :
 #   Settings -> Pages -> Source: "GitHub Actions"
@@ -128,6 +134,21 @@ jobs:
 
   deploy-pages:
     needs: build
+    # UNIQUEMENT sur un tag ou un lancement manuel -- jamais sur un simple
+    # push de branche. Confirmé par le support GitHub lui-même (voir
+    # discussion officielle actions/deploy-pages) : GitHub Pages ignore
+    # silencieusement un déploiement pour un SHA de commit déjà déployé
+    # auparavant -- "as expected behaviour" de leur côté, pas un bug chez
+    # nous. Or un tag pointe presque toujours vers un commit déjà poussé
+    # séparément vers la branche quelques instants plus tôt -- si CE push
+    # de branche avait déjà déclenché un déploiement pour ce même SHA (la
+    # version de développement, calculée avant que le tag existe), le
+    # déploiement du tag qui suit (version propre) échouait alors
+    # silencieusement : l'action rapportait un succès, mais le contenu
+    # affiché restait bloqué sur l'ancien déploiement. En ne déployant
+    # plus du tout sur un simple push de branche, le SHA d'un tag n'a
+    # jamais été déployé avant lui, éliminant le conflit à la racine.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment:
       name: github-pages

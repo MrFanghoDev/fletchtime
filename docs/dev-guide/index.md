@@ -94,6 +94,45 @@ que dans la doc publiée) :
   reconstruit donc toujours la doc, peu importe si `docs/`/`src/` ont
   changé depuis -- exactement ce qu'on veut ici.
 
+```{warning}
+**Piège GitHub Pages -- un même SHA de commit ne peut être déployé
+qu'une seule fois.** Même après le correctif ci-dessus (`docs.yml`
+déclenché sur les tags), la doc en ligne continuait par moments
+d'afficher une version de développement (`X.Y.Z.devN`) au lieu de la
+version propre du tag qu'on venait de pousser -- alors que l'archive
+`.tar.gz` jointe à la Release, elle, avait toujours la bonne version.
+
+Cause confirmée par le support GitHub lui-même (voir
+[cette discussion officielle](https://github.com/orgs/community/discussions/145042)) :
+**GitHub Pages ignore silencieusement un déploiement si ce même SHA de
+commit a déjà été déployé auparavant** -- l'action `deploy-pages`
+rapporte un succès, mais rien ne se passe réellement côté serveur. Or un
+tag pointe presque toujours vers un commit déjà poussé séparément vers
+`main` quelques instants plus tôt (`git push` puis, séparément, `git tag
+&& git push --tags`) -- deux événements distincts, même SHA. Si le push
+de branche avait déjà déclenché un déploiement pour ce SHA (calculant la
+version de développement, puisqu'à ce moment le tag n'existait pas
+encore), le déploiement du tag qui suivait était condamné à être ignoré,
+quoi qu'on fasse côté minuterie/concurrence du workflow.
+
+Ce n'était donc ni une course, ni un cache navigateur/CDN, ni un souci de
+`setuptools_scm` -- ces trois pistes ont été explorées et corrigées en
+cours de route (`cancel-in-progress: true`, navigation privée, diagnostic
+de version) sans jamais résoudre le symptôme, précisément parce
+qu'aucune n'attaquait la vraie cause.
+
+**Correctif définitif** : `deploy-pages` ne se déclenche plus que sur un
+tag ou un lancement manuel (`workflow_dispatch`), plus jamais sur un
+simple push de branche -- le job `build` continue, lui, de tourner sur
+chaque push pertinent (attrape une erreur de construction tôt), mais
+seule l'étape de déploiement effectif est restreinte. Le SHA d'un tag
+n'a ainsi jamais été déployé avant lui, éliminant le conflit à la racine.
+
+**Conséquence assumée** : la doc publiée ne reflète plus en continu le
+dernier commit de `main`, seulement la dernière version taguée -- voir
+la note correspondante sur {doc}`../index`.
+```
+
 ## Architecture générale
 
 Voir {doc}`../architecture` pour le détail complet. En résumé :

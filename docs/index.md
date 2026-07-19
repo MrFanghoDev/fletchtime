@@ -58,14 +58,15 @@ développeur.
   [github.com/MrFanghoDev/fletchtime/releases](https://github.com/MrFanghoDev/fletchtime/releases)
 
 ```{note}
-Cette documentation en ligne reflète toujours la dernière version de
-`main` -- potentiellement en avance sur la dernière version publiée (voir
-{doc}`roadmap`, section Backlog). **La documentation correspondant
-exactement à une version précédente est disponible dans chaque Release
-GitHub**, sous forme d'archive téléchargeable : ouvre la Release voulue
-(ex. `v0.1.2`), télécharge `FletchTime-v0.1.2-docs.tar.gz`, décompresse-la,
-puis ouvre `index.html` -- tu retrouves la documentation telle qu'elle
-était exactement à cette version.
+Cette documentation en ligne correspond à la dernière **version publiée**
+(dernier tag) -- elle ne se met plus à jour à chaque commit de `main`
+(voir {doc}`dev-guide/index` pour pourquoi : GitHub Pages ignore un
+second déploiement pour un commit déjà déployé, ce qui posait justement
+problème quand la doc se reconstruisait à chaque push). **La
+documentation correspondant exactement à une version précédente est
+disponible dans chaque Release GitHub**, sous forme d'archive
+téléchargeable : ouvre la Release voulue (ex. `v0.1.2`), télécharge
+`FletchTime-v0.1.2-docs.tar.gz`, décompresse-la, puis ouvre `index.html`.
 ```
 
 ---
