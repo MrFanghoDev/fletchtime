@@ -77,6 +77,31 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 
+- ~~**Icône de l'exécutable**~~ -- fait : `web/logo.ico` (multi-résolution,
+  16 à 256px, généré depuis `web/logo.svg`), utilisé par `fletchtime.spec`
+  pour l'exécutable Windows. Sans effet sous Linux, qui n'a pas ce
+  concept de métadonnées d'icône pour un simple binaire (vérifié). Le
+  favicon des pages web était en fait déjà en place, rien à faire là.
+- ~~**Son dupliqué sur plusieurs onglets**~~ -- fait : l'aperçu de
+  `control.html` (une vraie instance de `display.html` en iframe) ne
+  joue plus jamais de son -- c'est une simple vue visuelle, pas un écran
+  destiné aux archers. `?mute=1` permet en plus de couper le son sur
+  n'importe quel autre onglet ouvert en trop sur le même PC.
+- ~~**Chrono figé après focus de la fenêtre**~~ -- cause exacte non
+  identifiée avec certitude malgré l'investigation (déconnexions
+  écartées, statut toujours "en cours", gel permanent ne se résolvant
+  pas tout seul) -- mais `tick_loop` capture désormais toute exception
+  imprévue en son sein plutôt que de laisser mourir la boucle
+  silencieusement, journalisée avec sa trace complète. Si ça se
+  reproduit, le journal donnera enfin la cause exacte.
+- ~~**Données techniques dans la fenêtre**~~ -- fait : nouvel endpoint
+  `/api/status` (les mêmes données déjà affichées dans `control.html`),
+  affiché dans la fenêtre via sondage périodique. `ServerRuntime`
+  construit maintenant le `MatchServer` une seule fois et le partage
+  entre les deux serveurs, plutôt que d'en laisser `run_ws_server` créer
+  un nouveau à chaque démarrage.
+
+
 - ~~**Remerciements**~~ -- structure prête, à compléter : `REMERCIEMENTS.md`
   (modèle à remplir avec les noms), lié depuis le README et intégré à la
   doc Sphinx ({doc}`remerciements` -- même contenu, pas dupliqué, via une

@@ -420,50 +420,73 @@ class MatchServer:
         # ici puisqu'on mesure un intervalle, pas une heure absolue.
         last_tick = time.monotonic()
         while True:
-            await asyncio.sleep(TICK_INTERVAL)
-            now = time.monotonic()
-            elapsed = now - last_tick
-            last_tick = now
-            events = []
-            async with self._lock:
-                if self.engine is not None:
-                    self.engine.tick(elapsed)
-                    events = self.engine.pop_pending_events()
-                    if events:
-                        state = self.engine.current_state
-                        for event in events:
-                            # countdown_tick exclu volontairement : se
-                            # déclenche une fois par seconde dans les
-                            # dernières secondes de CHAQUE volée --
-                            # noierait le journal sans valeur diagnostique
-                            # ajoutée (le passage à l'orange, lui, est déjà
-                            # journalisé séparément via warning_orange).
-                            if event == "countdown_tick":
-                                continue
-                            logger.info(
-                                "Transition : %s (unité %d, volée %d%s, phase=%s)",
-                                event,
-                                state.unit_number,
-                                state.end_number,
-                                f", {state.current_turn}" if state.current_turn else "",
-                                state.phase.value,
-                            )
-                    # À chaque tick (~5x/seconde), pas seulement
-                    # périodiquement : un instantané périodique trop
-                    # espacé (auparavant toutes les 5s) peut être visible
-                    # par les écrans -- en cas de redémarrage du serveur,
-                    # la reprise se fait alors sur un temps plus ANCIEN
-                    # que ce que l'écran affichait déjà (extrapolé
-                    # localement pendant la coupure, voir display.html et
-                    # docs/architecture.md), provoquant un retour en
-                    # arrière visible du chrono affiché. Écrire un petit
-                    # JSON à chaque tick reste bon marché (fichier local,
-                    # quelques dizaines d'octets) -- réduit la fenêtre de
-                    # péremption à ~200ms, imperceptible.
-                    self._save_snapshot()
-            await self.broadcast_state()
-            if events:
-                await self._broadcast({"type": "events", "events": events})
+            try:
+                await asyncio.sleep(TICK_INTERVAL)
+                now = time.monotonic()
+                elapsed = now - last_tick
+                last_tick = now
+                events = []
+                async with self._lock:
+                    if self.engine is not None:
+                        self.engine.tick(elapsed)
+                        events = self.engine.pop_pending_events()
+                        if events:
+                            state = self.engine.current_state
+                            for event in events:
+                                # countdown_tick exclu volontairement : se
+                                # déclenche une fois par seconde dans les
+                                # dernières secondes de CHAQUE volée --
+                                # noierait le journal sans valeur diagnostique
+                                # ajoutée (le passage à l'orange, lui, est déjà
+                                # journalisé séparément via warning_orange).
+                                if event == "countdown_tick":
+                                    continue
+                                logger.info(
+                                    "Transition : %s (unité %d, volée %d%s, phase=%s)",
+                                    event,
+                                    state.unit_number,
+                                    state.end_number,
+                                    f", {state.current_turn}" if state.current_turn else "",
+                                    state.phase.value,
+                                )
+                        # À chaque tick (~5x/seconde), pas seulement
+                        # périodiquement : un instantané périodique trop
+                        # espacé (auparavant toutes les 5s) peut être visible
+                        # par les écrans -- en cas de redémarrage du serveur,
+                        # la reprise se fait alors sur un temps plus ANCIEN
+                        # que ce que l'écran affichait déjà (extrapolé
+                        # localement pendant la coupure, voir display.html et
+                        # docs/architecture.md), provoquant un retour en
+                        # arrière visible du chrono affiché. Écrire un petit
+                        # JSON à chaque tick reste bon marché (fichier local,
+                        # quelques dizaines d'octets) -- réduit la fenêtre de
+                        # péremption à ~200ms, imperceptible.
+                        self._save_snapshot()
+                await self.broadcast_state()
+                if events:
+                    await self._broadcast({"type": "events", "events": events})
+            except asyncio.CancelledError:
+                # Laisse la vraie annulation (arrêt propre du serveur, voir
+                # ServerRuntime.stop) se propager normalement -- ne doit
+                # surtout pas être avalée par le except Exception ci-dessous
+                # (CancelledError hérite de BaseException depuis Python
+                # 3.8, donc `except Exception` ne l'attraperait de toute
+                # façon pas, mais autant être explicite).
+                raise
+            except Exception:
+                # Ne doit JAMAIS arrêter la boucle silencieusement : sans
+                # ce filet, une exception imprévue ici tuait la boucle de
+                # décompte pour de bon, sans aucune erreur visible nulle
+                # part -- le reste du serveur (connexions, réponse aux
+                # commandes) continuait de fonctionner normalement à côté,
+                # donc rien ne semblait "en panne" du point de vue d'un
+                # client connecté, sinon un chrono figé indéfiniment.
+                # Cause précise jamais identifiée avec certitude (voir
+                # docs/architecture.md) -- ce filet capture la trace
+                # complète pour la prochaine occurrence, et continue au
+                # tick suivant plutôt que de laisser tout le décompte
+                # mourir en silence.
+                logger.exception("Erreur inattendue dans la boucle de décompte")
 
     # -- broadcasting ---------------------------------------------------------
 

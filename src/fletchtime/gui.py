@@ -24,8 +24,12 @@ Pydroid reste nécessaire pour confirmer le rendu et l'ergonomie tactile.
 
 from __future__ import annotations
 
+import json
 import queue
 import sys
+import threading
+import urllib.error
+import urllib.request
 import webbrowser
 
 import customtkinter as ctk
@@ -64,6 +68,17 @@ _TRANSLATIONS = {
         "networkErrorRange": "Les ports doivent être entre 1 et 65535",
         "networkErrorSame": "Les deux ports doivent être différents",
         "networkApplied": "Appliqué",
+        "techStatusUnavailable": "Statut technique : indisponible (serveur en cours de démarrage ?)",
+        "techStatusClients": "Clients connectés :",
+        "techStatusLanes": "Écrans :",
+        "techStatusNoLanes": "aucun",
+        "techStatusMode": "Mode :",
+        "techStatusNoMode": "aucun",
+        "techStatusPhase": "Phase :",
+        "techStatusSound": "Sons :",
+        "techStatusAuth": "Mot de passe :",
+        "yes": "oui",
+        "no": "non",
     },
     "en": {
         "title": "FletchTime -- Server",
@@ -87,6 +102,17 @@ _TRANSLATIONS = {
         "networkErrorRange": "Ports must be between 1 and 65535",
         "networkErrorSame": "Both ports must be different",
         "networkApplied": "Applied",
+        "techStatusUnavailable": "Technical status: unavailable (server starting?)",
+        "techStatusClients": "Connected clients:",
+        "techStatusLanes": "Screens:",
+        "techStatusNoLanes": "none",
+        "techStatusMode": "Mode:",
+        "techStatusNoMode": "none",
+        "techStatusPhase": "Phase:",
+        "techStatusSound": "Sounds:",
+        "techStatusAuth": "Password:",
+        "yes": "yes",
+        "no": "no",
     },
 }
 
@@ -209,6 +235,7 @@ class FletchTimeApp(ctk.CTk):
 
         self.language = "fr"
         self.log_queue: queue.Queue[str] = queue.Queue()
+        self.status_queue: queue.Queue = queue.Queue()
 
         self.data_root = _data_root()
         self.app_web_dir = _app_web_dir()
@@ -238,6 +265,8 @@ class FletchTimeApp(ctk.CTk):
 
         self._build_ui()
         self._poll_log_queue()
+        self._poll_technical_status()
+        self._drain_status_queue()
         self._start_server()
 
     # -- traductions ---------------------------------------------------
@@ -387,6 +416,20 @@ class FletchTimeApp(ctk.CTk):
 
         self.network_status_label = ctk.CTkLabel(network_frame, text="", text_color="gray60")
         self.network_status_label.pack(side="left", padx=(4, 12), pady=8, fill="x", expand=True)
+
+        # -- statut technique ---------------------------------------------
+        # Les mêmes données techniques que celles déjà affichées dans la
+        # page de contrôle (écrans connectés, mode actif...), lues via
+        # /api/status -- voir _poll_technical_status ci-dessous, et
+        # fletchtime.server.http_static._DualRootHandler._build_status_body
+        # côté serveur.
+        tech_frame = ctk.CTkFrame(self)
+        tech_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        self.tech_status_label = ctk.CTkLabel(
+            tech_frame, text=self._t("techStatusUnavailable"), anchor="w", justify="left"
+        )
+        self.tech_status_label.pack(fill="x", padx=12, pady=8)
 
         # -- journal ----------------------------------------------------
         self.log_label = ctk.CTkLabel(self, text=self._t("log_title"), anchor="w")
@@ -556,6 +599,61 @@ class FletchTimeApp(ctk.CTk):
         self.destroy()
 
     # -- journal (file thread-safe -> widget) ------------------------------
+
+    # -- statut technique (thread séparé pour la requête HTTP -> file) -----
+
+    def _poll_technical_status(self) -> None:
+        # Une requête HTTP, même locale, peut mettre du temps à répondre
+        # (serveur qui démarre, port qui change...) -- jamais faite
+        # directement depuis le thread principal (gèlerait la fenêtre le
+        # temps de la requête). Un thread par sondage, plutôt qu'un seul
+        # thread persistant : plus simple, et chaque requête se termine en
+        # quelques millisecondes en pratique (même machine).
+        threading.Thread(target=self._fetch_technical_status, daemon=True).start()
+        self.after(2000, self._poll_technical_status)
+
+    def _fetch_technical_status(self) -> None:
+        # Tourne dans un thread séparé -- ne touche JAMAIS un widget
+        # Tkinter directement ici (pas thread-safe) ; pousse seulement le
+        # résultat dans une file, lue depuis le thread principal via
+        # _drain_status_queue, exactement comme le journal (self.log_queue).
+        try:
+            url = f"http://127.0.0.1:{self.http_port}/api/status"
+            with urllib.request.urlopen(url, timeout=2) as res:
+                data = json.loads(res.read())
+        except (urllib.error.URLError, OSError, ValueError):
+            # Serveur pas encore démarré, port en cours de changement,
+            # réponse invalide... -- affiche juste "indisponible", jamais
+            # une exception qui remonterait jusqu'au thread principal.
+            data = None
+        self.status_queue.put(data)
+
+    def _drain_status_queue(self) -> None:
+        try:
+            while True:
+                data = self.status_queue.get_nowait()
+                self._render_technical_status(data)
+        except queue.Empty:
+            pass
+        self.after(200, self._drain_status_queue)
+
+    def _render_technical_status(self, data: dict | None) -> None:
+        if not data or not data.get("available"):
+            self.tech_status_label.configure(text=self._t("techStatusUnavailable"))
+            return
+        lanes = ", ".join(data["connected_lanes"]) or self._t("techStatusNoLanes")
+        mode = data["active_mode"] or self._t("techStatusNoMode")
+        phase = data["match_phase"] or "--"
+        text = (
+            f"{self._t('techStatusClients')} {data['connected_clients']}  |  "
+            f"{self._t('techStatusLanes')} {lanes}  |  "
+            f"{self._t('techStatusMode')} {mode}  |  "
+            f"{self._t('techStatusPhase')} {phase}  |  "
+            f"{self._t('techStatusSound')} {data['sound_pack']}  |  "
+            f"{self._t('techStatusAuth')} "
+            f"{self._t('yes') if data['password_configured'] else self._t('no')}"
+        )
+        self.tech_status_label.configure(text=text)
 
     def _poll_log_queue(self) -> None:
         try:

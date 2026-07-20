@@ -1241,6 +1241,42 @@ class TestMatchServerLogging(unittest.IsolatedAsyncioTestCase):
         joined = "\n".join(ctx.output)
         self.assertNotIn("countdown_tick", joined)
 
+    async def test_tick_loop_survives_an_unexpected_exception(self) -> None:
+        """Filet de sécurité contre un bug signalé en pratique : le
+        chrono se figeait indéfiniment sans aucune erreur visible, le
+        reste du serveur (connexions, commandes) continuant de
+        fonctionner normalement à côté -- symptôme cohérent avec une
+        exception imprévue tuant silencieusement la boucle. Ce test
+        vérifie qu'une exception injectée dans tick() n'arrête plus la
+        boucle : elle continue au tick suivant, et l'exception est
+        journalisée avec sa trace complète plutôt que d'être avalée."""
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}), self.control)
+
+        original_tick = self.server.engine.tick
+        call_count = {"n": 0}
+
+        def broken_tick(dt):
+            call_count["n"] += 1
+            if call_count["n"] == 2:
+                raise RuntimeError("exception simulée")
+            return original_tick(dt)
+
+        self.server.engine.tick = broken_tick
+
+        with self.assertLogs("fletchtime.server", level="ERROR") as ctx:
+            task = asyncio.ensure_future(self.server.tick_loop())
+            await asyncio.sleep(1.0)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        self.assertGreater(call_count["n"], 2)  # la boucle a continué après l'échec
+        joined = "\n".join(ctx.output)
+        self.assertIn("Erreur inattendue dans la boucle de décompte", joined)
+        self.assertIn("RuntimeError", joined)  # la trace complète est bien journalisée
+
 
 if __name__ == "__main__":
     unittest.main()

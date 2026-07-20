@@ -33,9 +33,12 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
     behaviour as before this existed).
     """
 
-    def __init__(self, *args, directory: str, assets_dir: str, ws_port: int, **kwargs) -> None:
+    def __init__(
+        self, *args, directory: str, assets_dir: str, ws_port: int, match_server=None, **kwargs
+    ) -> None:
         self._assets_dir = assets_dir
         self._ws_port = ws_port
+        self._match_server = match_server
         super().__init__(*args, directory=directory, **kwargs)
 
     def do_GET(self) -> None:
@@ -49,14 +52,58 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
             # page elle-même, qui est garanti correct sans configuration
             # supplémentaire côté client.
             body = json.dumps({"version": __version__, "ws_port": self._ws_port}).encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(body)
+            self._send_json(body)
+            return
+        if self.path == "/api/status":
+            self._send_json(self._build_status_body())
             return
         super().do_GET()
+
+    def _send_json(self, body: bytes) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _build_status_body(self) -> bytes:
+        """Les mêmes données techniques que celles déjà affichées dans la
+        page de contrôle (écrans connectés, mode actif...), exposées ici
+        pour que la fenêtre graphique puisse les afficher aussi sans
+        dupliquer la logique de rendu HTML -- voir fletchtime.gui,
+        interrogé par sondage périodique plutôt qu'en temps réel (pas
+        besoin d'une vraie connexion WebSocket juste pour un affichage de
+        statut, voir sa docstring pour le détail de ce choix).
+
+        Lu directement depuis l'instance MatchServer partagée avec le
+        serveur WebSocket (voir fletchtime.runtime.ServerRuntime), depuis
+        un thread différent de celui qui la modifie -- en lecture seule,
+        sans le verrou asyncio de MatchServer (qui ne serait de toute
+        façon pas utilisable depuis ce thread synchrone). Le GIL rend
+        chaque lecture individuelle atomique ; au pire, une valeur d'un
+        sondage sur deux légèrement obsolète pour un simple affichage de
+        statut, jamais une valeur corrompue."""
+        if self._match_server is None:
+            return json.dumps({"available": False}).encode("utf-8")
+
+        server = self._match_server
+        engine = server.engine
+        state = engine.current_state if engine is not None else None
+        connected_lanes = sorted(
+            {lane for lane in server._display_lanes.values() if lane != "apercu"}
+        )
+        payload = {
+            "available": True,
+            "connected_clients": len(server.clients),
+            "connected_lanes": connected_lanes,
+            "active_mode": server._current_mode_kind,
+            "match_phase": state.phase.value if state is not None else None,
+            "match_finished": state.finished if state is not None else None,
+            "sound_pack": server._sound_pack,
+            "password_configured": bool(server._password),
+        }
+        return json.dumps(payload).encode("utf-8")
 
     def translate_path(self, path: str) -> str:
         if path == "/assets" or path.startswith("/assets/"):
@@ -74,7 +121,11 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
 
 
 def start_http_server(
-    directory: str, port: int, assets_dir: str | None = None, ws_port: int | None = None
+    directory: str,
+    port: int,
+    assets_dir: str | None = None,
+    ws_port: int | None = None,
+    match_server=None,
 ) -> ThreadingHTTPServer:
     """``assets_dir`` defaults to ``<directory>/assets`` when not given,
     matching the historical single-root behaviour (dev checkout, or a
@@ -84,6 +135,12 @@ def start_http_server(
     8000/8765 default pair) when not given -- only used as a last-resort
     fallback, callers should normally pass the real configured value
     (see ``fletchtime.runtime.ServerRuntime``).
+
+    ``match_server``, if given, is exposed read-only via ``/api/status``
+    (see ``_DualRootHandler._build_status_body``) -- ``None`` by default,
+    in which case that endpoint reports ``{"available": false}`` rather
+    than erroring, since not every caller needs/has one to share (e.g.
+    a bare ``start_http_server()`` call in isolation, as some tests do).
 
     Returns the bound (but not yet serving) server instance -- the caller
     is expected to run ``.serve_forever()`` on it (typically in a
@@ -97,5 +154,6 @@ def start_http_server(
         directory=directory,
         assets_dir=resolved_assets_dir,
         ws_port=resolved_ws_port,
+        match_server=match_server,
     )
     return ThreadingHTTPServer(("0.0.0.0", port), handler)

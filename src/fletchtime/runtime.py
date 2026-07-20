@@ -18,6 +18,7 @@ import threading
 from http.server import ThreadingHTTPServer
 
 from fletchtime.server.http_static import start_http_server
+from fletchtime.server.match_server import MatchServer
 from fletchtime.server.ws_server import run_ws_server
 
 
@@ -32,6 +33,13 @@ class ServerRuntime:
         self.assets_dir = assets_dir
         self.http_port = http_port
         self.ws_port = ws_port
+
+        # Créé une seule fois ici (pas dans run_ws_server, qui en
+        # construirait un nouveau à chaque start()) -- partagé avec le
+        # serveur HTTP (voir start_http_server, paramètre match_server)
+        # pour exposer l'état du match en lecture via /api/status, sans
+        # dupliquer d'état entre les deux serveurs.
+        self.match_server = MatchServer()
 
         self._httpd: ThreadingHTTPServer | None = None
         self._http_thread: threading.Thread | None = None
@@ -52,7 +60,7 @@ class ServerRuntime:
             return
 
         self._httpd = start_http_server(
-            self.app_web_dir, self.http_port, self.assets_dir, self.ws_port
+            self.app_web_dir, self.http_port, self.assets_dir, self.ws_port, self.match_server
         )
         self._http_thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
         self._http_thread.start()
@@ -72,7 +80,9 @@ class ServerRuntime:
         self._ws_stop_event = asyncio.Event()
         self._ws_ready.set()
         try:
-            loop.run_until_complete(run_ws_server(self.ws_port, self._ws_stop_event))
+            loop.run_until_complete(
+                run_ws_server(self.ws_port, self._ws_stop_event, self.match_server)
+            )
         finally:
             loop.close()
 

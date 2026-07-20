@@ -71,6 +71,13 @@ exe = EXE(
     # assets/ du bootstrap), d'où un serveur qui tourne mais ne sert rien
     # d'utile. "." restaure explicitement l'ancien comportement.
     contents_directory=".",
+    # Icône de l'exécutable (barre des tâches, explorateur de fichiers,
+    # raccourci) -- fichier .ico multi-résolution (16 à 256px), généré à
+    # partir de web/logo.svg. PyInstaller ignore ce paramètre sous Linux
+    # (les .ico n'y ont pas de sens -- l'icône affichée dépend du
+    # gestionnaire de fichiers/bureau, hors du contrôle de l'exécutable
+    # lui-même), donc rien à prévoir de spécial pour cette plateforme.
+    icon=str(project_root / "src" / "fletchtime" / "web" / "logo.ico"),
 )
 
 coll = COLLECT(

@@ -343,6 +343,40 @@ confirmer le rendu et l'ergonomie tactile -- voir aussi le piège
 PyInstaller/`customtkinter` documenté dans {doc}`dev-guide/index`.
 ```
 
+## Résilience de la boucle de décompte
+
+`MatchServer.tick_loop()` capture désormais toute exception imprévue en
+son sein (journalisée avec la trace complète, voir plus bas) plutôt que
+de laisser mourir la boucle silencieusement -- filet de sécurité ajouté
+suite à un symptôme signalé en pratique : le chrono se figeait
+indéfiniment, sans aucune erreur visible, le reste du serveur
+(connexions, réponse aux commandes) continuant de fonctionner
+normalement à côté. Cause précise jamais identifiée avec certitude à ce
+jour, mais ce filet garantit que le décompte ne peut plus mourir
+silencieusement, quelle que soit la cause exacte, et que la prochaine
+occurrence laissera une trace exploitable dans le journal.
+
+## Statut technique exposé via HTTP (`/api/status`)
+
+Les mêmes données déjà affichées dans `control.html` (écrans connectés,
+mode actif, phase en cours, pack de sons, mot de passe configuré ou non)
+sont aussi exposées via un simple GET HTTP, lues directement depuis
+l'instance `MatchServer` partagée avec le serveur WebSocket (voir
+`ServerRuntime`, qui construit maintenant ce `MatchServer` une seule fois
+et le fait circuler vers les deux serveurs plutôt que de le laisser
+`run_ws_server` en créer un nouveau à chaque démarrage).
+
+Utilisé par la fenêtre graphique pour afficher ce même statut sans
+dupliquer la logique de rendu HTML -- interrogé par sondage périodique
+(toutes les 2s) depuis un thread séparé plutôt qu'en temps réel via une
+vraie connexion WebSocket, volontairement : pas besoin de la précision
+temps réel d'une vraie connexion juste pour un affichage de statut, et
+ça évite de dupliquer toute la logique de reconnexion/état déjà présente
+côté web. La requête HTTP elle-même tourne toujours dans un thread à
+part, jamais directement depuis le thread principal de la fenêtre (une
+requête bloquante, même locale, gèlerait sinon l'interface le temps de
+sa réponse).
+
 ## Journal applicatif persistant
 
 En plus du journal affiché dans la fenêtre graphique (en mémoire,
@@ -565,3 +599,15 @@ La miniature d'aperçu de `control.html` est un vrai `display.html` chargé
 dans une `<iframe>` (mise à l'échelle en CSS) plutôt qu'une logique de rendu
 dupliquée -- elle s'enregistre avec la lane spéciale `"apercu"`, exclue du
 comptage des écrans connectés.
+
+```{note}
+**Cette même lane `"apercu"` ne joue jamais de son** (voir `display.html`,
+`soundEnabled`) : sans ça, ouvrir la page de contrôle et un vrai écran
+d'affichage sur le même PC faisait entendre chaque son deux fois --
+l'aperçu est une simple vue visuelle pour le responsable du
+chronométrage, pas un écran destiné aux archers. Un paramètre d'URL
+`?mute=1` permet en plus de couper le son sur n'importe quel autre onglet
+ouvert en trop sur la même machine (ex. pour surveiller une autre lane
+sans dupliquer le son de l'écran qui joue réellement pour les archers).
+```
+

@@ -91,6 +91,15 @@
 <script>
   const params = new URLSearchParams(location.search);
   const lane = params.get("lane") || "?";
+  // L'aperçu (dans la page de contrôle) ne doit jamais être une source de
+  // son -- c'est un simple coup d'œil visuel pour le responsable du
+  // chronométrage, pas un écran destiné aux archers. Sans ça, ouvrir la
+  // page de contrôle ET un vrai écran d'affichage sur le même PC fait
+  // entendre chaque son deux fois. `mute=1` permet en plus de couper le
+  // son sur n'importe quel autre onglet ouvert en trop sur la même
+  // machine (ex. pour jeter un œil à une autre lane sans dupliquer le
+  // son de l'écran qui joue réellement pour les archers).
+  const soundEnabled = lane !== "apercu" && params.get("mute") !== "1";
   let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
   document.getElementById("lane").textContent = t(currentLanguage, "lane") + " " + lane;
 
@@ -301,6 +310,7 @@
   }
 
   function playEventSound(eventName) {
+    if (!soundEnabled) return;
     if (eventName in resolvedSoundExtension) {
       playResolvedSound(eventName, resolvedSoundExtension[eventName]);
     } else {
