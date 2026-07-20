@@ -170,7 +170,6 @@
   const SLIDE_DURATION_MS = 8000;
   const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp)$/i;
   let bannerImages = [];
-  let slideshowStep = 0;      // 0 = logo+horloge, 1..N = bannière N-1
   let slideshowTimer = null;
 
   async function discoverBanners() {
@@ -189,8 +188,19 @@
   discoverBanners();
   setInterval(discoverBanners, 60000);  // reprend les nouveaux fichiers sans relancer le serveur
 
+  function currentSlideshowStep() {
+    // Dérivé de l'horloge murale (pas d'un compteur local incrémenté
+    // indépendamment par chaque page) : deux écrans qui chargent ou se
+    // reconnectent à des instants différents affichaient sinon des
+    // slides différentes au même moment, puisque chacun repartait de 0
+    // à son propre démarrage -- voir docs/architecture.md.
+    const totalSlides = bannerImages.length + 1;  // +1 pour le slide logo/horloge
+    return Math.floor(Date.now() / SLIDE_DURATION_MS) % totalSlides;
+  }
+
   function showSlideshowStep() {
-    const isBannerSlide = slideshowStep > 0 && slideshowStep <= bannerImages.length;
+    const step = currentSlideshowStep();
+    const isBannerSlide = step > 0 && step <= bannerImages.length;
     idleLogoEl.style.display = isBannerSlide ? "none" : "";
     if (isBannerSlide) idleWordmarkEl.style.display = "none";
     else if (idleLogoEl.alt === "FletchTime") idleWordmarkEl.style.display = "block";
@@ -198,7 +208,7 @@
     idleClockEl.style.display = isBannerSlide ? "none" : "";
     idleCaptionEl.style.display = isBannerSlide ? "none" : "";
     if (isBannerSlide) {
-      idleBannerEl.src = bannerImages[slideshowStep - 1];
+      idleBannerEl.src = bannerImages[step - 1];
       idleBannerEl.style.display = "block";
     } else {
       idleBannerEl.style.display = "none";
@@ -208,11 +218,12 @@
   function startSlideshow() {
     if (slideshowTimer) return;  // déjà en cours
     showSlideshowStep();
-    slideshowTimer = setInterval(() => {
-      const totalSlides = bannerImages.length + 1;  // +1 pour le slide logo/horloge
-      slideshowStep = (slideshowStep + 1) % totalSlides;
-      showSlideshowStep();
-    }, SLIDE_DURATION_MS);
+    // Vérifie chaque seconde (bien plus souvent que SLIDE_DURATION_MS) :
+    // comme currentSlideshowStep() se recalcule à chaque appel à partir
+    // de l'horloge murale, tous les écrans convergent vers la même
+    // slide dans la seconde qui suit une transition, peu importe le
+    // décalage entre leurs démarrages respectifs.
+    slideshowTimer = setInterval(showSlideshowStep, 1000);
   }
 
   function stopSlideshow() {
@@ -220,7 +231,6 @@
       clearInterval(slideshowTimer);
       slideshowTimer = null;
     }
-    slideshowStep = 0;
     idleBannerEl.style.display = "none";
   }
 

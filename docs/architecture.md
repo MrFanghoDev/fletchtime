@@ -502,6 +502,28 @@ Le poste de contrôle, à l'inverse, affiche une bannière large et alarmante
 (pas discrète) en cas de coupure -- c'est le responsable du chronométrage
 qui doit être alerté clairement, pas les archers.
 
+## Synchronisation du diaporama de l'écran neutre
+
+L'écran neutre (hors concours, ou après sa fin) alterne logo/horloge et
+bannières sponsors -- voir `display.html`, `showSlideshowStep`. Aucune
+coordination serveur pour ça : chaque écran calcule sa slide actuelle en
+divisant l'horloge murale (`Date.now()`) par la durée d'une slide, plutôt
+que d'incrémenter un compteur local à partir de 0 à son propre démarrage.
+
+```{important}
+Une première version utilisait un compteur local (`slideshowStep`,
+incrémenté par `setInterval`) -- deux écrans qui chargeaient ou se
+reconnectaient à des instants différents affichaient alors des slides
+différentes au même moment, chacun étant reparti de 0 à son propre
+démarrage. Corrigé en dérivant la slide actuelle de l'horloge murale
+(`Math.floor(Date.now() / SLIDE_DURATION_MS) % totalSlides`) : deux
+écrans avec des horloges système raisonnablement synchronisées (le cas
+normal sur un même réseau local) calculent alors la même slide,
+indépendamment de quand chacun a démarré. Vérifié avec un vrai navigateur
+(Chromium via Playwright) : deux pages chargées à 3 secondes d'écart
+affichent bien la même slide.
+```
+
 ## Découverte du port WebSocket côté client
 
 `display.html` et `control.html` ne connaissent pas à l'avance le port

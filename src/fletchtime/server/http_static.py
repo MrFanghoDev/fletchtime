@@ -33,7 +33,9 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
     behaviour as before this existed).
     """
 
-    def __init__(self, *args, directory: str, assets_dir: str, ws_port: int, **kwargs) -> None:
+    def __init__(
+        self, *args, directory: str, assets_dir: str, ws_port: int, **kwargs
+    ) -> None:
         self._assets_dir = assets_dir
         self._ws_port = ws_port
         super().__init__(*args, directory=directory, **kwargs)
@@ -48,7 +50,9 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
             # a que ce même port HTTP, connu implicitement via l'URL de la
             # page elle-même, qui est garanti correct sans configuration
             # supplémentaire côté client.
-            body = json.dumps({"version": __version__, "ws_port": self._ws_port}).encode("utf-8")
+            body = json.dumps({"version": __version__, "ws_port": self._ws_port}).encode(
+                "utf-8"
+            )
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
