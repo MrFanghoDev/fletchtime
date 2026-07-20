@@ -77,6 +77,23 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 
+- ~~**Couleur orange trop marron**~~ -- fait : `#78350f` remplacé par
+  `#b45309` -- plus saturé et plus lumineux, se lit comme un vrai orange
+  plutôt qu'un brun terne, tout en restant cohérent avec la noirceur du
+  rouge/vert déjà en place. Vérifié avec un vrai rendu (Chromium), pas
+  seulement en théorie.
+- ~~**Cibles par défaut en SVG**~~ -- fait : les 4 cibles par défaut
+  (`indoor_recurve`, `indoor_compound`, `flint_35cm_1spot`,
+  `flint_20cm_4spot`) régénérées en SVG plutôt que converties depuis les
+  JPG existants -- proportions et couleurs officielles World Archery (10
+  zones de largeur égale, blanc/noir/bleu/rouge/or), reconstruites
+  proprement plutôt que vectorisées avec perte. Reste net à n'importe
+  quelle taille d'écran, contrairement à un JPG qui peut devenir flou sur
+  un grand affichage. `.svg` ajouté aussi à la détection des bannières
+  (`display.html`), pour la cohérence. Testé avec un vrai rendu de
+  `display.html` : les deux images se chargent et s'affichent
+  correctement.
+
 - ~~**Choix de la lane/muet à l'ouverture d'un écran**~~ -- fait : la page
   d'accueil permet maintenant de cocher "muet" à côté du champ de lane
   déjà existant (ex. plusieurs écrans pilotés par le même PC, qui

@@ -47,8 +47,8 @@ class FlintConfig:
     )
     # Les volées impaires (1, 3, 5) tirent sur le blason 35cm à 1 spot ; les
     # volées paires (2, 4, 6) sur le blason 20cm à 4 spots.
-    standard_target_image_1spot: str = "assets/targets/flint_35cm_1spot.jpg"
-    standard_target_image_4spot: str = "assets/targets/flint_20cm_4spot.jpg"
+    standard_target_image_1spot: str = "assets/targets/flint_35cm_1spot.svg"
+    standard_target_image_4spot: str = "assets/targets/flint_20cm_4spot.svg"
 
     walkup_arrows: int = 4
     walkup_time_per_arrow: float = 45.0
@@ -63,7 +63,7 @@ class FlintConfig:
         ]
     )
     # La volée 7 (walk-up) suit le même schéma que les volées impaires : 1 spot.
-    walkup_target_image: str = "assets/targets/flint_35cm_1spot.jpg"
+    walkup_target_image: str = "assets/targets/flint_35cm_1spot.svg"
 
     # Comment les archers se relaient sur le parcours : "ab_then_cd",
     # "cd_then_ab" (les deux relais, un après l'autre -- chacun tirant

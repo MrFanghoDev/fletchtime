@@ -20,10 +20,10 @@ orange_warning_time = 30.0
 distance_label = "20 yards"
 
 # Image du blason recourbe/trad (chemin relatif à web/)
-target_image_recurve = "assets/targets/indoor_recurve.jpg"
+target_image_recurve = "assets/targets/indoor_recurve.svg"
 
 # Image du blason poulies (chemin relatif à web/)
-target_image_compound = "assets/targets/indoor_compound.jpg"
+target_image_compound = "assets/targets/indoor_compound.svg"
 
 # Ordre des relais par défaut : ab_then_cd, cd_then_ab, ab_only, cd_only
 turn_mode = "ab_then_cd"

@@ -20,10 +20,10 @@ standard_orange_warning_time = 20.0
 standard_distances = ["25 yards", "20 pieds", "30 yards", "15 yards", "20 yards", "10 yards"]
 
 # Blason 1 spot (volées impaires)
-standard_target_image_1spot = "assets/targets/flint_35cm_1spot.jpg"
+standard_target_image_1spot = "assets/targets/flint_35cm_1spot.svg"
 
 # Blason 4 spots (volées paires)
-standard_target_image_4spot = "assets/targets/flint_20cm_4spot.jpg"
+standard_target_image_4spot = "assets/targets/flint_20cm_4spot.svg"
 
 # Nombre de flèches du walk-up
 walkup_arrows = 4
@@ -41,7 +41,7 @@ walkup_orange_warning_time = 10.0
 walkup_distances = ["30 yards", "25 yards", "20 yards", "15 yards"]
 
 # Blason du walk-up
-walkup_target_image = "assets/targets/flint_35cm_1spot.jpg"
+walkup_target_image = "assets/targets/flint_35cm_1spot.svg"
 
 # Ordre des relais par défaut
 turn_mode = "ab_then_cd"

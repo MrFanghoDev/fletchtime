@@ -43,8 +43,8 @@ class IndoorConfig:
     distance_label: str = "20 yards"
     # Deux blasons affichés côte à côte : recourbe/trad à gauche, poulies à
     # droite -- les deux catégories tirent souvent ensemble en Indoor.
-    target_image_recurve: str = "assets/targets/indoor_recurve.jpg"
-    target_image_compound: str = "assets/targets/indoor_compound.jpg"
+    target_image_recurve: str = "assets/targets/indoor_recurve.svg"
+    target_image_compound: str = "assets/targets/indoor_compound.svg"
 
     # Comment les archers se relaient sur un même blason pendant une volée :
     # "ab_then_cd", "cd_then_ab" (les deux relais, dans un ordre ou

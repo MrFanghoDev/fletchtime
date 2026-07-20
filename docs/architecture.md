@@ -70,8 +70,8 @@ granularité de l'ordonnanceur est plus grossière que sous Linux). Voir
     "arrow_in_end": 0,
     "total_arrows_in_end": 0,
     "distance_label": "20 yards",
-    "target_image": "assets/targets/indoor_recurve.jpg",
-    "target_image_2": "assets/targets/indoor_compound.jpg",
+    "target_image": "assets/targets/indoor_recurve.svg",
+    "target_image_2": "assets/targets/indoor_compound.svg",
     "finished": false
   },
   "message": null,
