@@ -1079,7 +1079,22 @@ class TestMatchServerCrashRecovery(unittest.IsolatedAsyncioTestCase):
         # sans rien de partagé avec server1 sinon le fichier sur disque.
         server2 = MatchServer()
         self.assertIsNotNone(server2.engine)
-        self.assertEqual(server2.engine.current_state, state_before)
+        state_after = server2.engine.current_state
+
+        # time_left est recalculé à partir de l'horloge murale à la
+        # restauration (voir MatchEngine.__init__, restore=) -- pas une
+        # simple relecture de la valeur sauvegardée. Une infime quantité de
+        # temps réel s'écoule forcément entre la sauvegarde ci-dessus et
+        # cette reconstruction (E/S disque, charge du runner...), donc pas
+        # d'égalité stricte sur ce champ précis : c'est le comportement
+        # voulu (voir docs/architecture.md), pas une régression.
+        self.assertAlmostEqual(state_after.time_left, state_before.time_left, delta=1.0)
+        self.assertEqual(state_after.phase, state_before.phase)
+        self.assertEqual(state_after.current_turn, state_before.current_turn)
+        self.assertEqual(state_after.end_number, state_before.end_number)
+        self.assertEqual(state_after.total_ends, state_before.total_ends)
+        self.assertEqual(state_after.unit_number, state_before.unit_number)
+        self.assertEqual(state_after.finished, state_before.finished)
         self.assertEqual(server2._current_mode_kind, "indoor")
 
     async def test_no_snapshot_means_fresh_server_has_no_match(self) -> None:
