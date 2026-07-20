@@ -1,0 +1,172 @@
+name: Documentation (construction, publication, archivage)
+
+# Un seul workflow pour tout le cycle de vie de la documentation Sphinx :
+# - construction à chaque push touchant à la doc ou au code (docs/, src/)
+#   -- attrape une erreur de construction tôt, sans attendre un tag
+# - publication sur GitHub Pages UNIQUEMENT sur un tag ou un lancement
+#   manuel -- jamais sur un simple push de branche (voir le commentaire du
+#   job deploy-pages plus bas pour l'explication complète : GitHub Pages
+#   ignore silencieusement un second déploiement pour un même SHA de
+#   commit, confirmé par leur support -- ce qui rendait le déploiement
+#   d'un tag inopérant s'il avait déjà été déployé juste avant via un
+#   simple push de branche vers main)
+# - archivage (.tar.gz joint à la Release GitHub) uniquement sur un tag
+#
+# Ne concerne QUE la doc développeur -- le manuel utilisateur
+# (web/manual.html) est servi localement par le serveur FletchTime
+# lui-même, jamais publié ici.
+#
+# Conséquence du point ci-dessus : la doc publiée sur GitHub Pages ne
+# reflète plus en continu le dernier commit de `main` comme avant -- elle
+# ne se met à jour qu'à chaque nouveau tag (ou lancement manuel explicite).
+# Voir aussi le point d'attention associé dans docs/roadmap.md.
+#
+# Configuration ponctuelle nécessaire (une seule fois, sur GitHub) :
+#   Settings -> Pages -> Source: "GitHub Actions"
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - "v*.*.*"  # sans ça, taguer une release ne redéclenche jamais ce
+                   # workflow (un push de tag n'est pas un push de branche) --
+                   # la doc publiée resterait bloquée sur la version de dev du
+                   # dernier push de branche, jamais la version propre de la
+                   # release qu'on vient de taguer. Les filtres `paths`
+                   # ci-dessous ne s'appliquent de toute façon pas aux push
+                   # de tags (comportement documenté par GitHub) : un tag
+                   # reconstruit donc toujours la doc, peu importe si
+                   # docs/src ont changé -- exactement ce qu'on veut ici.
+    paths:
+      - "docs/**"
+      - "src/**"  # la référence API (docs/api-reference.md) documente le
+                   # code source via autodoc -- doit se reconstruire aussi
+                   # quand le code change, pas juste la doc écrite à la main
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:  # permet aussi un lancement manuel depuis l'onglet Actions
+
+permissions:
+  contents: write  # lecture pour le checkout, écriture pour joindre
+                    # l'archive à une Release (job archive-on-release)
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  # true, pas false : un push vers une branche et le push du tag qui suit
+  # quelques instants plus tard (même commit, deux événements séparés --
+  # voir plus haut) peuvent tous les deux déclencher un déploiement. Avec
+  # false, les deux étaient mis en file d'attente plutôt qu'annulés, sans
+  # garantie stricte que l'ordre d'achèvement respecte l'ordre de
+  # déclenchement -- observé en pratique : le run "branche" (version de
+  # dev, calculée avant que le tag existe) terminait après le run "tag"
+  # (version propre), donc c'est lui qui restait affiché. Avec true, un
+  # nouveau déclenchement annule net le précédent s'il tourne encore :
+  # seul le plus récent des deux déploie, sans course.
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # Ignore les commits du bot de formatage automatique (voir test.yml,
+    # job lint -- corrige et recommit Black/Ruff sur chaque push direct) :
+    # sans ça, ce commit automatique déclenche un second run séparé de CE
+    # workflow, sur un commit qui se trouve être exactement 1 après le
+    # commit qu'on vient de taguer -- observé en pratique : la doc publiée
+    # affichait alors "vX.Y.dev1" au lieu de la version propre du tag, ce
+    # commit fantôme ayant déployé après coup.
+    #
+    # Condition volontairement restreinte à `github.event_name == 'push'` :
+    # `github.event.head_commit` n'existe pas pour d'autres déclencheurs
+    # (workflow_dispatch, release) -- pas de risque d'y toucher par erreur.
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, 'corrections automatiques (black + ruff)')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historique complet (tags compris) -- nécessaire à
+                           # setuptools_scm pour déterminer la version (voir
+                           # pyproject.toml et docs/conf.py)
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer le paquet et les dépendances de la doc
+        run: |
+          pip install -e .
+          pip install -r docs/requirements.txt
+
+      - name: Diagnostic -- ref déclencheur et version calculée
+        run: |
+          echo "Événement : ${{ github.event_name }}"
+          echo "Ref déclencheur : ${{ github.ref }}"
+          echo "SHA du commit : ${{ github.sha }}"
+          echo "Version calculée par setuptools_scm :"
+          python -c "from importlib.metadata import version; print(version('fletchtime'))"
+          echo "Sortie de 'git describe' pour comparaison :"
+          git describe --tags --long --always || echo "(aucun tag trouvé)"
+
+      - name: Construire la doc HTML
+        run: sphinx-build -b html docs docs/_build/html
+
+      - name: Vérifier la documentation générée
+        run: |
+          VERSION=$(python -c "from importlib.metadata import version; print(version('fletchtime'))")
+          echo "Version attendue : $VERSION"
+
+          grep -R "$VERSION" docs/_build/html | head -20 || true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build/html
+
+      - name: Créer l'archive de la doc (pour la Release, si on est sur un tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          ARCHIVE_NAME: FletchTime-${{ github.ref_name }}-docs.tar.gz
+        run: tar -czf "$ARCHIVE_NAME" -C docs/_build/html .
+
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: docs-archive
+          path: FletchTime-*-docs.tar.gz
+
+  deploy-pages:
+    needs: build
+    # UNIQUEMENT sur un tag ou un lancement manuel -- jamais sur un simple
+    # push de branche. Confirmé par le support GitHub lui-même (voir
+    # discussion officielle actions/deploy-pages) : GitHub Pages ignore
+    # silencieusement un déploiement pour un SHA de commit déjà déployé
+    # auparavant -- "as expected behaviour" de leur côté, pas un bug chez
+    # nous. Or un tag pointe presque toujours vers un commit déjà poussé
+    # séparément vers la branche quelques instants plus tôt -- si CE push
+    # de branche avait déjà déclenché un déploiement pour ce même SHA (la
+    # version de développement, calculée avant que le tag existe), le
+    # déploiement du tag qui suit (version propre) échouait alors
+    # silencieusement : l'action rapportait un succès, mais le contenu
+    # affiché restait bloqué sur l'ancien déploiement. En ne déployant
+    # plus du tout sur un simple push de branche, le SHA d'un tag n'a
+    # jamais été déployé avant lui, éliminant le conflit à la racine.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  archive-on-release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-archive
+
+      - name: Joindre l'archive à la Release GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: FletchTime-*-docs.tar.gz

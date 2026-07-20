@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<title>FletchTime — Contrôle</title>
+<style>
+  :root {
+    --bg: #0f1216;
+    --surface: #171b22;
+    --surface-2: #1d232c;
+    --border: #2a3140;
+    --text: #e8ebf1;
+    --text-muted: #8a93a6;
+    --text-faint: #5c6579;
+    --gold: #d1a13d;
+    --gold-dim: #4a3d21;
+    --blue: #4c7bdb;
+    --red: #d6534a;
+    --green: #3f9868;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    --radius: 10px;
+  }
+
+  /* Mode clair : suit la préférence système par défaut, ou le choix
+     explicite de l'utilisateur (voir theme.js) qui prime toujours. */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #eef1f6; --surface: #ffffff; --surface-2: #f2f4f9; --border: #d7dce6;
+      --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0;
+      --gold: #a8781f; --blue: #3357bf; --red: #b8392f; --green: #227a52;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f6; --surface: #ffffff; --surface-2: #f2f4f9; --border: #d7dce6;
+    --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0;
+    --gold: #a8781f; --blue: #3357bf; --red: #b8392f; --green: #227a52;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --surface: #171b22; --surface-2: #1d232c; --border: #2a3140;
+    --text: #e8ebf1; --text-muted: #8a93a6; --text-faint: #5c6579;
+    --gold: #d1a13d; --blue: #4c7bdb; --red: #d6534a; --green: #3f9868;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--font-ui); -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  body { padding: 0 0 3rem; }
+
+  /* ---------- structure générale ---------- */
+  .page {
+    max-width: 1100px; margin: 0 auto; padding: 0 1rem;
+    display: grid; gap: 1rem;
+  }
+  @media (min-width: 640px)  { .page { padding: 0 1.5rem; gap: 1.25rem; } }
+  @media (min-width: 1024px) { .page { padding: 0 2rem;   gap: 1.5rem; } }
+
+  header.app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 0.75rem;
+    padding: 1rem 1rem 0.75rem; max-width: 1100px; margin: 0 auto;
+  }
+  @media (min-width: 640px)  { header.app-header { padding: 1.25rem 1.5rem 1rem; } }
+  @media (min-width: 1024px) { header.app-header { padding: 1.5rem 2rem 1.25rem; } }
+
+  .brand { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+  .brand img { height: 2rem; width: auto; flex-shrink: 0; }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+  .brand-text .title { font-size: 1.05rem; font-weight: 600; white-space: nowrap; }
+  .wordmark .fletch { color: var(--text); }
+  .wordmark .time { color: var(--gold); }
+  .brand-text .subtitle {
+    font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .header-status { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+  #status { font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; }
+  #status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
+  #status.connected .dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  #status.disconnected .dot { background: var(--red); animation: pulse 1s infinite; }
+
+  #disconnect-banner {
+    display: none; align-items: center; justify-content: center; gap: 0.6rem;
+    background: var(--red); color: #fff; font-weight: 600; font-size: 0.92rem;
+    padding: 0.6rem 1rem; text-align: center;
+  }
+  #disconnect-banner.visible { display: flex; }
+  #disconnect-banner .dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #fff;
+    animation: pulse 1s infinite; flex-shrink: 0;
+  }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  .lang-toggle { display: flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .lang-btn {
+    font-family: var(--font-ui); font-size: 0.75rem; padding: 0.35rem 0.8rem; margin: 0;
+    border: none; background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .lang-btn.active { background: var(--gold); color: #1a1206; font-weight: 600; }
+
+  .theme-toggle { display: flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .theme-btn {
+    font-family: var(--font-ui); font-size: 0.8rem; padding: 0.35rem 0.7rem; margin: 0;
+    border: none; background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .theme-btn.active { background: var(--blue); color: #fff; }
+
+  #connected-lanes-line { font-size: 0.78rem; color: var(--text-muted); }
+
+  /* ---------- panneau signature : moniteur en direct ---------- */
+  .monitor-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1rem; display: grid; gap: 0.75rem;
+  }
+  .monitor-frame {
+    background: #05070a; border-radius: 8px; padding: 10px;
+    border: 1px solid #262c38; position: relative;
+    display: flex; justify-content: center;
+  }
+  .monitor-frame::before {
+    content: "● LIVE"; position: absolute; top: 8px; left: 14px;
+    font-size: 0.65rem; letter-spacing: 0.05em; color: var(--red); font-weight: 600;
+  }
+  .preview-wrapper {
+    width: 100%; max-width: 480px; aspect-ratio: 960 / 540;
+    overflow: hidden; border-radius: 4px; position: relative; background: #000;
+    contain: strict;
+  }
+  .preview-frame {
+    width: 960px; height: 540px; border: none;
+    transform-origin: top left; pointer-events: none;
+    position: absolute; top: 0; left: 0;
+  }
+  .monitor-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+
+  /* ---------- sections repliables ---------- */
+  details.panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  details.panel + details.panel { margin-top: 0; }
+  details.panel summary {
+    list-style: none; cursor: pointer; padding: 0.9rem 1rem;
+    display: flex; align-items: center; gap: 0.6rem;
+    font-size: 0.95rem; font-weight: 600; user-select: none;
+  }
+  details.panel summary::-webkit-details-marker { display: none; }
+  details.panel summary .chevron {
+    margin-left: auto; color: var(--text-faint); transition: transform 0.15s ease;
+    font-size: 0.8rem;
+  }
+  details.panel[open] summary .chevron { transform: rotate(90deg); }
+  details.panel summary .accent-bar {
+    width: 4px; align-self: stretch; border-radius: 2px; background: var(--accent, var(--gold));
+    min-height: 1.2em;
+  }
+  details.panel .panel-body {
+    padding: 0 1rem 1.1rem; display: grid; gap: 0.9rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.9rem;
+  }
+  details.panel[data-accent="setup"]   { --accent: var(--blue); }
+  details.panel[data-accent="live"]    { --accent: var(--gold); }
+  details.panel[data-accent="message"] { --accent: var(--green); }
+  details.panel[data-accent="debug"]   { --accent: var(--text-faint); }
+
+  .panel-subhead {
+    font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-faint); margin: 0.2rem 0 -0.3rem;
+  }
+
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+  .field-group { display: flex; flex-direction: column; gap: 0.3rem; }
+  .event-title-group { padding-top: 0.75rem; border-top: 1px solid var(--border); }
+  .field-group label.mini {
+    font-size: 0.72rem; color: var(--text-muted);
+  }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+  /* ---------- contrôles ---------- */
+  button {
+    font-family: var(--font-ui); font-size: 0.92rem; font-weight: 600;
+    padding: 0.65rem 1rem; border-radius: 8px; border: none; cursor: pointer;
+    color: #fff; transition: filter 0.1s ease, transform 0.05s ease;
+  }
+  button:active { transform: scale(0.98); }
+  button:hover:not(:disabled) { filter: brightness(1.08); }
+  .btn-start  { background: var(--blue); }
+  .btn-go     { background: var(--gold); color: #1a1206; }
+  .btn-danger { background: var(--red); }
+  .btn-quiet  { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+  button.quick {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted);
+    font-size: 0.8rem; font-weight: 500; padding: 0.4rem 0.7rem;
+  }
+  button:disabled, select:disabled, input:disabled {
+    opacity: 0.35; cursor: not-allowed; filter: none;
+  }
+
+  select, input[type=text], input[type=number] {
+    font-family: var(--font-ui); font-size: 0.9rem; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+  }
+  input[type=number] { font-family: var(--font-mono); width: 4.5em; }
+  input#msg, input#event-title { font-family: var(--font-ui); }
+  input[type=text]:focus, input[type=number]:focus, select:focus {
+    outline: 2px solid var(--gold); outline-offset: 1px;
+  }
+
+  label { font-size: 0.88rem; color: var(--text); }
+  label.checkbox { display: flex; align-items: center; gap: 0.4rem; }
+
+  .quick-messages { display: grid; gap: 0.6rem; }
+  #message-shooting-warning {
+    background: rgba(209, 161, 61, 0.15);
+    border: 1px solid var(--gold); color: var(--gold);
+    border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
+  .quick-messages-group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+  .quick-messages-label {
+    font-size: 0.72rem; color: var(--text-faint); width: 100%;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  #state {
+    white-space: pre-wrap; background: #05070a; color: #9fb0c9;
+    padding: 0.8rem; border-radius: 8px; font-family: var(--font-mono);
+    font-size: 0.78rem; max-height: 40vh; overflow: auto; border: 1px solid var(--border);
+  }
+
+  /* ---------- adaptation tablette / PC ---------- */
+  @media (min-width: 720px) {
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.5rem; align-items: start; }
+  }
+  @media (min-width: 1024px) {
+    input#msg { min-width: 320px; }
+    input#event-title { min-width: 380px; }
+  }
+  .auth-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000;
+    display: none; align-items: center; justify-content: center;
+  }
+  .auth-overlay.visible { display: flex; }
+  .auth-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 2rem; max-width: 320px; width: 90%; text-align: center;
+  }
+  .auth-box h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+  .auth-box p { color: var(--text-muted); font-size: 0.85rem; margin: 0 0 1.2rem; }
+  .auth-box input {
+    width: 100%; padding: 0.6rem 0.8rem; margin-bottom: 0.8rem; font-size: 1rem;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); box-sizing: border-box;
+  }
+  .auth-box button {
+    width: 100%; padding: 0.6rem; font-size: 0.95rem; font-weight: 600;
+    background: var(--gold); color: #1a1206; border: none; border-radius: 8px; cursor: pointer;
+  }
+  .auth-error { color: var(--red); font-size: 0.85rem; margin-top: 0.6rem; min-height: 1.2em; }
+</style>
+</head>
+<body>
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-box">
+      <h2 data-i18n="authTitle">Mot de passe requis</h2>
+      <p data-i18n="authDesc">Ce poste de contrôle est protégé -- demande le mot de passe au responsable du chronométrage.</p>
+      <input type="password" id="auth-password-input" data-i18n-placeholder="authPlaceholder" placeholder="Mot de passe" autocomplete="off">
+      <button onclick="submitAuthPassword()" data-i18n="authSubmit">Se connecter</button>
+      <div class="auth-error" id="auth-error"></div>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="brand">
+      <img src="logo.svg" alt="">
+      <div class="brand-text">
+        <span class="title wordmark"><span class="fletch">Fletch</span><span class="time">Time</span></span>
+        <span class="subtitle" data-i18n="controlSubtitle">Poste de contrôle</span>
+      </div>
+    </div>
+    <div class="header-status">
+      <div id="status"><span class="dot"></span>Connexion en cours...</div>
+      <a href="index.html" class="btn-quiet" style="text-decoration:none; padding:0.5rem 0.8rem; font-size:0.85rem;" data-i18n="homeLink">🏠 Accueil</a>
+      <a href="config.html" class="btn-quiet" style="text-decoration:none; padding:0.5rem 0.8rem; font-size:0.85rem;" data-i18n="configLink">⚙ Configuration</a>
+      <div class="lang-toggle">
+        <button class="lang-btn" id="lang-fr-btn" onclick="setLanguage('fr')">FR</button>
+        <button class="lang-btn" id="lang-en-btn" onclick="setLanguage('en')">EN</button>
+      </div>
+      <div class="theme-toggle">
+        <button class="theme-btn" data-theme="system" onclick="setTheme('system')" title="Auto">◐</button>
+        <button class="theme-btn" data-theme="light" onclick="setTheme('light')" title="Clair">☀</button>
+        <button class="theme-btn" data-theme="dark" onclick="setTheme('dark')" title="Sombre">☾</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="disconnect-banner"><span class="dot"></span><span id="disconnect-banner-text"></span></div>
+
+  <div class="page">
+
+    <!-- Panneau signature : moniteur en direct -->
+    <div class="monitor-panel">
+      <div class="monitor-frame">
+        <div class="preview-wrapper">
+          <iframe id="preview-frame" class="preview-frame" title="Aperçu écran"></iframe>
+        </div>
+      </div>
+      <div class="monitor-actions">
+        <div id="connected-lanes-line"></div>
+      </div>
+      <div class="field-group event-title-group">
+        <label class="mini" for="event-title" data-i18n="eventTitleLabel">Titre de l'événement (affiché en permanence sur les écrans) :</label>
+        <input type="text" id="event-title" data-i18n-placeholder="eventTitlePlaceholder"
+          placeholder="Ex. Concours FFTL Indoor -- Février 2026">
+        <div class="btn-row">
+          <button class="btn-quiet" data-i18n="send" onclick="sendEventTitle()">Envoyer</button>
+          <button class="btn-quiet" data-i18n="clear" onclick="send({action:'set_event_title', value:null})">Effacer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configuration / démarrage -->
+    <details class="panel" data-accent="setup" id="panel-setup" open>
+      <summary><span class="accent-bar"></span><span data-i18n="panelSetupTitle">Démarrage</span><span class="chevron">▶</span></summary>
+      <div class="panel-body">
+        <div class="two-col">
+          <div class="field-group">
+            <button class="btn-start" id="start-indoor-btn" data-i18n="startIndoor"
+              onclick="startIndoor()">▶ Démarrer Indoor</button>
+          </div>
+
+          <div class="field-group">
+            <button class="btn-start" id="start-flint-btn" data-i18n="startFlint"
+              onclick="startFlint()">▶ Démarrer Flint</button>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Contrôle en direct -->
+    <details class="panel" data-accent="live" id="panel-live">
+      <summary><span class="accent-bar"></span><span data-i18n="panelLiveTitle">Contrôle en direct</span><span class="chevron">▶</span></summary>
+      <div class="panel-body">
+        <div class="btn-row">
+          <button class="btn-go" id="next-btn" data-i18n="next" onclick="send({action:'next'})" disabled>Next ▶</button>
+          <button class="btn-quiet" id="pause-btn" data-i18n="pause"
+            onclick="send({action:'pause'})" disabled>⏸ Pause</button>
+          <button class="btn-quiet" id="play-btn" data-i18n="resume"
+            onclick="send({action:'play'})" disabled>▶ Reprendre</button>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-danger" id="stop-btn" data-i18n="stopMatch"
+            onclick="send({action:'stop'})" disabled>⏹ Arrêt du match</button>
+          <button class="btn-quiet" id="restart-btn" data-i18n="restart"
+            onclick="send({action:'restart'})" disabled>↻ Recommencer depuis le début</button>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-danger" id="emergency-btn" data-i18n="emergency"
+            onclick="send({action:'emergency'})" disabled>🚨 Urgence</button>
+          <button class="btn-quiet" id="resume-btn" data-i18n="resumeAfterEmergency"
+            onclick="send({action:'resume'})" disabled>✅ Reprise après urgence</button>
+        </div>
+
+        <div class="field-group">
+          <div class="panel-subhead" data-i18n="gotoLabel">Aller à : unité</div>
+          <div class="row">
+            <input type="number" id="goto-unit" value="1" min="1">
+            <span data-i18n="gotoVolee">volée</span>
+            <input type="number" id="goto-end" value="1" min="1">
+            <span data-i18n="gotoArrow">flèche (walk-up)</span>
+            <input type="number" id="goto-arrow" value="0" min="0">
+            <span data-i18n="gotoRelay">relais</span>
+            <select id="goto-turn">
+              <option value="" data-i18n="gotoAny">(peu importe)</option>
+              <option value="A-B">A-B</option>
+              <option value="C-D">C-D</option>
+            </select>
+            <button class="btn-quiet" data-i18n="gotoButton" onclick="sendGoto()">Aller à cette volée</button>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Messages -->
+    <details class="panel" data-accent="message" id="panel-messages">
+      <summary><span class="accent-bar"></span><span data-i18n="panelMessagesTitle">Messages</span><span class="chevron">▶</span></summary>
+      <div class="panel-body">
+        <div class="hint" id="message-shooting-warning" style="display:none;" data-i18n="messageShootingWarning">⚠ Le tir est en cours : le message n'apparaîtra qu'à la prochaine pause (ramassage des flèches), urgence, ou fin de match.</div>
+        <div class="row">
+          <input type="text" id="msg" data-i18n-placeholder="messagePlaceholder"
+            placeholder="Message à afficher sur les écrans...">
+          <label class="mini"><span data-i18n="messageTargetLabel">Cible :</span>
+            <input type="text" id="msg-lane-target" data-i18n-placeholder="messageTargetPlaceholder"
+              placeholder="toutes" style="width:5em;">
+          </label>
+          <button class="btn-go" data-i18n="send" onclick="sendMessage()">Envoyer</button>
+          <button class="btn-quiet" data-i18n="clear" onclick="clearMessage()">Effacer</button>
+        </div>
+
+        <div class="quick-messages" id="quick-messages"></div>
+      </div>
+    </details>
+
+    <!-- Détails techniques -->
+    <details class="panel" data-accent="debug">
+      <summary><span class="accent-bar"></span><span data-i18n="panelDebugTitle">Détails techniques</span><span class="chevron">▶</span></summary>
+      <div class="panel-body">
+        <div id="state">En attente de connexion...</div>
+      </div>
+    </details>
+
+  </div>
+
+<script src="i18n.js"></script>
+<script src="theme.js"></script>
+<script>
+  const statusEl = document.getElementById("status");
+  const stateBox = document.getElementById("state");
+  let ws;
+  // Port WebSocket réel, interrogé une seule fois via /api/version --
+  // ne peut plus être codé en dur depuis que les ports sont devenus
+  // modifiables (voir fletchtime.gui, config_store.load_gui_config).
+  // 8765 sert uniquement de repli si cette requête échoue (jamais
+  // utilisé en pratique, l'API répond depuis le même serveur qui vient
+  // de servir cette page).
+  let wsPort = 8765;
+
+  async function fetchWsPort() {
+    try {
+      const res = await fetch("/api/version");
+      const data = await res.json();
+      if (data.ws_port) wsPort = data.ws_port;
+    } catch (e) {
+      // Repli silencieux sur la valeur par défaut ci-dessus.
+    }
+  }
+  let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
+
+  // Structure des messages rapides : (clé de catégorie, [clés de message]).
+  const QUICK_MESSAGE_GROUPS = [
+    ["quickCategoryDelay", ["delay5", "delay10", "delay15", "joinLane"]],
+    ["quickCategoryPause", ["pause15", "lunchBreak", "resumingSoon"]],
+    ["quickCategorySafety", ["stopShooting", "lineClear", "inspection"]],
+    ["quickCategoryLogistics", ["returnScoresheets", "collectingScores", "equipmentCheck"]],
+    ["quickCategoryWeather", ["weatherAlert", "weatherResume"]],
+    ["quickCategoryEnd", ["competitionEnd", "resultsSoon", "awards"]],
+  ];
+
+  function renderQuickMessages() {
+    const container = document.getElementById("quick-messages");
+    container.innerHTML = "";
+    QUICK_MESSAGE_GROUPS.forEach(([categoryKey, messageKeys]) => {
+      const group = document.createElement("div");
+      group.className = "quick-messages-group";
+
+      const label = document.createElement("span");
+      label.className = "quick-messages-label";
+      label.textContent = t(currentLanguage, categoryKey);
+      group.appendChild(label);
+
+      messageKeys.forEach((key) => {
+        const text = t(currentLanguage, "quickMessages")[key];
+        const btn = document.createElement("button");
+        btn.className = "quick";
+        btn.textContent = text;
+        btn.onclick = () => fillMsg(text);
+        group.appendChild(btn);
+      });
+
+      container.appendChild(group);
+    });
+  }
+
+  function applyTranslations() {
+    document.title = t(currentLanguage, "controlTitle");
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t(currentLanguage, el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      el.placeholder = t(currentLanguage, el.getAttribute("data-i18n-placeholder"));
+    });
+    document.getElementById("lang-fr-btn").classList.toggle("active", currentLanguage === "fr");
+    document.getElementById("lang-en-btn").classList.toggle("active", currentLanguage === "en");
+    renderQuickMessages();
+    renderStatus();
+  }
+
+  let currentStatusKey = "connecting";
+  function renderStatus() {
+    statusEl.textContent = "";
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    statusEl.appendChild(dot);
+    statusEl.appendChild(document.createTextNode(t(currentLanguage, currentStatusKey)));
+    statusEl.className = currentStatusKey === "connected" ? "connected"
+      : currentStatusKey === "disconnected" ? "disconnected" : "";
+
+    const banner = document.getElementById("disconnect-banner");
+    const isDisconnected = currentStatusKey === "disconnected";
+    banner.classList.toggle("visible", isDisconnected);
+    if (isDisconnected) {
+      document.getElementById("disconnect-banner-text").textContent =
+        t(currentLanguage, "disconnectBannerText");
+    }
+  }
+
+  function setLanguage(lang) {
+    currentLanguage = lang;
+    localStorage.setItem("fletchtime_lang", lang);
+    applyTranslations();
+    send({action: "set_language", value: lang});
+  }
+
+  applyTranslations();
+
+  // Empêche l'écran du poste de contrôle de s'éteindre pendant le concours.
+  async function requestWakeLock() {
+    try {
+      if ("wakeLock" in navigator) {
+        await navigator.wakeLock.request("screen");
+      }
+    } catch (e) { /* refusé (batterie faible, etc.) -- pas bloquant */ }
+  }
+  requestWakeLock();
+
+  // Force le rechargement de la miniature à chaque ouverture de la page,
+  // pour éviter d'afficher une version périmée mise en cache par le
+  // navigateur (l'iframe pointe vers le même display.html que les vrais
+  // écrans, donc doit toujours refléter la version la plus récente).
+  document.getElementById("preview-frame").src = "display.html?lane=apercu&_=" + Date.now();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") requestWakeLock();
+  });
+
+  // La miniature (960x540 réel) est mise à l'échelle pour tenir dans son
+  // cadre responsive -- recalculé à chaque redimensionnement, puisque le
+  // cadre n'a plus une largeur fixe (adaptation téléphone/tablette/PC).
+  function scalePreviewFrame() {
+    const wrapper = document.querySelector(".preview-wrapper");
+    const frame = document.getElementById("preview-frame");
+    const scale = wrapper.offsetWidth / 960;
+    frame.style.transform = "scale(" + scale + ")";
+  }
+  scalePreviewFrame();
+  window.addEventListener("resize", scalePreviewFrame);
+  window.addEventListener("load", scalePreviewFrame);
+
+  let hasSyncedLanguageFromServer = false;
+  let previousMatchIsRunning = false;
+  let isAuthenticated = false;
+
+  function connect() {
+    ws = new WebSocket("ws://" + location.hostname + ":" + wsPort);
+
+    ws.onopen = () => { currentStatusKey = "connected"; renderStatus(); };
+    ws.onclose = () => {
+      currentStatusKey = "disconnected";
+      renderStatus();
+      setTimeout(connect, 2000);
+    };
+    ws.onerror = () => ws.close();
+
+    ws.onmessage = (evt) => {
+      const data = JSON.parse(evt.data);
+      if (data.type === "auth_required") {
+        // Rejet d'une action protégée -- la session n'est plus (ou pas
+        // encore) authentifiée : ré-affiche la fenêtre de connexion.
+        isAuthenticated = false;
+        document.getElementById("auth-overlay").classList.add("visible");
+        return;
+      }
+      if (data.type === "auth_result") {
+        const errorEl = document.getElementById("auth-error");
+        if (data.ok) {
+          isAuthenticated = true;
+          document.getElementById("auth-overlay").classList.remove("visible");
+          errorEl.textContent = "";
+        } else {
+          errorEl.textContent = t(currentLanguage, "authError");
+        }
+        return;
+      }
+      if (data.type === "state") {
+        // Affiche la fenêtre de connexion dès qu'un mot de passe est requis
+        // et que cette session ne s'est pas encore authentifiée -- avant
+        // même la première tentative d'action protégée.
+        if (data.auth_required && !isAuthenticated) {
+          document.getElementById("auth-overlay").classList.add("visible");
+        } else if (!data.auth_required) {
+          isAuthenticated = false;  // le responsable du chronométrage a retiré le mot de passe entre-temps
+          document.getElementById("auth-overlay").classList.remove("visible");
+        }
+
+        // À la toute première connexion, on adopte la langue déjà diffusée
+        // par le serveur (au cas où un autre poste de contrôle l'aurait
+        // déjà changée), plutôt que d'imposer la préférence locale.
+        if (!hasSyncedLanguageFromServer) {
+          hasSyncedLanguageFromServer = true;
+          if (data.language && data.language !== currentLanguage) {
+            currentLanguage = data.language;
+            localStorage.setItem("fletchtime_lang", currentLanguage);
+            applyTranslations();
+          }
+        }
+
+        // Garde le champ à jour si un autre poste de contrôle a changé le
+        // titre -- sauf si le responsable du chronométrage est justement en train d'y taper.
+        const eventTitleInput = document.getElementById("event-title");
+        if (document.activeElement !== eventTitleInput) {
+          eventTitleInput.value = data.event_title || "";
+        }
+
+        const lanes = data.connected_lanes || [];
+        document.getElementById("connected-lanes-line").textContent =
+          t(currentLanguage, "connectedLanesLabel") + " " +
+          (lanes.length ? lanes.join(", ") : t(currentLanguage, "connectedLanesNone"));
+
+        const safeToShow = !data.state || data.state.finished
+          || data.state.phase === "pause" || data.state.phase === "emergency";
+        document.getElementById("message-shooting-warning").style.display =
+          safeToShow ? "none" : "block";
+        const messageStatus = !data.message
+          ? t(currentLanguage, "messageNone")
+          : JSON.stringify(data.message) + " -- " + (safeToShow ? t(currentLanguage, "messageShown") : t(currentLanguage, "messageWaiting"));
+        const messageLine = t(currentLanguage, "messageLabel") + " : " + messageStatus;
+        const stateLine = data.state
+          ? JSON.stringify(data.state, null, 2)
+          : t(currentLanguage, "noMatch");
+        stateBox.textContent = messageLine + "\n\n" + stateLine;
+
+        // Le mode A-B/C-D est fixé au démarrage et ne doit pas changer en
+        // cours de match : on verrouille le sélecteur tant qu'un match
+        // tourne (state non nul et pas encore terminé).
+        const hasMatch = !!data.state;
+        const matchIsRunning = hasMatch && !data.state.finished;
+        document.getElementById("start-indoor-btn").disabled = matchIsRunning;
+        document.getElementById("start-flint-btn").disabled = matchIsRunning;
+
+        // Stop/Pause/Reprendre n'ont de sens que pendant un match actif ;
+        // Recommencer reste utile même après la fin (relance depuis le début).
+        document.getElementById("stop-btn").disabled = !matchIsRunning;
+        document.getElementById("pause-btn").disabled = !matchIsRunning;
+        document.getElementById("play-btn").disabled = !matchIsRunning;
+        document.getElementById("restart-btn").disabled = !hasMatch;
+
+        // Urgence : seulement pendant un match actif, pas déjà en urgence.
+        // Reprise : seulement quand on est effectivement en urgence.
+        const inEmergency = hasMatch && data.state.phase === "emergency";
+        document.getElementById("emergency-btn").disabled = !matchIsRunning || inEmergency;
+        document.getElementById("resume-btn").disabled = !inEmergency;
+        document.getElementById("next-btn").disabled = !matchIsRunning || inEmergency;
+
+        // Ouvre/ferme automatiquement les bons panneaux au démarrage et à
+        // l'arrêt d'un match -- seulement au changement d'état, pas à
+        // chaque mise à jour, pour ne pas gêner si le responsable du chronométrage les a repliés
+        // manuellement entre-temps.
+        if (matchIsRunning !== previousMatchIsRunning) {
+          previousMatchIsRunning = matchIsRunning;
+          document.getElementById("panel-setup").open = !matchIsRunning;
+          document.getElementById("panel-live").open = matchIsRunning;
+        }
+      }
+    };
+  }
+  fetchWsPort().then(connect);
+
+  function send(obj) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+  }
+  function submitAuthPassword() {
+    const value = document.getElementById("auth-password-input").value;
+    send({action: "authenticate", password: value});
+  }
+  document.getElementById("auth-password-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitAuthPassword();
+  });
+  function startIndoor() {
+    send({action: "start_indoor"});
+  }
+  function startFlint() {
+    send({action: "start_flint"});
+  }
+  function sendMessage() {
+    const val = document.getElementById("msg").value;
+    const lane = document.getElementById("msg-lane-target").value.trim();
+    send({action: "message", value: val, lane: lane});
+  }
+  function clearMessage() {
+    const lane = document.getElementById("msg-lane-target").value.trim();
+    send({action: "message", value: null, lane: lane});
+  }
+  function fillMsg(text) {
+    const input = document.getElementById("msg");
+    input.value = text;
+    input.focus();
+  }
+  function sendEventTitle() {
+    const val = document.getElementById("event-title").value;
+    send({action: "set_event_title", value: val});
+  }
+  function sendGoto() {
+    send({
+      action: "goto",
+      unit: parseInt(document.getElementById("goto-unit").value || "1", 10),
+      end: parseInt(document.getElementById("goto-end").value || "1", 10),
+      arrow: parseInt(document.getElementById("goto-arrow").value || "0", 10),
+      turn: document.getElementById("goto-turn").value,
+    });
+  }
+</script>
+</body>
+</html>

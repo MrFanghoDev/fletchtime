@@ -1,0 +1,32 @@
+# Nombre de séries
+series = 2
+
+# Nombre de volées par série
+ends_per_series = 6
+
+# Nombre de flèches par volée
+arrows_per_end = 5
+
+# Temps de mise en place avant chaque volée (secondes)
+prep_time = 10.0
+
+# Temps de tir total, décompte continu (secondes)
+shoot_time = 240.0
+
+# Passage à l'orange quand il reste ce temps (secondes)
+orange_warning_time = 30.0
+
+# Distance affichée à l'écran
+distance_label = "20 yards"
+
+# Image du blason recourbe/trad (chemin relatif à web/)
+target_image_recurve = "assets/targets/indoor_recurve.jpg"
+
+# Image du blason poulies (chemin relatif à web/)
+target_image_compound = "assets/targets/indoor_compound.jpg"
+
+# Ordre des relais par défaut : ab_then_cd, cd_then_ab, ab_only, cd_only
+turn_mode = "ab_then_cd"
+
+# Alterner l'ordre des relais à chaque série (true/false)
+alternate_relay_order_each_series = true

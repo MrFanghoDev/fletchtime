@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Généré par setuptools_scm à la construction (voir pyproject.toml,
+# write_to) -- jamais committé, régénéré à chaque `pip install -e .` /
+# `python -m build` / etc.
+src/fletchtime/_version.py
+
+# Artefacts de build (wheel, PyInstaller) -- jamais versionnés, régénérés à
+# la demande via `python -m build`, `pip wheel .`, ou `pyinstaller fletchtime.spec`.
+build/
+dist/
+
+# Environnements virtuels
+.venv/
+venv/
+
+# Sphinx
+docs/_build/
+
+# Mot de passe de contrôle -- contrairement à config/app.toml, indoor.toml,
+# flint.toml (réglages partageables sans risque), ce fichier contient un
+# vrai secret et ne doit jamais être versionné.
+config/auth.toml
+
+# Préférences de la fenêtre graphique (thème...) -- propres à la machine/
+# personne qui lance la fenêtre, pas un réglage de club à partager.
+config/gui.toml
+
+# Instantané du match en cours (récupération après crash) -- propre à une
+# session de match en cours, pas un réglage du club à partager/versionner.
+config/match_state.json
+config/match_state.json.tmp
+
+# Assets propres à un club (logo, banderoles) -- jamais versionnés dans le
+# dépôt public partagé avec la FFTL, voir docs/architecture.md. Le README
+# explicatif est copié depuis src/fletchtime/web/_defaults/ au premier
+# lancement (même mécanisme que pour les sons/cibles).
+web/assets/club/
+
+# Images de cibles et pack de sons "classic" : les vrais fichiers par
+# défaut vivent maintenant dans src/fletchtime/web/_defaults/ (inclus dans
+# le paquet, committé normalement) et sont copiés ici au premier lancement
+# -- ce dossier-ci n'est donc plus qu'une sortie générée, jamais committée.
+web/assets/targets/
+
+# Bannières publicitaires / sponsors -- propres à chaque club, jamais
+# versionnées ; le README explicatif est copié depuis src/fletchtime/web/
+# _defaults/ au premier lancement (même mécanisme que pour les sons/cibles).
+web/assets/banners/
+
+# Packs de sons : "classic" et le README sont maintenant copiés depuis
+# src/fletchtime/web/_defaults/ au premier lancement (voir plus haut) --
+# n'importe quel dossier sous packs/ reste local, jamais versionné ici.
+web/assets/sounds/packs/*
+!web/assets/sounds/packs/README.md
+
+# Filet de sécurité : les dossiers de données du club ne doivent jamais se
+# retrouver DANS le paquet lui-même (src/fletchtime/web/), seulement à la
+# racine du dépôt (web/assets/, voir plus haut) -- ce chemin ne devrait
+# normalement jamais exister (run_server.py fixe explicitement le
+# répertoire de travail pour l'éviter), mais autant s'en protéger si un
+# lancement particulier (ex. Pydroid dans un état inhabituel) le recréait
+# quand même.
+src/fletchtime/web/assets/
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+*.swp

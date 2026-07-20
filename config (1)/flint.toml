@@ -1,0 +1,50 @@
+# Nombre d'unités standards (2 = un parcours complet)
+units = 2
+
+# Nombre de volées standards par unité
+standard_ends_per_unit = 6
+
+# Nombre de flèches par volée standard
+arrows_per_standard_end = 4
+
+# Mise en place avant chaque volée standard (secondes)
+standard_prep_time = 10.0
+
+# Temps de tir d'une volée standard (secondes)
+standard_shoot_time = 180.0
+
+# Seuil orange volée standard (secondes)
+standard_orange_warning_time = 20.0
+
+# Les 6 distances des volées standards, dans l'ordre
+standard_distances = ["25 yards", "20 pieds", "30 yards", "15 yards", "20 yards", "10 yards"]
+
+# Blason 1 spot (volées impaires)
+standard_target_image_1spot = "assets/targets/flint_35cm_1spot.jpg"
+
+# Blason 4 spots (volées paires)
+standard_target_image_4spot = "assets/targets/flint_20cm_4spot.jpg"
+
+# Nombre de flèches du walk-up
+walkup_arrows = 4
+
+# Temps de tir par flèche du walk-up (secondes)
+walkup_time_per_arrow = 45.0
+
+# Mise en place avant chaque flèche du walk-up (secondes)
+walkup_prep_time = 10.0
+
+# Seuil orange par flèche du walk-up (secondes)
+walkup_orange_warning_time = 10.0
+
+# Les 4 distances du walk-up, dans l'ordre
+walkup_distances = ["30 yards", "25 yards", "20 yards", "15 yards"]
+
+# Blason du walk-up
+walkup_target_image = "assets/targets/flint_35cm_1spot.jpg"
+
+# Ordre des relais par défaut
+turn_mode = "ab_then_cd"
+
+# Alterner l'ordre des relais à chaque unité
+alternate_relay_order_each_unit = true

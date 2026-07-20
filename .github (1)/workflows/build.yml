@@ -1,0 +1,264 @@
+name: Distribution (paquet Python, exécutables)
+
+# Un seul workflow pour toute la chaîne de distribution :
+# - construction du paquet Python (sdist + wheel), publié sur TestPyPI à
+#   chaque push pertinent, sur PyPI (le vrai) à la publication d'une
+#   Release GitHub, et joint à cette même Release en téléchargement direct
+#   (utile pour installer sans passer par PyPI, ex. environnement isolé)
+# - construction des exécutables autoporteurs Windows/Linux (PyInstaller),
+#   joints à la même Release sur un tag
+#
+# PyInstaller ne fait pas de cross-compilation : chaque binaire est produit
+# par un runner de la plateforme correspondante (windows-latest,
+# ubuntu-latest). macOS retiré de la matrice après plusieurs tentatives de
+# correction infructueuses sur un bug d'empaquetage reproductible -- voir
+# docs/dev-guide/index.md pour le détail complet de l'investigation.
+#
+# ATTENTION -- configuration externe liée au NOM DE CE FICHIER : PyPI et
+# TestPyPI valident le Trusted Publisher (OIDC) en comparant le nom exact
+# du fichier workflow qui appelle l'API de publication. Si ce fichier est
+# renommé, il faut mettre à jour le champ "Workflow name" correspondant :
+#   - https://pypi.org/manage/account/publishing/ (projet fletchtime)
+#   - https://test.pypi.org/manage/account/publishing/ (projet fletchtime)
+# Anciennement pypi.yml / testpypi.yml -- si tu migres depuis ces fichiers,
+# les deux configurations Trusted Publisher doivent pointer vers
+# "build.yml" avant le prochain push, sinon la publication échouera avec
+# une erreur d'authentification OIDC.
+#
+# Configuration ponctuelle nécessaire (une seule fois) :
+#   1. PyPI (https://pypi.org) et TestPyPI (https://test.pypi.org -- compte
+#      SÉPARÉ, inscription indépendante) : ajoute un "trusted publisher"
+#      sur chacun -- PyPI Project Name: fletchtime, Owner: MrFanghoDev,
+#      Repository name: fletchtime, Workflow name: build.yml,
+#      Environment name: pypi / testpypi respectivement (doit correspondre
+#      aux `environment:` définis plus bas).
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - "v*.*.*"
+    paths:
+      - "src/**"
+      - "pyproject.toml"
+      - "fletchtime.spec"
+      - ".github/workflows/build.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # nécessaire pour joindre les exécutables à une Release
+                    # (job archive-on-release) -- id-token:write
+                    # est ajouté séparément, seulement sur les deux jobs de
+                    # publication qui en ont besoin (Trusted Publishing)
+
+jobs:
+  # -- Paquet Python (sdist + wheel) ----------------------------------------
+
+  build-package:
+    # Ignore les commits du bot de formatage automatique (voir docs.yml
+    # pour l'explication complète du problème que ça évite). Condition
+    # restreinte à github.event_name == 'push' : head_commit n'existe pas
+    # pour les autres déclencheurs (workflow_dispatch, release).
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, 'corrections automatiques (black + ruff)')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historique complet (tags compris) -- nécessaire à
+                           # setuptools_scm pour déterminer la version
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les outils de build
+        run: pip install build
+
+      - name: Construire la distribution (sdist + wheel)
+        run: python -m build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-testpypi:
+    needs: build-package
+    # Sur push (branche normale, pas un tag) ou lancement manuel -- jamais
+    # à la publication d'une Release (ça, c'est publish-pypi, la "vraie"
+    # publication), jamais non plus sur un tag directement (comportement
+    # historique conservé : TestPyPI sert à valider des paquets de
+    # développement, pas à dupliquer la publication PyPI officielle).
+    if: github.event_name != 'release' && !startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/fletchtime/
+    permissions:
+      id-token: write  # requis pour le Trusted Publishing (OIDC), pas de jeton secret
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publier sur TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    needs: build-package
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/fletchtime/
+    permissions:
+      id-token: write  # requis pour le Trusted Publishing (OIDC), pas de jeton secret
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  # -- Exécutables autoporteurs (PyInstaller) -------------------------------
+
+  build-executables:
+    # Sur push ou lancement manuel -- jamais à la publication d'une Release
+    # (les exécutables ont déjà été construits et archivés pendant le run
+    # déclenché par le push du tag lui-même, inutile de reconstruire).
+    # Ignore aussi les commits du bot de formatage automatique (voir
+    # build-package plus haut et docs.yml pour l'explication complète).
+    if: github.event_name != 'release' && (github.event_name != 'push' || !contains(github.event.head_commit.message, 'corrections automatiques (black + ruff)'))
+    strategy:
+      fail-fast: false  # une plateforme qui échoue ne doit pas annuler les
+                         # autres -- important pour comparer leurs résultats
+                         # en cas de souci d'empaquetage spécifique à l'une
+                         # d'elles (voir docs/dev-guide/index.md)
+      matrix:
+        include:
+          - os: windows-latest
+            archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-windows.zip
+
+          - os: ubuntu-latest
+            archive_name: FletchTime-${{ (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || 'dev' }}-linux.tar.gz
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historique complet (tags compris) -- nécessaire à
+                           # setuptools_scm pour déterminer la version
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller websockets customtkinter
+          # Installe aussi le paquet lui-même (pas juste ses dépendances) :
+          # c'est cette étape qui déclenche setuptools_scm et génère
+          # src/fletchtime/_version.py avec la version dérivée du tag --
+          # sans elle, PyInstaller (qui lit les sources directement via
+          # pathex, sans jamais "construire" le paquet) ne trouve jamais ce
+          # fichier, et fletchtime.__version__ retombe sur le repli "dev"
+          # même sur un vrai tag de release.
+          pip install -e .
+
+      - name: Construire l'exécutable
+        run: |
+          pyinstaller fletchtime.spec
+
+      - name: Vérifier le contenu de dist
+        shell: bash
+        run: |
+          echo "Runner : $RUNNER_OS"
+          pwd
+          ls -R dist
+
+      - name: Test de fumée -- l'exécutable démarre et sert la vraie page d'accueil (Linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd dist/FletchTime
+          ./FletchTime --headless &
+          SERVER_PID=$!
+          sleep 3
+          RESPONSE=$(curl -sf http://127.0.0.1:8000/)
+          kill $SERVER_PID 2>/dev/null || true
+          echo "$RESPONSE" | grep -q "FletchTime" || {
+            echo "ÉCHEC : la page d'accueil ne contient pas 'FletchTime' -- probablement le"
+            echo "dossier web/ introuvable (ex. régression du contenu de PyInstaller _internal/)."
+            echo "--- Réponse reçue ---"
+            echo "$RESPONSE"
+            exit 1
+          }
+          echo "OK -- la page d'accueil répond correctement."
+
+      - name: Test de fumée -- l'exécutable démarre et sert la vraie page d'accueil (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Push-Location dist/FletchTime
+          Start-Process -FilePath ".\FletchTime.exe" -ArgumentList "--headless" -WindowStyle Hidden
+          Start-Sleep -Seconds 3
+          try {
+            $response = Invoke-WebRequest -Uri "http://127.0.0.1:8000/" -UseBasicParsing
+          } finally {
+            Stop-Process -Name "FletchTime" -Force -ErrorAction SilentlyContinue
+          }
+          Pop-Location
+          if ($response.Content -notmatch "FletchTime") {
+            Write-Host "ÉCHEC : la page d'accueil ne contient pas 'FletchTime' -- probablement le"
+            Write-Host "dossier web/ introuvable (ex. régression du contenu de PyInstaller _internal/)."
+            Write-Host "--- Réponse reçue ---"
+            Write-Host $response.Content
+            exit 1
+          }
+          Write-Host "OK -- la page d'accueil répond correctement."
+
+      - name: Créer l'archive Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+         Compress-Archive `
+           -Path dist/FletchTime/* `
+           -DestinationPath dist/${{ matrix.archive_name }}
+
+      - name: Créer l'archive Linux
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd dist
+          tar -czf ${{ matrix.archive_name }} FletchTime
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive_name }}
+          path: dist/${{ matrix.archive_name }}
+
+  archive-on-release:
+    needs: [build-executables, build-package]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          # Pas de filtre par nom cette fois : on veut à la fois les deux
+          # exécutables (FletchTime-*) et le paquet Python (dist -- sdist +
+          # wheel), pour que la Release GitHub serve aussi de point de
+          # téléchargement direct du paquet sans passer par PyPI.
+
+      - name: Joindre les exécutables et le paquet Python à la Release GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*/*
