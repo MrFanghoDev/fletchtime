@@ -133,6 +133,40 @@ dernier commit de `main`, seulement la dernière version taguée -- voir
 la note correspondante sur {doc}`../index`.
 ```
 
+## Options de la ligne de commande (mode terminal)
+
+`fletchtime --headless --help` (ou `python -m fletchtime --headless
+--help`) affiche la liste complète, mais résumé ici pour référence
+rapide -- voir `fletchtime/__main__.py`, `_build_arg_parser`.
+
+| Option | Effet |
+|---|---|
+| `-h`, `--help` | Affiche l'aide et quitte. |
+| `-V`, `--version` | Affiche la version et quitte. |
+| `--headless`, `--no-gui` | Mode terminal, sans fenêtre graphique. |
+| `-v`, `--verbose` | Affiche les journaux applicatifs (commandes reçues, (dé)connexions...) dans le terminal, pas seulement dans le fichier. |
+| `-d`, `--debug` | Journalisation la plus détaillée possible, fichier compris -- implique `--verbose`. |
+| `--http-port PORT` | Remplace le port HTTP configuré, pour cette exécution seulement. |
+| `--ws-port PORT` | Remplace le port WebSocket configuré, pour cette exécution seulement. |
+
+```{note}
+`--http-port`/`--ws-port` **ne modifient jamais** `config/gui.toml` --
+un remplacement ponctuel (utile pour un lancement scripté/CI, ou
+plusieurs salles de compétition sur un même PC sans dossier séparé par
+salle), pas un changement persistant. Pour un réglage durable, voir la
+fenêtre graphique (section Ports) ou éditer `config/gui.toml`
+directement.
+```
+
+**Niveaux de journalisation, fichier et terminal indépendants l'un de
+l'autre** (voir `fletchtime.logging_setup.configure_logging`) : le
+fichier de journal (`logs/fletchtime.log`) reste toujours à INFO par
+défaut, quelle que soit la commande utilisée pour lancer FletchTime --
+le diagnostic après-coup d'un concours ne doit pas dépendre de si
+quelqu'un a pensé à ajouter `-v`. Seul le terminal respecte
+`-v`/`--verbose` (silencieux par défaut, WARNING). `--debug` élève les
+deux au niveau DEBUG.
+
 ## Architecture générale
 
 Voir {doc}`../architecture` pour le détail complet. En résumé :

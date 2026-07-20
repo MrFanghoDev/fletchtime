@@ -56,18 +56,22 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   (`pip install fletchtime` + commande `fletchtime`), exécutables
   autoporteurs Windows/Linux, CI (lint + tests à chaque push).
 
-## ⬜ Étape 7 — Partage FFTL
+## ✅ Étape 7 — Partage FFTL (hors contact fédération, démarche humaine)
 
 - ~~Licence open source claire~~ -- déjà en place : `LICENSE`
   (GPL-3.0-or-later), cohérent avec `pyproject.toml`.
 - ~~Guide de contribution~~ -- fait : `CONTRIBUTING.md` (français/anglais),
   flux classique fork/branche/Pull Request, volontairement simple.
-- Nettoyage : vérifier qu'aucun contenu spécifique au club (nom, logo,
-  détails propres à Les Aigles 77) ne traîne en dur dans le code ou la
-  doc, en dehors de `web/assets/` où c'est normal et attendu.
-- Un vrai guide "premier club" : point d'entrée pour quelqu'un qui
-  découvre l'outil sans le contexte déjà connu (c'est quoi, pourquoi
-  l'utiliser, comment démarrer).
+- ~~Nettoyage~~ -- fait : balayage complet du dépôt, aucun contenu
+  spécifique au club trouvé en dehors de `web/assets/` (normal et
+  attendu là). Un vrai souci trouvé au passage, mais côté livraison
+  plutôt que dans le dépôt lui-même : un logo de club réel se
+  retrouvait dans les archives livrées malgré son exclusion de git --
+  corrigé.
+- ~~Guide "premier club"~~ -- fait : {doc}`premier-club`, point d'entrée
+  pour quelqu'un qui découvre l'outil sans contexte préalable (c'est
+  quoi, pourquoi s'en servir, prérequis, premiers pas, peut-on lui faire
+  confiance, où chercher de l'aide).
 - Contact fédération pour retour d'expérience / adoption éventuelle par
   d'autres clubs -- démarche humaine, hors du champ du dépôt lui-même.
 

@@ -91,12 +91,14 @@ Autoriser une application via le pare-feu* -- coche `FletchTime.exe` pour
 les réseaux privés.
 
 **Ports réseau utilisés** : **8000** en HTTP (pages web) et **8765** en
-WebSocket (synchronisation temps réel) -- deux ports séparés, tous deux
-nécessaires. Si le serveur tourne dans un conteneur/VM (Docker, WSL2...),
-les deux doivent être redirigés vers l'hôte, pas seulement le 8000 : sans
-le 8765, les pages se chargent normalement mais restent bloquées sur "en
-attente de connexion" indéfiniment (la synchronisation temps réel ne peut
-jamais s'établir).
+WebSocket (synchronisation temps réel) par défaut -- deux ports séparés,
+tous deux nécessaires, modifiables (fenêtre graphique, `config/gui.toml`,
+ou `--http-port`/`--ws-port` en ligne de commande). Si le serveur tourne
+dans un conteneur/VM (Docker, WSL2...), les deux doivent être redirigés
+vers l'hôte, pas seulement le port HTTP : sans le port WebSocket, les
+pages se chargent normalement mais restent bloquées sur "en attente de
+connexion" indéfiniment (la synchronisation temps réel ne peut jamais
+s'établir).
 
 Pour construire ces exécutables toi-même :
 voir `.github/workflows/build.yml` et `fletchtime.spec` (PyInstaller). Un
