@@ -1,6 +1,6 @@
 <img src="https://mrfanghodev.github.io/fletchtime/_static/logo.svg" width="80" height="80" alt="FletchTime logo">
 
-[![Python](https://img.shields.io/badge/python-version-from-pep-621-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2FMrFanghoDev%2Ffletchtime%2Fmaster%2Fpyproject.toml)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
 [![Licence](https://img.shields.io/github/license/MrFanghoDev/fletchtime)](LICENSE)
 [![Tests](https://github.com/MrFanghoDev/fletchtime/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/MrFanghoDev/fletchtime/actions/workflows/test.yml)
 [![PyPI](https://img.shields.io/pypi/v/fletchtime)](https://pypi.org/project/fletchtime/)

@@ -4,7 +4,7 @@
 :align: center
 ```
 
-[![Python](https://img.shields.io/badge/python-version-from-pep-621-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2FMrFanghoDev%2Ffletchtime%2Fmaster%2Fpyproject.toml)](https://github.com/MrFanghoDev/fletchtime/blob/master/pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://github.com/MrFanghoDev/fletchtime/blob/master/pyproject.toml)
 [![Licence](https://img.shields.io/github/license/MrFanghoDev/fletchtime)](https://github.com/MrFanghoDev/fletchtime/blob/master/LICENSE)
 [![Tests](https://github.com/MrFanghoDev/fletchtime/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/MrFanghoDev/fletchtime/actions/workflows/test.yml)
 [![PyPI](https://img.shields.io/pypi/v/fletchtime)](https://pypi.org/project/fletchtime/)
