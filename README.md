@@ -17,6 +17,13 @@ compris Pydroid 3. Ajoute `--headless` pour retrouver l'ancien mode
 terminal (aussi utilisé automatiquement si la fenêtre ne peut pas se
 charger, ex. `customtkinter` absent).
 
+En mode terminal, `fletchtime --headless --help` liste toutes les
+options -- notamment `-v`/`--verbose` et `-d`/`--debug` (plus de détail
+dans le journal), et `--http-port`/`--ws-port` pour remplacer les ports
+configurés le temps d'un seul lancement (ex. plusieurs salles de
+compétition sur un même PC via un script, sans dossier séparé par salle
+-- voir plus bas pour l'approche par copie de dossier).
+
 ## Installation
 
 Trois façons d'obtenir et faire tourner FletchTime, selon ton matériel --

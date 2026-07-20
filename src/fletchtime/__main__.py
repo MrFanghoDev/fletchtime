@@ -19,6 +19,8 @@ Deux notions de dossier bien distinctes ici, à ne pas confondre :
 
 from __future__ import annotations
 
+import argparse
+import logging
 import shutil
 import signal
 import socket
@@ -150,7 +152,87 @@ def _print_banner(ip: str, data_root: Path, http_port: int) -> None:
         print("=" * 60)
 
 
-def _run_headless() -> None:
+def _build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="fletchtime",
+        description=(
+            "Serveur de chronométrage pour compétitions d'archerie FFTL "
+            "(Indoor et Flint)."
+        ),
+    )
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=f"FletchTime {__version__}",
+    )
+    parser.add_argument(
+        "--headless",
+        "--no-gui",
+        dest="headless",
+        action="store_true",
+        help="Mode terminal, sans fenêtre graphique.",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Affiche les journaux applicatifs (commandes reçues, "
+        "(dé)connexions...) dans le terminal, pas seulement dans le "
+        "fichier de journal.",
+    )
+    parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Journalisation la plus détaillée possible, fichier compris "
+        "-- implique --verbose.",
+    )
+    parser.add_argument(
+        "--http-port",
+        type=int,
+        metavar="PORT",
+        help="Port HTTP -- remplace la valeur de config/gui.toml pour "
+        "cette exécution seulement, sans la modifier (voir aussi la "
+        "fenêtre graphique pour un réglage persistant).",
+    )
+    parser.add_argument(
+        "--ws-port",
+        type=int,
+        metavar="PORT",
+        help="Port WebSocket -- remplace la valeur de config/gui.toml "
+        "pour cette exécution seulement, sans la modifier.",
+    )
+    return parser
+
+
+def _resolve_console_log_level(args: argparse.Namespace) -> int:
+    if args.debug:
+        return logging.DEBUG
+    if args.verbose:
+        return logging.INFO
+    return logging.WARNING
+
+
+def _resolve_ports(args: argparse.Namespace, parser: argparse.ArgumentParser) -> tuple[int, int]:
+    """Priorité aux options de la ligne de commande sur config/gui.toml,
+    sans jamais modifier ce fichier -- une exécution scriptée/CI ne doit
+    pas laisser de trace persistante par accident. Revalide les deux
+    ports ensemble (même règle que config_store.save_gui_config) même
+    si un seul des deux vient de la ligne de commande, pour ne jamais se
+    retrouver avec une combinaison invalide (identiques, hors bornes)."""
+    gui_config = config_store.load_gui_config()
+    http_port = args.http_port if args.http_port is not None else gui_config["http_port"]
+    ws_port = args.ws_port if args.ws_port is not None else gui_config["ws_port"]
+    for name, port in (("--http-port", http_port), ("--ws-port", ws_port)):
+        if not (1 <= port <= 65535):
+            parser.error(f"{name} : le port doit être entre 1 et 65535 (reçu {port}).")
+    if http_port == ws_port:
+        parser.error("--http-port et --ws-port doivent être différents.")
+    return http_port, ws_port
+
+
+def _run_headless(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     """Mode terminal classique -- utilisé si l'interface graphique n'a pas
     pu être chargée (ex. `customtkinter` absent), ou explicitement demandé
     via `--headless`/`--no-gui`."""
@@ -159,18 +241,18 @@ def _run_headless() -> None:
     ensure_directories(data_root, app_web_dir)
     assets_dir = data_root / "web" / "assets"
 
-    log_file = configure_logging(data_root / "logs")
+    console_level = _resolve_console_log_level(args)
+    file_level = logging.DEBUG if args.debug else logging.INFO
+    log_file = configure_logging(data_root / "logs", console_level, file_level)
     print(f"Journal détaillé / Detailed log: {log_file}")
 
-    # Ports lus depuis config/gui.toml (mêmes préférences que la fenêtre
-    # graphique, voir config_store.load_gui_config) -- permet de faire
-    # tourner plusieurs salles de compétition sur le même PC : une copie
-    # de dossier par salle, chacune avec son propre gui.toml donnant des
-    # ports différents. "gui.toml" malgré le nom concerne aussi ce mode
-    # terminal, pour que les deux se comportent de façon cohérente.
-    gui_config = config_store.load_gui_config()
-    http_port = gui_config["http_port"]
-    ws_port = gui_config["ws_port"]
+    # Ports lus depuis config/gui.toml par défaut (mêmes préférences que
+    # la fenêtre graphique, voir config_store.load_gui_config), sauf
+    # remplacement explicite via --http-port/--ws-port pour cette seule
+    # exécution -- permet de faire tourner plusieurs salles de
+    # compétition sur un même PC sans dossier séparé par salle, utile
+    # pour un lancement scripté/CI par exemple.
+    http_port, ws_port = _resolve_ports(args, parser)
 
     _print_banner(local_ip(), data_root, http_port)
 
@@ -193,8 +275,11 @@ def _run_headless() -> None:
 
 
 def main() -> None:
-    if "--headless" in sys.argv or "--no-gui" in sys.argv:
-        _run_headless()
+    parser = _build_arg_parser()
+    args = parser.parse_args()
+
+    if args.headless:
+        _run_headless(args, parser)
         return
 
     try:
@@ -212,7 +297,7 @@ def main() -> None:
         # repli ne risque pas un conflit de port avec _run_headless().
         print(f"Interface graphique indisponible ({exc}) -- mode terminal.")
         print(f"Graphical interface unavailable ({exc}) -- terminal mode.")
-        _run_headless()
+        _run_headless(args, parser)
 
 
 if __name__ == "__main__":
