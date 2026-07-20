@@ -156,8 +156,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fletchtime",
         description=(
-            "Serveur de chronométrage pour compétitions d'archerie FFTL "
-            "(Indoor et Flint)."
+            "Serveur de chronométrage pour compétitions d'archerie FFTL " "(Indoor et Flint)."
         ),
     )
     parser.add_argument(
@@ -185,8 +184,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "-d",
         "--debug",
         action="store_true",
-        help="Journalisation la plus détaillée possible, fichier compris "
-        "-- implique --verbose.",
+        help="Journalisation la plus détaillée possible, fichier compris " "-- implique --verbose.",
     )
     parser.add_argument(
         "--http-port",
