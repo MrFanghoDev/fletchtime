@@ -30,6 +30,7 @@ import queue
 import sys
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 import webbrowser
 
@@ -64,6 +65,8 @@ _TRANSLATIONS = {
         "themeLight": "Clair",
         "themeDark": "Sombre",
         "networkCaption": "Ports (HTTP/WS) :",
+        "displayOptionsCaption": "Lane à ouvrir :",
+        "muteLabel": "Muet",
         "apply": "Appliquer",
         "networkErrorNotANumber": "Les ports doivent être des nombres",
         "networkErrorRange": "Les ports doivent être entre 1 et 65535",
@@ -98,6 +101,8 @@ _TRANSLATIONS = {
         "themeLight": "Light",
         "themeDark": "Dark",
         "networkCaption": "Ports (HTTP/WS):",
+        "displayOptionsCaption": "Lane to open:",
+        "muteLabel": "Muted",
         "apply": "Apply",
         "networkErrorNotANumber": "Ports must be numbers",
         "networkErrorRange": "Ports must be between 1 and 65535",
@@ -267,11 +272,31 @@ class FletchTimeApp(ctk.CTk):
         self.log_file = configure_logging(self.data_root / "logs", console_level=logging.INFO)
 
         self.title(self._t("title"))
-        self.geometry("820x600")
+        self.geometry("820x600")  # taille de départ -- corrigée juste après
         self.minsize(640, 480)
         self.protocol("WM_DELETE_WINDOW", self._on_quit)
 
         self._build_ui()
+
+        # La taille de départ ci-dessus datait d'avant l'ajout de plusieurs
+        # sections (ports, statut technique...) -- trop petite pour tout
+        # montrer, le bouton Quitter se retrouvant hors de la fenêtre
+        # visible (constaté en pratique). Plutôt que de deviner un nouveau
+        # nombre fixe qui redeviendrait insuffisant à la prochaine section
+        # ajoutée, calcule la taille réellement nécessaire à partir du
+        # contenu construit juste au-dessus : update_idletasks() force
+        # Tkinter à calculer la taille demandée par chaque widget avant
+        # qu'on ne la lise, sans quoi winfo_reqheight/reqwidth
+        # renverraient une valeur pas encore à jour.
+        self.update_idletasks()
+        required_width = max(820, self.winfo_reqwidth())
+        required_height = max(600, self.winfo_reqheight())
+        self.geometry(f"{required_width}x{required_height}")
+        # Empêche aussi de redescendre en dessous de cette taille par un
+        # redimensionnement manuel -- le bouton Quitter (et tout le reste)
+        # doit rester accessible sans avoir à agrandir la fenêtre.
+        self.minsize(required_width, required_height)
+
         self._poll_log_queue()
         self._poll_technical_status()
         self._drain_status_queue()
@@ -361,9 +386,35 @@ class FletchTimeApp(ctk.CTk):
         self.display_button = ctk.CTkButton(
             links_frame,
             text=self._t("display"),
-            command=lambda: self._open_link("/display.html?lane=1"),
+            command=self._open_display,
         )
         self.display_button.pack(side="left", padx=(0, 12), pady=10, expand=True, fill="x")
+
+        # -- options d'affichage (lane à ouvrir, muet ou non) --------------
+        # Auparavant un simple raccourci vers lane=1 -- rendu configurable
+        # pour pouvoir ouvrir n'importe quelle lane et couper le son sur cet
+        # onglet précis (voir display.html, soundEnabled) directement
+        # depuis la fenêtre, comme c'est déjà possible depuis la page
+        # d'accueil.
+        display_options_frame = ctk.CTkFrame(self)
+        display_options_frame.pack(fill="x", padx=16, pady=(0, 8))
+
+        self.display_options_caption = ctk.CTkLabel(
+            display_options_frame,
+            text=self._t("displayOptionsCaption"),
+            font=ctk.CTkFont(size=11),
+            text_color="gray60",
+        )
+        self.display_options_caption.pack(side="left", padx=(12, 8), pady=8)
+
+        self.lane_entry = ctk.CTkEntry(display_options_frame, width=90, justify="center")
+        self.lane_entry.insert(0, "1")
+        self.lane_entry.pack(side="left", padx=(0, 12), pady=8)
+
+        self.mute_checkbox = ctk.CTkCheckBox(
+            display_options_frame, text=self._t("muteLabel"), width=20
+        )
+        self.mute_checkbox.pack(side="left", padx=(0, 12), pady=8)
 
         # -- adresse du serveur -----------------------------------------
         # CTkEntry (désactivée après affichage) plutôt qu'un simple
@@ -471,6 +522,13 @@ class FletchTimeApp(ctk.CTk):
     def _open_link(self, path: str) -> None:
         webbrowser.open(f"http://127.0.0.1:{self.http_port}{path}")
 
+    def _open_display(self) -> None:
+        lane = self.lane_entry.get().strip() or "1"
+        path = f"/display.html?lane={urllib.parse.quote(lane)}"
+        if self.mute_checkbox.get():
+            path += "&mute=1"
+        self._open_link(path)
+
     def _start_server(self) -> None:
         if self.runtime.is_running:
             return
@@ -514,6 +572,8 @@ class FletchTimeApp(ctk.CTk):
         self.home_button.configure(text=self._t("home"))
         self.control_button.configure(text=self._t("control"))
         self.display_button.configure(text=self._t("display"))
+        self.display_options_caption.configure(text=self._t("displayOptionsCaption"))
+        self.mute_checkbox.configure(text=self._t("muteLabel"))
         self.address_caption.configure(text=self._t("addressCaption"))
         self.log_label.configure(text=self._t("log_title"))
         self.quit_button.configure(text=self._t("quit"))

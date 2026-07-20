@@ -77,6 +77,16 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 
+- ~~**Choix de la lane/muet à l'ouverture d'un écran**~~ -- fait : la page
+  d'accueil permet maintenant de cocher "muet" à côté du champ de lane
+  déjà existant (ex. plusieurs écrans pilotés par le même PC, qui
+  partagent le même haut-parleur -- voir la FAQ du manuel). Même chose
+  dans la fenêtre graphique : le raccourci "Affichage", auparavant figé
+  sur `lane=1`, permet maintenant de choisir la lane et de cocher "muet"
+  avant l'ouverture. Testé avec un vrai navigateur (page d'accueil) et
+  vérifié via la documentation officielle de `customtkinter` (case à
+  cocher, fenêtre).
+
 - ~~**Icône de l'exécutable**~~ -- fait : `web/logo.ico` (multi-résolution,
   16 à 256px, généré depuis `web/logo.svg`), utilisé par `fletchtime.spec`
   pour l'exécutable Windows. Sans effet sous Linux, qui n'a pas ce
@@ -102,7 +112,19 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   `save_match_snapshot` retente quelques fois avant d'abandonner
   proprement (jamais d'exception qui remonterait perturber la diffusion
   de l'état aux écrans). Testé concrètement : échec transitoire récupéré,
-  échec permanent absorbé sans lever.
+  échec permanent absorbé sans lever. **Confirmé résolu en conditions
+  réelles sur Windows** (plus de blocage constaté après ce correctif).
+- ~~**Bouton Quitter hors de la fenêtre**~~ -- fait : la taille de départ
+  de la fenêtre datait d'avant l'ajout de plusieurs sections (ports,
+  statut technique...), devenue trop petite pour tout montrer. Calcule
+  désormais la taille réellement nécessaire à partir du contenu construit
+  (`update_idletasks` + `winfo_reqheight`/`reqwidth`), plutôt qu'un
+  nombre fixe qui redeviendrait insuffisant à la prochaine section
+  ajoutée. **Réserve honnête** : ce motif est standard en Tkinter, mais
+  une source a signalé un comportement parfois différent avec
+  `customtkinter` selon si on l'applique à la fenêtre ou à un cadre
+  interne -- non vérifiable ici (pas d'affichage disponible), à confirmer
+  visuellement.
 - ~~**Journal absent du widget de la fenêtre**~~ -- vrai bug trouvé en
   creusant le point précédent : `configure_logging` était appelé sans
   préciser `console_level`, retombant sur le défaut `WARNING` (pensé
@@ -110,7 +132,8 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   widget est censé montrer (commandes, connexions, transitions, toutes
   en `INFO`). Corrigé avec `console_level=INFO` explicite pour la
   fenêtre. Confirmé par comparaison directe avant/après : file vide
-  avant, message présent après.
+  avant, message présent après. **Confirmé résolu en conditions
+  réelles** (le bon niveau de journal s'affiche bien dans la fenêtre).
 - ~~**Données techniques dans la fenêtre**~~ -- fait : nouvel endpoint
   `/api/status` (les mêmes données déjà affichées dans `control.html`),
   affiché dans la fenêtre via sondage périodique. `ServerRuntime`

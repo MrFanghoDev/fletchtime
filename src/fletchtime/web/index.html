@@ -78,14 +78,19 @@
   .card.manual a.button { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
   .card a.button:hover, .card button:hover { filter: brightness(1.08); }
 
-  .lane-row { display: flex; gap: 0.5rem; }
-  .lane-row input {
+  .lane-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  .lane-row input[type="text"] {
     font-family: var(--font-mono); font-size: 0.95rem; width: 4.5em; text-align: center;
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
     padding: 0.5rem;
   }
-  .lane-row input:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .lane-row input[type="text"]:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
   .lane-row button { flex-grow: 1; }
+  .mute-row {
+    display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;
+    color: var(--text-muted); cursor: pointer; white-space: nowrap;
+  }
+  .mute-row input[type="checkbox"] { cursor: pointer; }
 
   footer {
     margin-top: 3rem; color: var(--text-faint); font-size: 0.78rem; text-align: center;
@@ -154,6 +159,10 @@
         <input type="text" id="lane-input" value="1" maxlength="20"
           data-i18n-placeholder="laneInputPlaceholder" placeholder="1, A, Nord..."
           data-i18n-aria-label="laneInputLabel" aria-label="Numéro ou nom du pas de tir">
+        <label class="mute-row">
+          <input type="checkbox" id="mute-checkbox">
+          <span data-i18n="homeDisplayMuteLabel">Muet</span>
+        </label>
         <button onclick="openDisplay()" data-i18n="homeDisplayButton">Ouvrir</button>
       </div>
     </div>
@@ -215,7 +224,10 @@
 
   function openDisplay() {
     const lane = document.getElementById("lane-input").value.trim() || "1";
-    window.open("display.html?lane=" + encodeURIComponent(lane), "_blank");
+    const muted = document.getElementById("mute-checkbox").checked;
+    let url = "display.html?lane=" + encodeURIComponent(lane);
+    if (muted) url += "&mute=1";
+    window.open(url, "_blank");
   }
   document.getElementById("lane-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") openDisplay();
