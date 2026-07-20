@@ -12,6 +12,7 @@ the function body specifically so this stays possible.
 
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 import tempfile
@@ -84,6 +85,18 @@ class TestServerRuntime(unittest.TestCase):
         self.assertTrue(self.runtime.is_running)
         res = urllib.request.urlopen(f"http://127.0.0.1:{self.HTTP_PORT}/index.html")
         self.assertEqual(res.status, 200)
+
+    def test_api_version_reports_the_actual_configured_ws_port(self) -> None:
+        """Les pages web (display.html/control.html) n'ont aucun autre
+        moyen de connaître le port WebSocket réellement configuré depuis
+        que les ports sont devenus modifiables (voir fletchtime.gui) --
+        elles le récupèrent via cet endpoint avant d'ouvrir leur connexion.
+        Un mauvais port ici casserait silencieusement toutes les pages."""
+        self.runtime.start()
+        time.sleep(0.3)
+        res = urllib.request.urlopen(f"http://127.0.0.1:{self.HTTP_PORT}/api/version")
+        data = json.loads(res.read())
+        self.assertEqual(data["ws_port"], self.WS_PORT)
 
     def test_stop_frees_the_port(self) -> None:
         self.runtime.start()

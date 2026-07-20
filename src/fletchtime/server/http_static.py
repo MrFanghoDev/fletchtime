@@ -33,13 +33,26 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
     behaviour as before this existed).
     """
 
-    def __init__(self, *args, directory: str, assets_dir: str, **kwargs) -> None:
+    def __init__(
+        self, *args, directory: str, assets_dir: str, ws_port: int, **kwargs
+    ) -> None:
         self._assets_dir = assets_dir
+        self._ws_port = ws_port
         super().__init__(*args, directory=directory, **kwargs)
 
     def do_GET(self) -> None:
         if self.path == "/api/version":
-            body = json.dumps({"version": __version__}).encode("utf-8")
+            # ws_port inclus ici : c'est le seul moyen pour le JS des pages
+            # (display.html/control.html) de connaître le port WebSocket
+            # réellement configuré -- il ne peut plus être codé en dur
+            # côté client depuis que les ports sont devenus modifiables
+            # (voir fletchtime.gui, config_store.load_gui_config) ; il n'y
+            # a que ce même port HTTP, connu implicitement via l'URL de la
+            # page elle-même, qui est garanti correct sans configuration
+            # supplémentaire côté client.
+            body = json.dumps({"version": __version__, "ws_port": self._ws_port}).encode(
+                "utf-8"
+            )
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
@@ -65,11 +78,16 @@ class _DualRootHandler(SimpleHTTPRequestHandler):
 
 
 def start_http_server(
-    directory: str, port: int, assets_dir: str | None = None
+    directory: str, port: int, assets_dir: str | None = None, ws_port: int | None = None
 ) -> ThreadingHTTPServer:
     """``assets_dir`` defaults to ``<directory>/assets`` when not given,
     matching the historical single-root behaviour (dev checkout, or a
     PyInstaller build where everything sits together next to the exe).
+
+    ``ws_port`` defaults to ``port + 765`` (matching the historical
+    8000/8765 default pair) when not given -- only used as a last-resort
+    fallback, callers should normally pass the real configured value
+    (see ``fletchtime.runtime.ServerRuntime``).
 
     Returns the bound (but not yet serving) server instance -- the caller
     is expected to run ``.serve_forever()`` on it (typically in a
@@ -77,7 +95,11 @@ def start_http_server(
     for a clean stop (standard library guarantee, see
     ``socketserver.BaseServer``)."""
     resolved_assets_dir = assets_dir or str(Path(directory) / "assets")
+    resolved_ws_port = ws_port if ws_port is not None else port + 765
     handler = functools.partial(
-        _DualRootHandler, directory=directory, assets_dir=resolved_assets_dir
+        _DualRootHandler,
+        directory=directory,
+        assets_dir=resolved_assets_dir,
+        ws_port=resolved_ws_port,
     )
     return ThreadingHTTPServer(("0.0.0.0", port), handler)

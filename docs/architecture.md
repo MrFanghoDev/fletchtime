@@ -502,6 +502,30 @@ Le poste de contrôle, à l'inverse, affiche une bannière large et alarmante
 (pas discrète) en cas de coupure -- c'est le responsable du chronométrage
 qui doit être alerté clairement, pas les archers.
 
+## Découverte du port WebSocket côté client
+
+`display.html` et `control.html` ne connaissent pas à l'avance le port
+WebSocket à utiliser : depuis que les ports sont devenus modifiables
+(voir la fenêtre graphique et `config/gui.toml`, pensé pour plusieurs
+salles de compétition sur un même PC), le coder en dur côté client
+casserait silencieusement toute page si le port avait été changé.
+
+Chaque page interroge `/api/version` (servi par le même serveur HTTP qui
+vient de la servir, donc forcément sur le bon port) avant d'ouvrir sa
+connexion WebSocket -- la réponse inclut `ws_port`, le port réellement
+configuré (`ServerRuntime.ws_port`, plombé jusqu'à
+`http_static.start_http_server`). Un échec de cette requête (réseau,
+serveur non démarré) se rabat silencieusement sur `8765` -- l'ancien
+port fixe, qui reste une valeur par défaut raisonnable, jamais une
+erreur bloquante pour l'utilisateur.
+
+```{note}
+Vérifié avec un vrai navigateur (Chromium via Playwright), pas seulement
+en théorie : les deux pages utilisent bien le port récupéré
+dynamiquement, et se rabattent proprement sur 8765 sans planter quand
+`/api/version` échoue.
+```
+
 ## Multi-écrans et ciblage
 
 Chaque écran se connecte au WebSocket et s'enregistre avec son numéro de lane

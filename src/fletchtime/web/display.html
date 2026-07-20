@@ -318,9 +318,26 @@
   let lastPayload = null;
   let lastReceivedAt = null;
   let extrapolationTimer = null;
+  // Port WebSocket réel, interrogé une seule fois via /api/version --
+  // ne peut plus être codé en dur depuis que les ports sont devenus
+  // modifiables (voir fletchtime.gui, config_store.load_gui_config).
+  // 8765 sert uniquement de repli si cette requête échoue pour une
+  // raison quelconque (jamais utilisé en pratique, l'API répond depuis
+  // le même serveur qui vient de servir cette page).
+  let wsPort = 8765;
+
+  async function fetchWsPort() {
+    try {
+      const res = await fetch("/api/version");
+      const data = await res.json();
+      if (data.ws_port) wsPort = data.ws_port;
+    } catch (e) {
+      // Repli silencieux sur la valeur par défaut ci-dessus.
+    }
+  }
 
   function connect() {
-    const ws = new WebSocket("ws://" + location.hostname + ":8765");
+    const ws = new WebSocket("ws://" + location.hostname + ":" + wsPort);
 
     ws.onopen = () => {
       isConnected = true;
@@ -346,7 +363,7 @@
     };
     ws.onerror = () => ws.close();
   }
-  connect();
+  fetchWsPort().then(connect);
 
   let extrapolationOrangeFired = false;
   let extrapolationTicksFired = new Set();

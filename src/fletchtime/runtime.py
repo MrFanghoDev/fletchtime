@@ -51,7 +51,9 @@ class ServerRuntime:
         if self.is_running:
             return
 
-        self._httpd = start_http_server(self.app_web_dir, self.http_port, self.assets_dir)
+        self._httpd = start_http_server(
+            self.app_web_dir, self.http_port, self.assets_dir, self.ws_port
+        )
         self._http_thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
         self._http_thread.start()
 

@@ -427,6 +427,23 @@
   const statusEl = document.getElementById("status");
   const stateBox = document.getElementById("state");
   let ws;
+  // Port WebSocket réel, interrogé une seule fois via /api/version --
+  // ne peut plus être codé en dur depuis que les ports sont devenus
+  // modifiables (voir fletchtime.gui, config_store.load_gui_config).
+  // 8765 sert uniquement de repli si cette requête échoue (jamais
+  // utilisé en pratique, l'API répond depuis le même serveur qui vient
+  // de servir cette page).
+  let wsPort = 8765;
+
+  async function fetchWsPort() {
+    try {
+      const res = await fetch("/api/version");
+      const data = await res.json();
+      if (data.ws_port) wsPort = data.ws_port;
+    } catch (e) {
+      // Repli silencieux sur la valeur par défaut ci-dessus.
+    }
+  }
   let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
 
   // Structure des messages rapides : (clé de catégorie, [clés de message]).
@@ -543,7 +560,7 @@
   let isAuthenticated = false;
 
   function connect() {
-    ws = new WebSocket("ws://" + location.hostname + ":8765");
+    ws = new WebSocket("ws://" + location.hostname + ":" + wsPort);
 
     ws.onopen = () => { currentStatusKey = "connected"; renderStatus(); };
     ws.onclose = () => {
@@ -655,7 +672,7 @@
       }
     };
   }
-  connect();
+  fetchWsPort().then(connect);
 
   function send(obj) {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
