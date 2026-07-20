@@ -1,7 +1,8 @@
 """A ``Step`` is one timed segment of a competition (e.g. "red light, 10s,
 end 3 of 12, turn A-B, distance 18m"). A shooting mode's job is only to
-produce an ordered list of ``Step``s up front; the engine then plays that
-list back, handling ticking, manual advance and emergency stop.
+produce an ordered list of ``Step`` objects up front; the engine then
+plays that list back, handling ticking, manual advance and emergency
+stop.
 
 This keeps modes simple, declarative, and trivial to unit test: you can
 assert on the exact list of steps a config produces without running any

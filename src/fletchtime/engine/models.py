@@ -14,15 +14,15 @@ from enum import StrEnum
 class Phase(StrEnum):
     """Visual/safety phase of the current step.
 
-    WAIT      -- before the match starts, or between matches. No countdown.
-    RED       -- preparation time (archers approach / take position).
-    GREEN     -- main shooting time.
-    ORANGE    -- warning period near the end of shooting time.
-    PAUSE     -- end of a volée: archers retrieve arrows, no countdown.
-                 The engine waits here indefinitely until the DOS manually
-                 starts the next volée (``MatchEngine.next()``).
-    EMERGENCY -- danger signal, clock frozen, must be explicitly resumed.
-    FINISHED  -- sequence exhausted, nothing left to shoot.
+    - ``WAIT`` -- before the match starts, or between matches. No countdown.
+    - ``RED`` -- preparation time (archers approach / take position).
+    - ``GREEN`` -- main shooting time.
+    - ``ORANGE`` -- warning period near the end of shooting time.
+    - ``PAUSE`` -- end of a volée: archers retrieve arrows, no countdown.
+      The engine waits here indefinitely until the DOS manually starts
+      the next volée (``MatchEngine.next()``).
+    - ``EMERGENCY`` -- danger signal, clock frozen, must be explicitly resumed.
+    - ``FINISHED`` -- sequence exhausted, nothing left to shoot.
     """
 
     WAIT = "wait"
