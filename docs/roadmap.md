@@ -82,14 +82,14 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   plutôt qu'un brun terne, tout en restant cohérent avec la noirceur du
   rouge/vert déjà en place. Vérifié avec un vrai rendu (Chromium), pas
   seulement en théorie.
-- ~~**Cibles par défaut en SVG**~~ -- fait : les 4 cibles par défaut
-  (`indoor_recurve`, `indoor_compound`, `flint_35cm_1spot`,
-  `flint_20cm_4spot`) régénérées en SVG plutôt que converties depuis les
-  JPG existants -- proportions et couleurs officielles World Archery (10
-  zones de largeur égale, blanc/noir/bleu/rouge/or), reconstruites
-  proprement plutôt que vectorisées avec perte. Reste net à n'importe
-  quelle taille d'écran, contrairement à un JPG qui peut devenir flou sur
-  un grand affichage. `.svg` ajouté aussi à la détection des bannières
+- ~~**Cibles par défaut en SVG**~~ -- fait, avec une vraie erreur en
+  route corrigée : premier essai généré à partir de proportions World
+  Archery génériques (blanc/noir/bleu/rouge/or) plutôt que des vraies
+  images de référence pourtant déjà vues -- alors que les cibles réelles
+  sont bleu marine (indoor) et noir/blanc alterné style NFAA/IFAA
+  (Flint), rien à voir avec le motif WA. Corrigé en utilisant les 4 SVG
+  faits à la main par le club (Inkscape), qui reproduisent fidèlement les
+  vraies cibles. `.svg` ajouté aussi à la détection des bannières
   (`display.html`), pour la cohérence. Testé avec un vrai rendu de
   `display.html` : les deux images se chargent et s'affichent
   correctement.
