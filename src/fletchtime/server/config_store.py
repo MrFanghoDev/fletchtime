@@ -13,13 +13,17 @@ maison, largement suffisant pour les types simples qu'on manipule ici
 from __future__ import annotations
 
 import json
+import logging
 import sys
+import time
 import tomllib
 from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
 from fletchtime.engine import FlintConfig, IndoorConfig
+
+logger = logging.getLogger("fletchtime.server")
 
 # FletchTime opère sur le répertoire courant, comme la plupart des outils en
 # ligne de commande (jekyll, hugo...) : `config/` vit à côté d'où la
@@ -256,12 +260,45 @@ def _write_toml(path: Path, values: dict[str, Any], comments: dict[str, str]) ->
 def save_match_snapshot(data: dict[str, Any]) -> None:
     """Écriture atomique (fichier temporaire puis renommage) : ne laisse
     jamais un fichier à moitié écrit si le processus s'arrête précisément
-    pendant l'écriture -- ``Path.replace`` est atomique aussi bien sous
-    Linux/macOS que Windows depuis Python 3.3+."""
+    pendant l'écriture -- ``Path.replace`` est garanti atomique aussi bien
+    sous Linux/macOS que Windows depuis Python 3.3+.
+
+    Ceci dit, "atomique" ne veut pas dire "ne peut jamais échouer" : sous
+    Windows, remplacer un fichier peut lever une erreur de "violation de
+    partage" si un autre processus l'a ouvert au même instant (antivirus,
+    surveillance de fichiers d'un IDE, Git Bash...) -- constaté en
+    pratique (voir docs/architecture.md, section sur la résilience de la
+    boucle de décompte, appelante de cette fonction à chaque tick).
+    Ce verrou est transitoire par nature, d'où quelques tentatives avant
+    d'abandonner. Échoue silencieusement (juste un avertissement dans le
+    journal) plutôt que de lever : un instantané manqué n'est jamais
+    grave (le prochain tick, ~200ms plus tard, retente), alors qu'une
+    exception qui remonterait perturberait aussi la diffusion de l'état
+    aux écrans pour ce même tick, pour une raison qui n'a rien à voir
+    avec eux."""
     MATCH_STATE_JSON.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = MATCH_STATE_JSON.with_suffix(".json.tmp")
-    tmp_path.write_text(json.dumps(data), encoding="utf-8")
-    tmp_path.replace(MATCH_STATE_JSON)
+    try:
+        tmp_path.write_text(json.dumps(data), encoding="utf-8")
+    except OSError:
+        logger.warning("Échec d'écriture de l'instantané de match (fichier temporaire)")
+        return
+
+    last_error: OSError | None = None
+    for attempt in range(3):
+        try:
+            tmp_path.replace(MATCH_STATE_JSON)
+            return
+        except OSError as exc:
+            last_error = exc
+            if attempt < 2:
+                time.sleep(0.05)
+    logger.warning(
+        "Échec de sauvegarde de l'instantané de match après plusieurs tentatives "
+        "(fichier probablement verrouillé par un autre processus, ex. antivirus, "
+        "IDE) : %s",
+        last_error,
+    )
 
 
 def load_match_snapshot() -> dict[str, Any] | None:

@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fletchtime.server import config_store
 
@@ -14,16 +15,19 @@ class TestConfigStore(unittest.TestCase):
         self._original_flint = config_store.FLINT_TOML
         self._original_app = config_store.APP_TOML
         self._original_auth = config_store.AUTH_TOML
+        self._original_match_state = config_store.MATCH_STATE_JSON
         config_store.INDOOR_TOML = Path(self._tmpdir.name) / "indoor.toml"
         config_store.FLINT_TOML = Path(self._tmpdir.name) / "flint.toml"
         config_store.APP_TOML = Path(self._tmpdir.name) / "app.toml"
         config_store.AUTH_TOML = Path(self._tmpdir.name) / "auth.toml"
+        config_store.MATCH_STATE_JSON = Path(self._tmpdir.name) / "match_state.json"
 
     def tearDown(self) -> None:
         config_store.INDOOR_TOML = self._original_indoor
         config_store.FLINT_TOML = self._original_flint
         config_store.APP_TOML = self._original_app
         config_store.AUTH_TOML = self._original_auth
+        config_store.MATCH_STATE_JSON = self._original_match_state
         self._tmpdir.cleanup()
 
     def test_missing_file_falls_back_to_dataclass_defaults(self) -> None:
@@ -113,6 +117,44 @@ class TestConfigStore(unittest.TestCase):
         config_store.save_app_config({"sound_pack": "classic", "bogus_field": "x"})
         app = config_store.load_app_config()
         self.assertNotIn("bogus_field", app)
+
+    def test_save_match_snapshot_round_trips(self) -> None:
+        config_store.save_match_snapshot({"index": 1, "time_left": 100.0})
+        self.assertEqual(config_store.load_match_snapshot(), {"index": 1, "time_left": 100.0})
+
+    def test_save_match_snapshot_survives_a_transient_windows_sharing_violation(self) -> None:
+        """Sous Windows, remplacer le fichier peut échouer avec une
+        "violation de partage" si un autre processus l'a ouvert au même
+        instant (antivirus, surveillance de fichiers d'un IDE...) --
+        constaté en pratique. Ce verrou est transitoire, donc quelques
+        tentatives suffisent généralement."""
+        original_replace = Path.replace
+        call_count = {"n": 0}
+
+        def flaky_replace(self, target):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise OSError(32, "verrou transitoire simulé")
+            return original_replace(self, target)
+
+        with patch.object(Path, "replace", flaky_replace):
+            config_store.save_match_snapshot({"index": 2, "time_left": 50.0})
+
+        self.assertEqual(call_count["n"], 2)
+        self.assertEqual(config_store.load_match_snapshot(), {"index": 2, "time_left": 50.0})
+
+    def test_save_match_snapshot_never_raises_even_if_permanently_locked(self) -> None:
+        """Ne doit JAMAIS remonter d'exception : appelé à chaque tick
+        (voir MatchServer.tick_loop), une exception ici perturberait
+        aussi la diffusion de l'état aux écrans pour ce tick, pour une
+        raison qui n'a rien à voir avec eux. Un instantané manqué n'est
+        jamais grave -- le tick suivant, ~200ms plus tard, retente."""
+
+        def always_fails(self, target):
+            raise OSError(32, "verrou permanent simulé")
+
+        with patch.object(Path, "replace", always_fails):
+            config_store.save_match_snapshot({"index": 3, "time_left": 25.0})  # ne doit pas lever
 
 
 if __name__ == "__main__":

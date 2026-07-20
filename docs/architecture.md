@@ -346,15 +346,35 @@ PyInstaller/`customtkinter` documenté dans {doc}`dev-guide/index`.
 ## Résilience de la boucle de décompte
 
 `MatchServer.tick_loop()` capture désormais toute exception imprévue en
-son sein (journalisée avec la trace complète, voir plus bas) plutôt que
-de laisser mourir la boucle silencieusement -- filet de sécurité ajouté
-suite à un symptôme signalé en pratique : le chrono se figeait
-indéfiniment, sans aucune erreur visible, le reste du serveur
-(connexions, réponse aux commandes) continuant de fonctionner
-normalement à côté. Cause précise jamais identifiée avec certitude à ce
-jour, mais ce filet garantit que le décompte ne peut plus mourir
-silencieusement, quelle que soit la cause exacte, et que la prochaine
-occurrence laissera une trace exploitable dans le journal.
+son sein (journalisée avec la trace complète) plutôt que de laisser
+mourir la boucle silencieusement -- filet de sécurité ajouté suite à un
+symptôme signalé en pratique : le chrono se figeait indéfiniment, sans
+aucune erreur visible, le reste du serveur (connexions, réponse aux
+commandes) continuant de fonctionner normalement à côté.
+
+```{important}
+**Cause la plus probable identifiée** : sous Windows, remplacer un
+fichier (`Path.replace`) peut échouer avec une "violation de partage"
+si un autre processus a le fichier cible ouvert au même instant
+(antivirus, surveillance de fichiers d'un IDE, Git Bash...) -- une
+différence fondamentale avec la sémantique POSIX (Linux/macOS), où ceci
+n'arrive jamais. Observé une fois en pratique, précisément sur
+`config/match_state.json` -- écrit à chaque tick depuis la persistance
+après plantage (voir plus bas). Sans gestion d'erreur, cette exception
+tuait silencieusement `tick_loop` pour de bon : exactement le symptôme
+rapporté (gel permanent, aucune déconnexion, se produisant aussi bien
+en fenêtre graphique qu'en mode terminal -- sans lien réel avec le
+focus d'une fenêtre, malgré la corrélation observée au départ).
+
+Deux correctifs complémentaires : ce filet dans `tick_loop` (n'importe
+quelle exception, pas seulement celle-ci), et
+`config_store.save_match_snapshot` qui retente quelques fois avant
+d'abandonner proprement (jamais d'exception qui remonterait perturber
+la diffusion de l'état aux écrans pour ce tick). Testé concrètement :
+un échec transitoire (une fois puis réussite) est absorbé et le
+contenu final reste correct ; un échec permanent (toutes les tentatives
+échouent) est abandonné proprement, sans jamais lever d'exception.
+```
 
 ## Statut technique exposé via HTTP (`/api/status`)
 
@@ -403,6 +423,21 @@ volatile de la fenêtre.
   est volontairement exclu (se déclenche une fois par seconde dans les
   dernières secondes de chaque volée -- noierait le journal sans valeur
   diagnostique ajoutée).
+
+```{important}
+`configure_logging` prend un `console_level` séparé du niveau du fichier
+(toujours INFO par défaut, lui) -- la fenêtre graphique doit l'appeler
+avec `console_level=logging.INFO` explicitement, **pas** le défaut
+(`WARNING`, pensé pour un terminal silencieux par défaut, voir
+`fletchtime.__main__`, `-v`/`--verbose`). Un oubli de ce paramètre a
+laissé le widget de journal de la fenêtre silencieux en usage normal
+pendant un temps -- tous les journaux applicatifs ci-dessus sont à
+INFO, donc filtrés par le `WARNING` par défaut, exactement l'inverse de
+ce que ce widget est censé montrer. Confirmé par comparaison directe
+avant/après correctif : file d'attente vide avant, message présent
+après, avec un appel par ailleurs identique.
+```
+
 
 ```{important}
 Le mot de passe (action `authenticate`) n'est **jamais** journalisé -- le

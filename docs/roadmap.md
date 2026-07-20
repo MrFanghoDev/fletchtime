@@ -87,13 +87,30 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
   joue plus jamais de son -- c'est une simple vue visuelle, pas un écran
   destiné aux archers. `?mute=1` permet en plus de couper le son sur
   n'importe quel autre onglet ouvert en trop sur le même PC.
-- ~~**Chrono figé après focus de la fenêtre**~~ -- cause exacte non
-  identifiée avec certitude malgré l'investigation (déconnexions
-  écartées, statut toujours "en cours", gel permanent ne se résolvant
-  pas tout seul) -- mais `tick_loop` capture désormais toute exception
-  imprévue en son sein plutôt que de laisser mourir la boucle
-  silencieusement, journalisée avec sa trace complète. Si ça se
-  reproduit, le journal donnera enfin la cause exacte.
+- ~~**Chrono figé (sous Windows, pas lié au focus en réalité)**~~ --
+  cause la plus probable identifiée : sous Windows, remplacer un fichier
+  peut échouer avec une "violation de partage" si un autre processus l'a
+  ouvert au même instant (antivirus, surveillance de fichiers d'un
+  IDE...) -- observé une fois en pratique, précisément sur
+  `config/match_state.json`, écrit à chaque tick depuis la persistance
+  après plantage. Sans gestion d'erreur, ça tuait silencieusement
+  `tick_loop` pour de bon -- exactement le symptôme rapporté (gel
+  permanent, pas de déconnexion, se produisant aussi bien en GUI qu'en
+  headless, sans lien réel avec le focus). Deux correctifs : `tick_loop`
+  capture désormais toute exception imprévue en son sein (journalisée
+  avec sa trace complète, ne meurt plus silencieusement) et
+  `save_match_snapshot` retente quelques fois avant d'abandonner
+  proprement (jamais d'exception qui remonterait perturber la diffusion
+  de l'état aux écrans). Testé concrètement : échec transitoire récupéré,
+  échec permanent absorbé sans lever.
+- ~~**Journal absent du widget de la fenêtre**~~ -- vrai bug trouvé en
+  creusant le point précédent : `configure_logging` était appelé sans
+  préciser `console_level`, retombant sur le défaut `WARNING` (pensé
+  pour un terminal silencieux) -- qui filtrait justement tout ce que ce
+  widget est censé montrer (commandes, connexions, transitions, toutes
+  en `INFO`). Corrigé avec `console_level=INFO` explicite pour la
+  fenêtre. Confirmé par comparaison directe avant/après : file vide
+  avant, message présent après.
 - ~~**Données techniques dans la fenêtre**~~ -- fait : nouvel endpoint
   `/api/status` (les mêmes données déjà affichées dans `control.html`),
   affiché dans la fenêtre via sondage périodique. `ServerRuntime`

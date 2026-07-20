@@ -25,6 +25,7 @@ Pydroid reste nécessaire pour confirmer le rendu et l'ergonomie tactile.
 from __future__ import annotations
 
 import json
+import logging
 import queue
 import sys
 import threading
@@ -253,10 +254,17 @@ class FletchTimeApp(ctk.CTk):
         # Appelé APRÈS la redirection ci-dessus, volontairement : le
         # StreamHandler créé par configure_logging() se lie au sys.stderr
         # courant au moment de sa création -- fait après le remplacement,
-        # les journaux applicatifs (commandes reçues, pertes de connexion...)
-        # apparaissent donc aussi dans le widget de journal de la fenêtre,
-        # pas seulement dans le fichier persistant.
-        self.log_file = configure_logging(self.data_root / "logs")
+        # les journaux applicatifs (commandes reçues, pertes de connexion,
+        # transitions...) apparaissent donc aussi dans le widget de
+        # journal de la fenêtre, pas seulement dans le fichier persistant.
+        #
+        # console_level=INFO explicite, pas le défaut (WARNING, pensé
+        # pour un terminal silencieux par défaut -- voir
+        # fletchtime.__main__, -v/--verbose) : sans ce paramètre, le
+        # widget de journal de la fenêtre restait silencieux en usage
+        # normal, puisque tous les journaux applicatifs sont à INFO --
+        # exactement l'inverse de ce que ce widget est censé montrer.
+        self.log_file = configure_logging(self.data_root / "logs", console_level=logging.INFO)
 
         self.title(self._t("title"))
         self.geometry("820x600")
