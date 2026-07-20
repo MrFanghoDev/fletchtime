@@ -30,6 +30,7 @@ page d'accueil, pas ici) -- voir {doc}`user-guide/index`.
 specifications
 architecture
 roadmap
+remerciements
 user-guide/index
 dev-guide/index
 api-reference

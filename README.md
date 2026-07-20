@@ -135,6 +135,9 @@ Envie de proposer un correctif, une idée, ou juste signaler un bug ? Voir
 [CONTRIBUTING.md](CONTRIBUTING.md) (français/anglais) -- processus
 volontairement simple, flux classique fork/branche/Pull Request.
 
+Merci aux membres du club qui ont testé l'outil et proposé des idées au
+fil du développement -- voir [REMERCIEMENTS.md](REMERCIEMENTS.md).
+
 ## Qualité continue
 
 Chaque push et pull request déclenche `.github/workflows/test.yml` :

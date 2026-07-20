@@ -73,6 +73,12 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 
+- ~~**Remerciements**~~ -- structure prête, à compléter : `REMERCIEMENTS.md`
+  (modèle à remplir avec les noms), lié depuis le README et intégré à la
+  doc Sphinx ({doc}`remerciements` -- même contenu, pas dupliqué, via une
+  inclusion). Les membres du club ont aidé à tester et proposé des idées
+  au fil du développement -- reste à toi d'ajouter les noms.
+
 - ~~**Journal applicatif persistant**~~ -- fait : `MatchServer` journalise
   désormais chaque commande reçue, (dé)connexion, perte de connexion
   réseau et message malformé dans un fichier avec rotation
