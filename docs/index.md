@@ -27,6 +27,7 @@ page d'accueil, pas ici) -- voir {doc}`user-guide/index`.
 :maxdepth: 2
 :caption: Contenu
 
+premier-club
 specifications
 architecture
 roadmap
