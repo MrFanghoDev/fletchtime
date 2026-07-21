@@ -77,6 +77,20 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 
+- ~~**Titre de l'événement en haut à droite**~~ -- fait : repositionné de
+  centré à aligné à droite, en miroir de `#lane` (haut à gauche). Un
+  premier essai (juste déplacer le titre) restait insuffisant : avec un
+  titre long et un écran bas, le contenu centré verticalement (dont les
+  images de cible) pouvait quand même chevaucher le titre -- détecté en
+  testant rigoureusement les rectangles réels plutôt qu'en supposant que
+  le repositionnement suffisait. Corrigé en réservant une bande fixe en
+  haut de l'écran (`padding-top` sur `#root`) que le contenu centré ne
+  peut plus chevaucher, quelle que soit la longueur du titre ou la
+  hauteur de l'écran. Testé sur 4 combinaisons (écran large/bas, titre
+  long/court) : plus aucun chevauchement. S'applique aussi à l'aperçu de
+  la page de contrôle, un simple redimensionnement proportionnel du même
+  `display.html`.
+
 - ~~**Couleur orange trop marron**~~ -- fait : `#78350f` remplacé par
   `#b45309` -- plus saturé et plus lumineux, se lit comme un vrai orange
   plutôt qu'un brun terne, tout en restant cohérent avec la noirceur du
