@@ -1,0 +1,11 @@
+# blank_issues_enabled reste à true volontairement : CONTRIBUTING.md dit
+# explicitement "pas besoin de formulaire compliqué" -- ces modèles sont
+# des points de départ pratiques, pas une étape obligatoire.
+blank_issues_enabled: true
+contact_links:
+  - name: Signaler une faille de sécurité / Report a security vulnerability
+    url: https://github.com/MrFanghoDev/fletchtime/security/advisories/new
+    about: Ne pas ouvrir d'Issue publique pour ça -- voir SECURITY.md / Don't open a public Issue for this -- see SECURITY.md
+  - name: Documentation
+    url: https://mrfanghodev.github.io/fletchtime/
+    about: Guide premier club, manuel utilisateur, architecture technique / First-club guide, user manual, technical architecture

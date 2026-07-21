@@ -147,6 +147,9 @@ volontairement simple, flux classique fork/branche/Pull Request.
 Merci aux membres du club qui ont testé l'outil et proposé des idées au
 fil du développement -- voir [REMERCIEMENTS.md](REMERCIEMENTS.md).
 
+Une faille de sécurité à signaler ? Voir [SECURITY.md](SECURITY.md) --
+pas d'Issue publique pour ça.
+
 ## Qualité continue
 
 Chaque push et pull request déclenche `.github/workflows/test.yml` :

@@ -80,7 +80,7 @@ Projet porté par un club, pas une entreprise -- pas de pression, pas
 d'attente de réactivité instantanée. Sois patient·e avec les retours,
 bienveillant·e dans les échanges, et n'hésite pas si quelque chose dans
 cette doc (ou dans le code) n'est pas clair : c'est aussi un signal utile
-pour l'améliorer.
+pour l'améliorer. Voir aussi le [code de conduite](CODE_OF_CONDUCT.md).
 
 ---
 
@@ -164,4 +164,5 @@ starting anything substantial.
 This is a club-run project, not a company -- no pressure, no expectation of
 instant responsiveness. Please be patient with feedback, kind in
 discussions, and don't hesitate to flag if anything in this doc (or the
-code) isn't clear: that's useful signal for improving it too.
+code) isn't clear: that's useful signal for improving it too. See also the
+[Code of Conduct](CODE_OF_CONDUCT.md).
