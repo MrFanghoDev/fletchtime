@@ -94,6 +94,17 @@ class MatchServer:
         _app_config = config_store.load_app_config()
         self._sound_pack: str = _app_config["sound_pack"]
         self._countdown_tick_seconds: int = _app_config["countdown_tick_seconds"]
+        # Couleurs de fond par phase, diffusées à tous les écrans -- mêmes
+        # valeurs que les couleurs auparavant figées dans le CSS de
+        # display.html, personnalisables depuis la page de configuration
+        # (voir config_store.DEFAULT_APP_CONFIG).
+        self._phase_colors: dict[str, str] = {
+            "red": _app_config["color_red"],
+            "orange": _app_config["color_orange"],
+            "green": _app_config["color_green"],
+            "pause": _app_config["color_pause"],
+            "emergency": _app_config["color_emergency"],
+        }
         # Mot de passe protégeant les actions de contrôle et la
         # configuration -- vide = aucune protection (comportement historique
         # inchangé). Chargé une fois au démarrage, mis à jour via
@@ -319,6 +330,13 @@ class MatchServer:
                             saved = config_store.save_app_config(values)
                             self._sound_pack = saved["sound_pack"]
                             self._countdown_tick_seconds = saved["countdown_tick_seconds"]
+                            self._phase_colors = {
+                                "red": saved["color_red"],
+                                "orange": saved["color_orange"],
+                                "green": saved["color_green"],
+                                "pause": saved["color_pause"],
+                                "emergency": saved["color_emergency"],
+                            }
                             reply["ok"] = True
                             reply["values"] = saved
                         elif mode == "auth":
@@ -538,6 +556,7 @@ class MatchServer:
             "active_mode": self._current_mode_kind if match_in_progress else None,
             "sound_pack": self._sound_pack,
             "countdown_tick_seconds": self._countdown_tick_seconds,
+            "phase_colors": self._phase_colors,
             "auth_required": self._auth_required(websocket),
         }
 

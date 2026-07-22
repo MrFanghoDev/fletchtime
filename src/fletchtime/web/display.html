@@ -485,6 +485,11 @@
 
     if (isIdle) {
       root.className = (state && state.finished) ? "phase-finished" : "phase-wait";
+      // Efface tout style personnalisé laissé par la dernière phase
+      // active -- sans ça, une couleur personnalisée (voir plus bas)
+      // resterait affichée sur l'écran neutre, qui n'utilise que la
+      // classe CSS phase-wait/phase-finished, jamais un style en ligne.
+      root.style.backgroundColor = "";
       timeEl.style.display = "none";
       turnEl.style.display = "none";
       distEl.style.display = "none";
@@ -501,6 +506,19 @@
       distEl.style.display = "";
 
       root.className = "phase-" + state.phase;
+      // Couleur personnalisable depuis la page de configuration (voir
+      // config_store.DEFAULT_APP_CONFIG, match_server._phase_colors) --
+      // appliquée en style direct, par-dessus la couleur par défaut du
+      // CSS. Repli sur cette dernière si le serveur ne renvoie pas
+      // phase_colors pour une raison quelconque (ancienne version du
+      // serveur, par exemple), plutôt que de planter ou d'afficher du
+      // transparent. Le clignotement de la phase urgence (@keyframes
+      // blink) continue de fonctionner par-dessus : une animation CSS a
+      // priorité sur un style en ligne pour la propriété qu'elle anime,
+      // tant qu'elle est active -- vérifié avec un vrai rendu.
+      if (payload.phase_colors && payload.phase_colors[state.phase]) {
+        root.style.backgroundColor = payload.phase_colors[state.phase];
+      }
       timeEl.textContent = state.phase === "pause" ? "⏸" : Math.ceil(state.time_left);
       turnEl.textContent = state.phase === "pause"
         ? t(currentLanguage, "retrieving")

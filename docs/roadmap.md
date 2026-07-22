@@ -77,6 +77,22 @@ dépendent d'extensions compilées (Rust/C) peu fiables sur Pydroid 3, voir
 
 ## Backlog — à discuter / non encore programmé dans une étape précise
 
+- ~~**Couleurs de phase configurables**~~ -- fait : les 5 couleurs
+  (rouge/orange/vert/pause/urgence) sont personnalisables depuis un
+  nouveau panneau "Couleurs" dans la page de configuration, diffusées à
+  tous les écrans dès l'enregistrement (même comportement que le pack de
+  sons -- pas besoin d'un nouveau match). Deux vrais problèmes trouvés et
+  corrigés en testant : une couleur personnalisée restait affichée en
+  fuite sur l'écran neutre après la fin d'un match (corrigé en
+  réinitialisant le style à chaque passage en mode neutre), et le
+  panneau "Couleurs" et celui du son partagent le même mode de sauvegarde
+  (`app`), donc l'affichage de confirmation ne ciblait à tort que le
+  panneau Son (corrigé pour que les deux affichent la confirmation).
+  Testé avec un vrai navigateur : les 5 couleurs s'appliquent
+  correctement, le clignotement de la phase urgence continue de
+  fonctionner avec une couleur personnalisée, et testé bout en bout
+  (page de configuration → serveur → diffusion aux écrans).
+
 - ~~**Titre de l'événement en haut à droite**~~ -- fait : repositionné de
   centré à aligné à droite, en miroir de `#lane` (haut à gauche). Un
   premier essai (juste déplacer le titre) restait insuffisant : avec un

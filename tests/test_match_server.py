@@ -59,6 +59,9 @@ class FakeWebSocket:
     def last_sound_pack(self):
         return json.loads(self.sent[-1])["sound_pack"]
 
+    def last_phase_colors(self):
+        return json.loads(self.sent[-1])["phase_colors"]
+
     def last_config_saved_reply(self):
         for raw in reversed(self.sent):
             parsed = json.loads(raw)
@@ -804,6 +807,69 @@ class TestMatchServerConfigCommands(unittest.IsolatedAsyncioTestCase):
         )
         reply = self.control.last_config_saved_reply()
         self.assertTrue(reply["ok"])
+
+    async def test_default_phase_colors_match_historical_css_values(self) -> None:
+        """Mêmes valeurs que celles auparavant figées dans le CSS de
+        display.html -- rien ne doit changer visuellement tant que
+        personne ne les personnalise."""
+        colors = self.control.last_phase_colors()
+        self.assertEqual(
+            colors,
+            {
+                "red": "#7f1d1d",
+                "orange": "#b45309",
+                "green": "#14532d",
+                "pause": "#374151",
+                "emergency": "#dc2626",
+            },
+        )
+
+    async def test_saving_phase_colors_broadcasts_immediately_to_all_clients(self) -> None:
+        display = FakeWebSocket()
+        await self.server.register(display)
+
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "app",
+                    "values": {"color_orange": "#ff8800"},
+                }
+            ),
+            self.control,
+        )
+
+        reply = self.control.last_config_saved_reply()
+        self.assertTrue(reply["ok"])
+        self.assertEqual(reply["values"]["color_orange"], "#ff8800")
+        # un écran déjà connecté doit recevoir la nouvelle couleur tout de
+        # suite, même sans match en cours -- même comportement que le pack
+        # de sons.
+        self.assertEqual(display.last_phase_colors()["orange"], "#ff8800")
+        # les autres couleurs restent inchangées
+        self.assertEqual(display.last_phase_colors()["red"], "#7f1d1d")
+
+    async def test_invalid_phase_color_is_rejected(self) -> None:
+        await self.server.handle_command(
+            json.dumps(
+                {
+                    "action": "save_config",
+                    "mode": "app",
+                    "values": {"color_red": "pas-une-couleur"},
+                }
+            ),
+            self.control,
+        )
+        reply = self.control.last_config_saved_reply()
+        self.assertFalse(reply["ok"])
+        # la couleur invalide n'a pas dû être appliquée malgré l'échec --
+        # un nouvel écran qui se connecte doit recevoir la valeur
+        # d'origine, pas invalide (self.control.last_phase_colors()
+        # pointerait à tort sur la réponse d'erreur elle-même, qui n'a pas
+        # ce champ, pas sur un état diffusé).
+        display = FakeWebSocket()
+        await self.server.register(display)
+        self.assertEqual(display.last_phase_colors()["red"], "#7f1d1d")
 
 
 class TestMatchServerAuth(unittest.IsolatedAsyncioTestCase):

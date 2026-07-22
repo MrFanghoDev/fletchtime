@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 import time
 import tomllib
@@ -60,8 +61,26 @@ GUI_TOML = CONFIG_DIR / "gui.toml"
 APP_COMMENTS: dict[str, str] = {
     "sound_pack": "Nom du dossier dans web/assets/sounds/packs/ à utiliser (ex. classic)",
     "countdown_tick_seconds": "Nombre de secondes avant la fin d'un décompte où countdown_tick est émis (0 = désactivé)",
+    "color_red": "Couleur de fond de l'écran en phase rouge (préparation), format #rrggbb",
+    "color_orange": "Couleur de fond de l'écran en phase orange (fin de tir proche), format #rrggbb",
+    "color_green": "Couleur de fond de l'écran en phase verte (tir), format #rrggbb",
+    "color_pause": "Couleur de fond de l'écran en pause (récupération des flèches), format #rrggbb",
+    "color_emergency": "Couleur de fond de l'écran en urgence (clignote), format #rrggbb",
 }
-DEFAULT_APP_CONFIG: dict[str, Any] = {"sound_pack": "classic", "countdown_tick_seconds": 5}
+DEFAULT_APP_CONFIG: dict[str, Any] = {
+    "sound_pack": "classic",
+    "countdown_tick_seconds": 5,
+    # Mêmes valeurs que les couleurs auparavant figées dans le CSS de
+    # display.html -- rien ne change visuellement tant que personne ne
+    # les personnalise depuis la page de configuration.
+    "color_red": "#7f1d1d",
+    "color_orange": "#b45309",
+    "color_green": "#14532d",
+    "color_pause": "#374151",
+    "color_emergency": "#dc2626",
+}
+
+_HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 GUI_COMMENTS: dict[str, str] = {
     "theme": 'Thème de la fenêtre : "system" (suit le thème du système), "light" ou "dark"',
@@ -160,6 +179,9 @@ def save_app_config(overrides: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(
             "countdown_tick_seconds must be >= 0, got " f"{merged['countdown_tick_seconds']}"
         )
+    for key in ("color_red", "color_orange", "color_green", "color_pause", "color_emergency"):
+        if not _HEX_COLOR_RE.match(merged[key]):
+            raise ValueError(f"{key} must be a #rrggbb hex color, got {merged[key]!r}")
     _write_toml(APP_TOML, merged, APP_COMMENTS)
     return merged
 

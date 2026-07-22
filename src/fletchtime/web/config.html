@@ -197,6 +197,37 @@
     </details>
 
     <details class="panel">
+      <summary><span data-i18n="configColorsTitle">Couleurs</span><span class="chevron">▶</span></summary>
+      <div class="panel-body">
+        <div class="field">
+          <label for="app-color_red" data-i18n="cfg_color_red">Rouge (préparation)</label>
+          <input type="color" id="app-color_red">
+        </div>
+        <div class="field">
+          <label for="app-color_orange" data-i18n="cfg_color_orange">Orange (fin de tir proche)</label>
+          <input type="color" id="app-color_orange">
+        </div>
+        <div class="field">
+          <label for="app-color_green" data-i18n="cfg_color_green">Vert (tir)</label>
+          <input type="color" id="app-color_green">
+        </div>
+        <div class="field">
+          <label for="app-color_pause" data-i18n="cfg_color_pause">Pause (récupération des flèches)</label>
+          <input type="color" id="app-color_pause">
+        </div>
+        <div class="field">
+          <label for="app-color_emergency" data-i18n="cfg_color_emergency">Urgence (clignote)</label>
+          <input type="color" id="app-color_emergency">
+        </div>
+        <span class="hint" data-i18n="configColorsHint">S'applique à tous les écrans dès l'enregistrement, y compris pendant un match en cours.</span>
+        <div class="panel-footer">
+          <button class="btn-save" onclick="saveConfig('app')" data-i18n="configSave">Enregistrer</button>
+          <span class="save-status" id="app-colors-status"></span>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel">
       <summary><span data-i18n="configSecurityTitle">Sécurité</span><span class="chevron">▶</span></summary>
       <div class="panel-body">
         <div class="field">
@@ -241,6 +272,10 @@
     ["target_image_recurve", "str"], ["target_image_compound", "str"],
     ["turn_mode", "turn_mode"], ["alternate_relay_order_each_series", "bool"],
   ];
+  // Un seul tableau, pas [cle, type] comme INDOOR_FIELDS/FLINT_FIELDS :
+  // toujours des couleurs (input type="color"), pas besoin de distinguer
+  // plusieurs types de champ ici.
+  const COLOR_FIELDS = ["color_red", "color_orange", "color_green", "color_pause", "color_emergency"];
   const FLINT_FIELDS = [
     ["units", "int"], ["standard_ends_per_unit", "int"], ["arrows_per_standard_end", "int"],
     ["standard_prep_time", "float"], ["standard_shoot_time", "float"], ["standard_orange_warning_time", "float"],
@@ -411,6 +446,9 @@
           }
           select.value = data.app.sound_pack;
           document.getElementById("app-countdown_tick_seconds").value = data.app.countdown_tick_seconds;
+          COLOR_FIELDS.forEach((key) => {
+            document.getElementById("app-" + key).value = data.app[key];
+          });
         }
         if (data.auth) updateAuthHint(data.auth.password_set);
       } else if (data.type === "state") {
@@ -436,13 +474,24 @@
           statusEl.dataset.lockedByActiveMode = isActive ? "1" : "";
         });
       } else if (data.type === "config_saved") {
-        const statusEl = document.getElementById(data.mode + "-status");
+        // "app" est partagé entre les panneaux Son et Couleurs (même
+        // fichier app.toml, voir saveConfig) -- les deux doivent afficher
+        // la confirmation, pas seulement celui qui a déclenché la
+        // sauvegarde, sans quoi enregistrer depuis "Couleurs" semblerait
+        // ne rien faire (la confirmation n'apparaîtrait que sur "Son").
+        const statusIds = data.mode === "app" ? ["app-status", "app-colors-status"] : [data.mode + "-status"];
+        const statusEls = statusIds.map((id) => document.getElementById(id)).filter(Boolean);
         if (data.ok) {
-          statusEl.textContent = t(currentLanguage, "configSaveOk");
-          statusEl.className = "save-status ok";
+          statusEls.forEach((el) => {
+            el.textContent = t(currentLanguage, "configSaveOk");
+            el.className = "save-status ok";
+          });
           if (data.values && data.mode === "app") {
             document.getElementById("app-sound_pack").value = data.values.sound_pack;
             document.getElementById("app-countdown_tick_seconds").value = data.values.countdown_tick_seconds;
+            COLOR_FIELDS.forEach((key) => {
+              document.getElementById("app-" + key).value = data.values[key];
+            });
           } else if (data.values && data.mode === "auth") {
             document.getElementById("auth-password").value = "";
             updateAuthHint(data.values.password_set);
@@ -455,8 +504,10 @@
             : data.error === "auth_required"
             ? t(currentLanguage, "authError")
             : (data.error || "");
-          statusEl.textContent = t(currentLanguage, "configSaveError") + " " + errorText;
-          statusEl.className = "save-status error";
+          statusEls.forEach((el) => {
+            el.textContent = t(currentLanguage, "configSaveError") + " " + errorText;
+            el.className = "save-status error";
+          });
         }
       }
     };
@@ -488,11 +539,14 @@
 
   function saveConfig(mode) {
     if (mode === "app") {
-      send({action: "save_config", mode: "app",
-            values: {
-              sound_pack: document.getElementById("app-sound_pack").value,
-              countdown_tick_seconds: parseInt(document.getElementById("app-countdown_tick_seconds").value || "5", 10),
-            }});
+      const values = {
+        sound_pack: document.getElementById("app-sound_pack").value,
+        countdown_tick_seconds: parseInt(document.getElementById("app-countdown_tick_seconds").value || "5", 10),
+      };
+      COLOR_FIELDS.forEach((key) => {
+        values[key] = document.getElementById("app-" + key).value;
+      });
+      send({action: "save_config", mode: "app", values: values});
       return;
     }
     const values = collectForm(mode, mode === "indoor" ? INDOOR_FIELDS : FLINT_FIELDS);

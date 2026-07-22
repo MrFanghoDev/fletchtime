@@ -79,7 +79,11 @@ granularité de l'ordonnanceur est plus grossière que sous Linux). Voir
   "event_title": "Concours FFTL Indoor -- Février 2026",
   "connected_lanes": ["1", "2", "3"],
   "active_mode": "indoor",
-  "sound_pack": "classic"
+  "sound_pack": "classic",
+  "phase_colors": {
+    "red": "#7f1d1d", "orange": "#b45309", "green": "#14532d",
+    "pause": "#374151", "emergency": "#dc2626"
+  }
 }
 ```
 
@@ -87,6 +91,17 @@ granularité de l'ordonnanceur est plus grossière que sous Linux). Voir
 écran ne fait qu'interpréter ce payload ; toute la logique de décision (quand
 passer à l'orange, quand enchaîner la volée suivante, quand mettre en pause
 entre deux relais, etc.) vit côté serveur, dans le moteur de séquencement.
+
+```{note}
+`phase_colors` suit exactement le même chemin que `sound_pack` :
+personnalisable depuis la page de configuration, diffusé à tous les
+écrans dès l'enregistrement (pas besoin d'un nouveau match), appliqué
+côté client en style direct sur `#root` (`display.html`), avec repli sur
+la couleur par défaut du CSS si absent. Le clignotement de la phase
+urgence (`@keyframes blink`) continue de fonctionner par-dessus une
+couleur personnalisée -- une animation CSS a priorité sur un style en
+ligne pour la propriété qu'elle anime, tant qu'elle est active.
+```
 
 ## Moteur de séquencement
 
