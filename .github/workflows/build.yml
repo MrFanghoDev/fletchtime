@@ -129,12 +129,15 @@ jobs:
   # -- Exécutables autoporteurs (PyInstaller) -------------------------------
 
   build-executables:
-    # Sur push ou lancement manuel -- jamais à la publication d'une Release
-    # (les exécutables ont déjà été construits et archivés pendant le run
-    # déclenché par le push du tag lui-même, inutile de reconstruire).
+    # ⚠️ S'exécute aussi sur l'événement `release` (voir CLAUDE.md /
+    # fletchscore -- même bug déjà corrigé là-bas) : une Release publiée
+    # séparément (via l'UI GitHub) après coup sur un tag déjà poussé
+    # n'arrive PAS forcément dans la même exécution CI que le push de ce
+    # tag. Exclure `release` ici ferait skip ce job silencieusement dans
+    # ce cas, et `archive-on-release` (qui en dépend) resterait skip aussi.
     # Ignore aussi les commits du bot de formatage automatique (voir
     # build-package plus haut et docs.yml pour l'explication complète).
-    if: github.event_name != 'release' && (github.event_name != 'push' || !contains(github.event.head_commit.message, 'corrections automatiques (black + ruff)'))
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, 'corrections automatiques (black + ruff)')
     strategy:
       fail-fast: false  # une plateforme qui échoue ne doit pas annuler les
                          # autres -- important pour comparer leurs résultats
@@ -247,7 +250,7 @@ jobs:
 
   archive-on-release:
     needs: [build-executables, build-package]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

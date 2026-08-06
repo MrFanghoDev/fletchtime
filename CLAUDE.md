@@ -96,10 +96,18 @@ En plus de la checklist générique (voir le `CLAUDE.md` global) :
 
 ## Erreurs déjà commises, à ne pas répéter
 
-*Section à tenir à jour au fil des sessions -- vide pour l'instant car ce
-`CLAUDE.md` est reconstitué sans historique de session Claude propre à
-ce dépôt. Voir aussi celui de FletchScore : plusieurs leçons là-bas
-(déclencheurs CI `release`/`push`, dépendance non installée en CI)
-concernent des workflows très proches des siens -- vérifier si elles
-s'appliquent aussi ici avant de les considérer réglées uniquement côté
-FletchScore.*
+- **`build.yml::build-executables` excluait `release`, même bug que
+  FletchScore.** Corrigé le 2026-08-06 sans attendre un vrai incident ici
+  (contrairement à FletchScore où le bug a été détecté après coup, en
+  vérifiant la cohérence entre les trois dépôts frères) : le job supposait
+  qu'une Release GitHub arrive toujours dans la même exécution CI que le
+  push du tag correspondant -- faux si la Release est publiée séparément
+  (via l'UI) après coup sur un tag déjà poussé. Dans ce cas,
+  `build-executables` restait skip, et `archive-on-release` (qui en
+  dépend via `needs:`) aussi -- silencieusement, sans erreur dans les
+  logs. `archive-on-release` avait le même souci (condition uniquement sur
+  `refs/tags/v`, sans le OR sur `event_name == 'release'`). Alignés tous
+  les deux sur la version corrigée de FletchScore. Non vérifié en
+  exécution réelle (impossible de déclencher une vraie Release GitHub
+  dans cet environnement) -- à confirmer à la prochaine Release publiée
+  séparément d'un push de tag.
