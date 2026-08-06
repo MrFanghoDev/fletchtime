@@ -25,8 +25,14 @@ mode `--headless` si absente), déployé sur un réseau local multi-écrans.
   réelle du club (pas de PC disponible à l'origine du projet). C'est ce
   qui explique `websockets` plutôt que FastAPI/uvicorn, et `tomllib`
   (stdlib depuis 3.11) plutôt que PyYAML pour la config.
-- **Docstrings en anglais** dans le code source (`src/`) ; **commentaires
-  utilisateur en français** (fichiers TOML, README destinés au club).
+- **Tout en français** : docstrings dans le code source (`src/`) comme
+  commentaires utilisateur (fichiers TOML, README destinés au club).
+  Ancienne règle "docstrings en anglais" abandonnée le 2026-08-06 (même
+  décision que côté FletchScore, voir son CLAUDE.md) -- incohérente avec
+  le reste du projet déjà tout en français. Le module `engine/` (et une
+  partie de `server/`) garde ses docstrings existantes en anglais, pas de
+  reprise rétroactive ; nouvelles docstrings partout en français
+  désormais, y compris dans `engine/`.
 - **Un test qui échoue avant livraison n'est pas un problème** -- c'est le
   système qui fonctionne. Ne jamais contourner un test qui échoue sans
   comprendre pourquoi.
