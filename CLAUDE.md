@@ -69,6 +69,13 @@ mode `--headless` si absente), déployé sur un réseau local multi-écrans.
   `fletchtime.gui` (importé en `try/except`) échouerait silencieusement
   sur toutes les plateformes, pas seulement macOS.
 
+## Publication (PyPI/TestPyPI)
+
+Se fait par **trusted publishing** (OIDC GitHub Actions <-> PyPI, pas de
+token API stocké en secret GitHub) -- confirmé par l'utilisateur
+2026-08-06, cohérent avec `gh secret list` qui ne montre aucun secret
+sur ce dépôt.
+
 ## Vérifications spécifiques avant de livrer
 
 En plus de la checklist générique (voir le `CLAUDE.md` global) :
