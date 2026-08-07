@@ -36,10 +36,11 @@ mode `--headless` si absente), déployé sur un réseau local multi-écrans.
 - **Un test qui échoue avant livraison n'est pas un problème** -- c'est le
   système qui fonctionne. Ne jamais contourner un test qui échoue sans
   comprendre pourquoi.
-- `tkinter`/`customtkinter` non installés dans l'environnement de travail
-  habituel -- même précaution que pour FletchScore : tout module qui doit
-  rester testable ici doit pouvoir s'importer sans eux (repli
-  `--headless` déjà prévu par le code, `fletchtime.gui` importé en
+- `tkinter`/`customtkinter` **non installés par défaut** dans
+  l'environnement de travail habituel -- même précaution que pour
+  FletchScore : tout module qui doit rester testable sans eux doit
+  pouvoir s'importer sans eux (repli `--headless` déjà prévu par le
+  code, `fletchtime.gui` importé en
   `try/except` dans `main()`).
 - **Deux ports réseau séparés et tous deux nécessaires** : 8000 HTTP,
   8765 WebSocket. Dans un conteneur/VM, les deux doivent être exposés --
@@ -88,10 +89,12 @@ En plus de la checklist générique (voir le `CLAUDE.md` global) :
 
 - Mettre à jour `docs/roadmap.md` et `docs/architecture.md` si le
   changement touche à un mécanisme déjà documenté.
-- GUI (customtkinter) -- capture d'écran réelle ou scénario réel ; pages
-  web servies (contrôle, affichage) -- Playwright ou vérification réseau
-  réelle (les deux ports, pas juste HTTP), pas une relecture du
-  HTML/JS/CSS.
+- GUI (customtkinter) -- capture d'écran réelle ou scénario réel
+  (possible depuis le 2026-08-07 même sans écran physique, voir le
+  `CLAUDE.md` global section Environnement -- `apk add python3-tkinter
+  tk xvfb xdotool scrot` + `Xvfb`) ; pages web servies (contrôle,
+  affichage) -- Playwright ou vérification réseau réelle (les deux
+  ports, pas juste HTTP), pas une relecture du HTML/JS/CSS.
 - Nettoyage particulier à ce dépôt (voir `.gitignore` pour la liste
   complète et le pourquoi de chaque exclusion) : `config/auth.toml`
   (secret réel), `config/gui.toml` et `config/match_state.json`
