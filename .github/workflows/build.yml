@@ -111,7 +111,19 @@ jobs:
 
   publish-pypi:
     needs: build-package
-    if: github.event_name == 'release'
+    # ⚠️ Ne pas se fier uniquement à `release` : la Release GitHub créée
+    # automatiquement par `archive-on-release` (job plus bas) utilise le
+    # GITHUB_TOKEN du workflow -- GitHub ne redéclenche jamais un autre
+    # workflow à partir d'un événement produit par ce token (protection
+    # anti-boucle), donc `release: published` ne se déclenche jamais dans
+    # ce cas précis et ce job restait skip silencieusement. Se déclenche
+    # donc aussi directement sur le push de tag, comme
+    # `build-executables`/`archive-on-release`. Bug détecté sur la
+    # release v0.3.1 (jamais publiée sur PyPI malgré une Release GitHub
+    # complète avec tous les fichiers joints) -- même bug latent dans
+    # FletchScore, masqué là-bas seulement parce que les Releases y ont
+    # toujours été recréées à la main plutôt que par le bot.
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment:
       name: pypi

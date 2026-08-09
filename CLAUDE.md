@@ -120,3 +120,26 @@ En plus de la checklist générique (voir le `CLAUDE.md` global) :
   exécution réelle (impossible de déclencher une vraie Release GitHub
   dans cet environnement) -- à confirmer à la prochaine Release publiée
   séparément d'un push de tag.
+
+- **Suite du point précédent, confirmé en conditions réelles le
+  2026-08-09 (release v0.3.1) : `publish-pypi` ne se déclenchait jamais
+  tout seul.** `archive-on-release` crée bien la Release GitHub
+  automatiquement au push du tag, avec tous les fichiers joints (paquet
+  + exécutables) -- mais avec le `GITHUB_TOKEN` du workflow lui-même.
+  GitHub a une protection anti-boucle documentée : un événement produit
+  par `GITHUB_TOKEN` ne redéclenche jamais un autre workflow. Résultat :
+  `release: published` ne se déclenchait jamais dans ce cas précis, et
+  `publish-pypi` (condition `github.event_name == 'release'` stricte)
+  restait skip silencieusement -- v0.3.1 a eu une Release GitHub
+  complète mais n'est jamais montée sur PyPI. Repéré en comparant avec
+  FletchScore, où la publication PyPI a toujours fonctionné, mais
+  seulement parce que les Releases y étaient recréées à la main
+  (compte humain, pas de restriction anti-boucle) -- même bug latent
+  là-bas, jamais exercé. Corrigé en faisant tourner `publish-pypi`
+  directement sur le push de tag, comme `build-executables`/
+  `archive-on-release`, plutôt que d'attendre l'événement `release`.
+  Leçon générale : une Release créée par le bot du workflow ne peut pas
+  servir de déclencheur pour un autre job du même dépôt -- soit tout
+  faire dans le même run (le choix fait ici), soit utiliser un jeton
+  personnel (PAT) à la place de `GITHUB_TOKEN` pour cette création de
+  Release.
