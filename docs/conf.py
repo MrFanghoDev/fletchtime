@@ -5,8 +5,8 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 
 project = "FletchTime"
-copyright = "2026, [Nom du club]"
-author = "[Nom du club]"
+copyright = "2026, Les Aigles 77 / Archers Libres de Fontaine le Port"
+author = "MrFanghoDev"
 try:
     # Version dérivée du tag git via setuptools_scm (voir pyproject.toml) --
     # lue depuis le paquet installé, jamais codée en dur ici. Nécessite que
@@ -22,18 +22,20 @@ version = release  # les deux valeurs Sphinx standard, identiques ici par simpli
 extensions = [
     "myst_parser",
     "sphinx.ext.autosectionlabel",
-    "sphinx.ext.autodoc",       # documentation de l'API Python interne
-    "sphinx.ext.napoleon",      # comprend les docstrings de style Google/NumPy
-    "sphinx.ext.viewcode",      # lien "voir le code source" sur chaque objet documenté
-    "sphinxcontrib.mermaid",    # diagrammes ```mermaid dans les fichiers .md
-    "sphinx_design",            # cartes/grilles/onglets pour aérer la mise en page
+    "sphinx.ext.autodoc",  # documentation de l'API Python interne
+    "sphinx.ext.napoleon",  # comprend les docstrings de style Google/NumPy
+    "sphinx.ext.viewcode",  # lien "voir le code source" sur chaque objet documenté
+    "sphinxcontrib.mermaid",  # diagrammes ```mermaid dans les fichiers .md
+    "sphinx_design",  # cartes/grilles/onglets pour aérer la mise en page
 ]
 
 # -- Documentation de l'API Python (autodoc) ----------------------------------
 # Nécessite que le paquet fletchtime soit installé (pip install -e .) avant
 # de construire la doc -- déjà fait par .github/workflows/docs.yml.
 autodoc_member_order = "bysource"  # ordre du fichier source, pas alphabétique
-autodoc_typehints = "description"  # affiche les annotations de type dans la description, pas la signature
+autodoc_typehints = (
+    "description"  # affiche les annotations de type dans la description, pas la signature
+)
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 
@@ -43,12 +45,12 @@ source_suffix = {
 }
 
 myst_enable_extensions = [
-    "colon_fence",      # blocs ::: pour les admonitions (note, warning, etc.)
+    "colon_fence",  # blocs ::: pour les admonitions (note, warning, etc.)
     "deflist",
     "fieldlist",
     "attrs_inline",
     "tasklist",
-    "substitution",     # active {{ version }} etc. dans les fichiers .md
+    "substitution",  # active {{ version }} etc. dans les fichiers .md
 ]
 
 myst_substitutions = {"version": release}

@@ -25,6 +25,8 @@ const TRANSLATIONS = {
     homeManualButton: "Consulter le manuel",
     homeFooter: "FletchTime — logiciel libre pour la FFTL.",
     homeFooterDevLink: "Projet GitHub",
+    siteFooterCredit: "Développé pour les Archers Libres de Fontaine-le-Port ·",
+    siteFooterLicense: "Licence GPLv3",
     laneInputLabel: "Numéro ou nom du pas de tir",
     laneInputPlaceholder: "1, A, Nord...",
 
@@ -254,6 +256,8 @@ const TRANSLATIONS = {
     homeManualButton: "View the manual",
     homeFooter: "FletchTime — free software for FFTL.",
     homeFooterDevLink: "GitHub project",
+    siteFooterCredit: "Built for Archers Libres de Fontaine-le-Port ·",
+    siteFooterLicense: "GPLv3 License",
     laneInputLabel: "Shooting lane number or name",
     laneInputPlaceholder: "1, A, North...",
 
