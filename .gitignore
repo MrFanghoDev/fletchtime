@@ -36,6 +36,11 @@ config/gui.toml
 config/match_state.json
 config/match_state.json.tmp
 
+# Journal applicatif (voir fletchtime/logging_setup.py) -- propre à
+# chaque installation, jamais versionné. Manquait ici jusqu'ici (trouvé
+# en écrivant le même mécanisme côté FletchScore, issue #18).
+logs/
+
 # Assets propres à un club (logo, banderoles) -- jamais versionnés dans le
 # dépôt public partagé avec la FFTL, voir docs/architecture.md. Le README
 # explicatif est copié depuis src/fletchtime/web/_defaults/ au premier
