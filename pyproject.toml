@@ -24,7 +24,7 @@ include = ["fletchtime*"]
 
 [tool.setuptools.package-data]
 "fletchtime.web" = [
-    "*.html", "*.js", "*.svg",
+    "*.html", "*.js", "*.svg", "*.ico",
     "screenshots/*.png",
     "_defaults/targets/*.jpg",
     "_defaults/sounds/packs/classic/*.wav",
