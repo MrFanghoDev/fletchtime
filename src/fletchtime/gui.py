@@ -72,6 +72,8 @@ _TRANSLATIONS = {
         "start": "Démarrer",
         "stop": "Arrêter",
         "quit": "Quitter",
+        "homeWelcome": "Bienvenue sur FletchTime",
+        "homeTagline": "Chronométrage open source pour compétitions d'archerie FFTL -- Indoor & Flint",
         "home": "Accueil",
         "control": "Contrôle",
         "display": "Affichage",
@@ -132,6 +134,8 @@ _TRANSLATIONS = {
         "start": "Start",
         "stop": "Stop",
         "quit": "Quit",
+        "homeWelcome": "Welcome to FletchTime",
+        "homeTagline": "Open source timing software for FFTL archery competitions -- Indoor & Flint",
         "home": "Home",
         "control": "Control",
         "display": "Display",
@@ -536,6 +540,19 @@ class FletchTimeApp(ctk.CTk):
     # -- écran Accueil : statut, démarrer/arrêter, adresse, liens rapides --
 
     def _construire_ecran_accueil(self, parent: ctk.CTkBaseClass) -> None:
+        # Même formule que fletchscore/gui/ecran_accueil.py::_construire_bienvenue
+        # (titre + tagline courte) -- la tagline reprend mot pour mot celle
+        # déjà utilisée sur la page web (web/i18n.js::homeTagline), pas de
+        # nouveau texte inventé. Dupliquée plutôt que partagée (aucune
+        # infrastructure commune entre i18n.js et _TRANSLATIONS ici) -- à
+        # garder synchronisée si le texte change d'un côté.
+        ctk.CTkLabel(
+            parent, text=self._t("homeWelcome"), font=ctk.CTkFont(size=22, weight="bold")
+        ).pack(anchor="w", pady=(0, 5))
+        ctk.CTkLabel(parent, text=self._t("homeTagline"), text_color="gray60").pack(
+            anchor="w", pady=(0, 15)
+        )
+
         statut_frame = ctk.CTkFrame(parent)
         statut_frame.pack(fill="x", pady=(0, 8))
 
