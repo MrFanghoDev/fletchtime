@@ -57,7 +57,7 @@ from fletchtime.logging_setup import configure_logging
 from fletchtime.runtime import ServerRuntime
 from fletchtime.server import config_store
 
-SECTIONS = ["accueil", "affichage", "reseau", "statut_technique", "journal"]
+SECTIONS = ["accueil", "affichage", "reseau", "statut_technique", "journal", "aide"]
 
 # Même fichier que celui utilisé comme icône de fletchtime.spec -- pas de
 # nouvel asset à ajouter, seulement "*.ico" au package-data pip (voir
@@ -91,6 +91,14 @@ _TRANSLATIONS = {
         "shortcutControlWebDesc": "Ouvrir le poste de contrôle dans le navigateur",
         "shortcutDisplayWeb": "Écran d'affichage ↗",
         "shortcutDisplayWebDesc": "Ouvrir l'écran d'affichage (lane 1) dans le navigateur",
+        "help": "Aide",
+        "helpIntro": "Ce résumé couvre l'essentiel. Pour le détail complet, consulte le manuel utilisateur :",
+        "helpManualButton": "Ouvrir le manuel utilisateur",
+        "helpHomeDesc": "Statut du serveur (démarré/arrêté), adresse à donner aux archers, et raccourcis vers les autres écrans et les pages web.",
+        "helpDisplayDesc": "Choisis la lane à ouvrir et si le son doit être coupé, puis lance l'écran d'affichage dans le navigateur.",
+        "helpNetworkDesc": "Modifie les ports HTTP/WebSocket du serveur -- utile pour faire tourner plusieurs salles de compétition sur le même PC.",
+        "helpTechDesc": "Écrans connectés, mode actif, phase en cours, pack de sons, mot de passe configuré ou non.",
+        "helpLogDesc": "Historique des commandes reçues, connexions/déconnexions et erreurs -- utile pour comprendre après coup ce qui s'est passé.",
         "status_stopped": "Serveur arrêté",
         "status_running": "Serveur en cours -- {ip}",
         "log_title": "Journal",
@@ -143,6 +151,14 @@ _TRANSLATIONS = {
         "shortcutControlWebDesc": "Open the control station in your browser",
         "shortcutDisplayWeb": "Display screen ↗",
         "shortcutDisplayWebDesc": "Open the display screen (lane 1) in your browser",
+        "help": "Help",
+        "helpIntro": "This summary covers the essentials. For full detail, see the user manual:",
+        "helpManualButton": "Open the user manual",
+        "helpHomeDesc": "Server status (started/stopped), address to share with archers, and shortcuts to the other screens and web pages.",
+        "helpDisplayDesc": "Choose which lane to open and whether to mute it, then launch the display screen in your browser.",
+        "helpNetworkDesc": "Change the server's HTTP/WebSocket ports -- useful for running several competition rooms on the same PC.",
+        "helpTechDesc": "Connected screens, active mode, current phase, sound pack, whether a password is configured.",
+        "helpLogDesc": "History of received commands, connections/disconnections and errors -- useful to understand what happened afterwards.",
         "status_stopped": "Server stopped",
         "status_running": "Server running -- {ip}",
         "log_title": "Log",
@@ -364,6 +380,7 @@ class FletchTimeApp(ctk.CTk):
             "reseau": self._t("network"),
             "statut_technique": self._t("techStatusTitle"),
             "journal": self._t("log_title"),
+            "aide": self._t("help"),
         }[cle]
 
     # -- construction de l'interface -------------------------------------
@@ -511,6 +528,8 @@ class FletchTimeApp(ctk.CTk):
             self._construire_ecran_statut_technique(self.cadre_section)
         elif cle == "journal":
             self._construire_ecran_journal(self.cadre_section)
+        elif cle == "aide":
+            self._construire_ecran_aide(self.cadre_section)
         else:
             raise ValueError(f"Section inconnue : {cle}")
 
@@ -760,6 +779,49 @@ class FletchTimeApp(ctk.CTk):
             self.log_box.insert("end", ligne + "\n")
         self.log_box.see("end")
         self.log_box.configure(state="disabled")
+
+    # -- écran Aide : résumé rapide par écran + lien vers le manuel --------
+
+    def _construire_ecran_aide(self, parent: ctk.CTkBaseClass) -> None:
+        """Sur le modèle de fletchscore/gui/ecran_aide.py -- lien vers la
+        doc complète en haut, puis un résumé (titre + description courte)
+        par écran. Lien vers manual.html (déjà existant, niveau
+        utilisateur) plutôt que la doc développeur publiée -- plus proche
+        de ce que cherche un bénévole non-technique en pleine compétition
+        (voir issue #11)."""
+        cadre_lien = ctk.CTkFrame(parent)
+        cadre_lien.pack(fill="x", pady=(0, 15))
+
+        ctk.CTkLabel(cadre_lien, text=self._t("helpIntro"), wraplength=500, justify="left").pack(
+            anchor="w", padx=15, pady=(15, 5)
+        )
+
+        ctk.CTkButton(
+            cadre_lien,
+            text=self._t("helpManualButton"),
+            command=lambda: self._open_link("/manual.html"),
+        ).pack(anchor="w", padx=15, pady=(0, 15))
+
+        zone = ctk.CTkScrollableFrame(parent, fg_color="transparent")
+        zone.pack(fill="both", expand=True)
+
+        sections_aide = [
+            ("accueil", "helpHomeDesc"),
+            ("affichage", "helpDisplayDesc"),
+            ("reseau", "helpNetworkDesc"),
+            ("statut_technique", "helpTechDesc"),
+            ("journal", "helpLogDesc"),
+        ]
+        for index, (cle, cle_texte) in enumerate(sections_aide):
+            ctk.CTkLabel(
+                zone,
+                text=self._libelle_section(cle),
+                font=ctk.CTkFont(size=15, weight="bold"),
+                anchor="w",
+            ).pack(fill="x", pady=(10 if index else 0, 2))
+            ctk.CTkLabel(
+                zone, text=self._t(cle_texte), wraplength=500, justify="left", anchor="w"
+            ).pack(fill="x")
 
     # -- actions ---------------------------------------------------------
 
