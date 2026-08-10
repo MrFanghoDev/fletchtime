@@ -4,6 +4,15 @@ d'entrée principal sur toutes les plateformes (PC et Pydroid), voir
 mode terminal si ce module ne peut pas être importé, ex. `customtkinter`
 absent).
 
+Panneau latéral gauche avec un bouton par écran (Accueil, Affichage,
+Réseau, Statut technique, Journal), qui bascule la zone de contenu --
+même principe que ``fletchscore/gui/app.py::afficher_section`` (voir
+issue #7, convergence de navigation entre les deux outils). Le journal
+et le statut technique sont alimentés en continu par des threads
+d'arrière-plan indépendamment de l'écran affiché (voir ``self.log_lines``/
+``self.tech_status_data``) : passer d'un écran à l'autre ne perd jamais
+ces données, seul le widget qui les affiche est détruit/reconstruit.
+
 Le serveur (HTTP + WebSocket, voir ``fletchtime.runtime.ServerRuntime``)
 démarre automatiquement à l'ouverture de la fenêtre, avec des boutons pour
 l'arrêter/le relancer sans fermer l'application. Le journal affiché est une
@@ -13,12 +22,11 @@ journal d'accès HTTP (``http.server`` écrit sur stderr) que n'importe quel
 d'appel.
 
 ```{warning}
-La fenêtre elle-même (rendu customtkinter) n'a pas pu être testée
-visuellement lors de son écriture -- l'environnement de développement
-utilisé n'a pas d'affichage graphique disponible. La logique de démarrage/
-arrêt du serveur qu'elle pilote (``ServerRuntime``) est, elle, testée
-(voir tests/test_runtime.py). Un premier lancement réel sur PC et sur
-Pydroid reste nécessaire pour confirmer le rendu et l'ergonomie tactile.
+Le rendu du panneau latéral (customtkinter) a été vérifié visuellement via
+Xvfb (voir CLAUDE.md global, section Environnement), redimensionnement
+compris -- pas encore sur un vrai poste ni sur Pydroid. La logique de
+démarrage/arrêt du serveur qu'elle pilote (``ServerRuntime``) est, elle,
+testée sans affichage (voir tests/test_runtime.py).
 ```
 """
 
@@ -47,6 +55,8 @@ from fletchtime.logging_setup import configure_logging
 from fletchtime.runtime import ServerRuntime
 from fletchtime.server import config_store
 
+SECTIONS = ["accueil", "affichage", "reseau", "statut_technique", "journal"]
+
 _TRANSLATIONS = {
     "fr": {
         "title": "FletchTime -- Serveur",
@@ -56,6 +66,11 @@ _TRANSLATIONS = {
         "home": "Accueil",
         "control": "Contrôle",
         "display": "Affichage",
+        "open": "Ouvrir",
+        "network": "Réseau",
+        "techStatusTitle": "Statut technique",
+        "languageCaption": "Langue",
+        "themeCaption": "Thème",
         "status_stopped": "Serveur arrêté",
         "status_running": "Serveur en cours -- {ip}",
         "log_title": "Journal",
@@ -92,6 +107,11 @@ _TRANSLATIONS = {
         "home": "Home",
         "control": "Control",
         "display": "Display",
+        "open": "Open",
+        "network": "Network",
+        "techStatusTitle": "Technical status",
+        "languageCaption": "Language",
+        "themeCaption": "Theme",
         "status_stopped": "Server stopped",
         "status_running": "Server running -- {ip}",
         "log_title": "Log",
@@ -199,7 +219,7 @@ def _apply_brand_colors() -> None:
         # Filet de sécurité : si l'API interne de ThemeManager diffère de
         # ce qui est attendu ici (ex. version de customtkinter différente),
         # l'appli continue avec le thème intégré "dark-blue" tel quel --
-        # moins conforme à la charte graphique, mais jamais un plantage au
+        # moins conforme à la charte graphique, jamais un plantage au
         # démarrage pour une simple histoire de couleurs.
         pass
 
@@ -242,6 +262,16 @@ class FletchTimeApp(ctk.CTk):
         self.language = "fr"
         self.log_queue: queue.Queue[str] = queue.Queue()
         self.status_queue: queue.Queue = queue.Queue()
+        # Sources de vérité pour le journal et le statut technique --
+        # alimentées en continu (voir _poll_log_queue/_drain_status_queue)
+        # indépendamment de l'écran affiché. Les widgets qui les montrent
+        # (self.log_box, self.tech_status_label) sont détruits/recréés à
+        # chaque changement d'écran (voir afficher_section) : None quand
+        # leur écran n'est pas actif, auquel cas seules ces données-ci
+        # sont mises à jour.
+        self.log_lines: list[str] = []
+        self.tech_status_data: dict | None = None
+        self.section_active = "accueil"
 
         self.data_root = _data_root()
         self.app_web_dir = _app_web_dir()
@@ -272,30 +302,18 @@ class FletchTimeApp(ctk.CTk):
         self.log_file = configure_logging(self.data_root / "logs", console_level=logging.INFO)
 
         self.title(self._t("title"))
-        self.geometry("820x600")  # taille de départ -- corrigée juste après
-        self.minsize(640, 480)
+        # Taille fixe raisonnable plutôt que calculée dynamiquement depuis
+        # le contenu construit (ancienne approche, pensée pour un unique
+        # panneau qui empilait tout) : avec un panneau latéral + écrans,
+        # un seul écran est visible à la fois, donc la taille "naturelle"
+        # du contenu construit au départ (Accueil) ne dit rien de la
+        # taille dont les autres écrans (Réseau, Statut technique) auront
+        # besoin. Mêmes valeurs que FletchScore, pour la cohérence.
+        self.geometry("1100x700")
+        self.minsize(900, 600)
         self.protocol("WM_DELETE_WINDOW", self._on_quit)
 
         self._build_ui()
-
-        # La taille de départ ci-dessus datait d'avant l'ajout de plusieurs
-        # sections (ports, statut technique...) -- trop petite pour tout
-        # montrer, le bouton Quitter se retrouvant hors de la fenêtre
-        # visible (constaté en pratique). Plutôt que de deviner un nouveau
-        # nombre fixe qui redeviendrait insuffisant à la prochaine section
-        # ajoutée, calcule la taille réellement nécessaire à partir du
-        # contenu construit juste au-dessus : update_idletasks() force
-        # Tkinter à calculer la taille demandée par chaque widget avant
-        # qu'on ne la lise, sans quoi winfo_reqheight/reqwidth
-        # renverraient une valeur pas encore à jour.
-        self.update_idletasks()
-        required_width = max(820, self.winfo_reqwidth())
-        required_height = max(600, self.winfo_reqheight())
-        self.geometry(f"{required_width}x{required_height}")
-        # Empêche aussi de redescendre en dessous de cette taille par un
-        # redimensionnement manuel -- le bouton Quitter (et tout le reste)
-        # doit rester accessible sans avoir à agrandir la fenêtre.
-        self.minsize(required_width, required_height)
 
         self._poll_log_queue()
         self._poll_technical_status()
@@ -308,57 +326,175 @@ class FletchTimeApp(ctk.CTk):
         text = _TRANSLATIONS[self.language].get(key, key)
         return text.format(**kwargs) if kwargs else text
 
+    def _libelle_section(self, cle: str) -> str:
+        return {
+            "accueil": self._t("home"),
+            "affichage": self._t("display"),
+            "reseau": self._t("network"),
+            "statut_technique": self._t("techStatusTitle"),
+            "journal": self._t("log_title"),
+        }[cle]
+
     # -- construction de l'interface -------------------------------------
 
     def _build_ui(self) -> None:
-        header = ctk.CTkFrame(self, corner_radius=0)
-        header.pack(fill="x")
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self._construire_barre_laterale()
+        self._construire_zone_contenu()
+        self.afficher_section(self.section_active)
 
-        ctk.CTkLabel(header, text="FletchTime", font=ctk.CTkFont(size=22, weight="bold")).pack(
-            side="left", padx=(16, 4), pady=12
-        )
+    def _construire_barre_laterale(self) -> None:
+        self.barre_laterale = ctk.CTkFrame(self, width=220, corner_radius=0)
+        self.barre_laterale.grid(row=0, column=0, sticky="nsew")
 
+        ligne = 0
         ctk.CTkLabel(
-            header,
-            text=f"v{__version__}",
-            font=ctk.CTkFont(size=13),
-            text_color="gray60",
-        ).pack(side="left", padx=(0, 16), pady=12)
+            self.barre_laterale, text="FletchTime", font=ctk.CTkFont(size=20, weight="bold")
+        ).grid(row=ligne, column=0, padx=20, pady=(20, 10))
+        ligne += 1
 
+        # Indicateur de statut serveur -- toujours présent dans le
+        # panneau latéral (jamais détruit/reconstruit, contrairement aux
+        # écrans), pour rester visible quel que soit l'écran affiché.
+        # L'écran Accueil a en plus sa propre version complète avec les
+        # boutons démarrer/arrêter (voir _construire_ecran_accueil).
+        cadre_statut = ctk.CTkFrame(self.barre_laterale, fg_color="transparent")
+        cadre_statut.grid(row=ligne, column=0, padx=20, pady=(0, 15), sticky="w")
+        self.barre_status_dot = ctk.CTkLabel(
+            cadre_statut, text="●", text_color="gray50", font=ctk.CTkFont(size=13)
+        )
+        self.barre_status_dot.pack(side="left")
+        self.barre_status_label = ctk.CTkLabel(
+            cadre_statut, text=self._t("status_stopped"), font=ctk.CTkFont(size=11)
+        )
+        self.barre_status_label.pack(side="left", padx=(5, 0))
+        ligne += 1
+
+        self.boutons_sections: dict[str, ctk.CTkButton] = {}
+        for cle in SECTIONS:
+            bouton = ctk.CTkButton(
+                self.barre_laterale,
+                text=self._libelle_section(cle),
+                anchor="w",
+                command=lambda c=cle: self.afficher_section(c),
+            )
+            bouton.grid(row=ligne, column=0, padx=20, pady=6, sticky="ew")
+            self.boutons_sections[cle] = bouton
+            ligne += 1
+
+        # Ligne vide qui absorbe tout l'espace restant -- pousse langue/
+        # thème/quitter/version en bas du panneau, même mécanisme que
+        # FletchScore (gui/app.py::_construire_barre_laterale).
+        self.barre_laterale.grid_rowconfigure(ligne, weight=1)
+        ligne += 1
+
+        self.langue_caption = ctk.CTkLabel(self.barre_laterale, text=self._t("languageCaption"))
+        self.langue_caption.grid(row=ligne, column=0, padx=20, pady=(10, 0), sticky="w")
+        ligne += 1
+        self.lang_menu = ctk.CTkOptionMenu(
+            self.barre_laterale, values=["FR", "EN"], command=self._on_language_change
+        )
+        self.lang_menu.set(self.language.upper())
+        self.lang_menu.grid(row=ligne, column=0, padx=20, pady=(5, 10), sticky="ew")
+        ligne += 1
+
+        self.theme_caption = ctk.CTkLabel(self.barre_laterale, text=self._t("themeCaption"))
+        self.theme_caption.grid(row=ligne, column=0, padx=20, pady=(0, 0), sticky="w")
+        ligne += 1
         self.theme_menu = ctk.CTkOptionMenu(
-            header,
+            self.barre_laterale,
             values=[self._t("themeSystem"), self._t("themeLight"), self._t("themeDark")],
-            width=110,
             command=self._on_theme_change,
         )
         self.theme_menu.set(self._theme_label(self.theme))
-        self.theme_menu.pack(side="right", padx=(0, 8), pady=12)
+        self.theme_menu.grid(row=ligne, column=0, padx=20, pady=(5, 15), sticky="ew")
+        ligne += 1
 
-        self.lang_menu = ctk.CTkOptionMenu(
-            header, values=["FR", "EN"], width=70, command=self._on_language_change
+        self.quit_button = ctk.CTkButton(
+            self.barre_laterale,
+            text=self._t("quit"),
+            command=self._on_quit,
+            fg_color="#3a4354",
+            hover_color="#4a5568",
         )
-        self.lang_menu.set("FR")
-        self.lang_menu.pack(side="right", padx=16, pady=12)
+        self.quit_button.grid(row=ligne, column=0, padx=20, pady=(0, 15), sticky="ew")
+        ligne += 1
 
-        # -- statut + démarrer/arrêter --------------------------------
-        status_frame = ctk.CTkFrame(self)
-        status_frame.pack(fill="x", padx=16, pady=(16, 8))
+        ctk.CTkLabel(
+            self.barre_laterale,
+            text=f"v{__version__}",
+            font=ctk.CTkFont(size=11),
+            text_color="gray60",
+        ).grid(row=ligne, column=0, padx=20, pady=(0, 10), sticky="w")
 
-        self.status_dot = ctk.CTkLabel(
-            status_frame, text="●", text_color="gray50", font=ctk.CTkFont(size=18)
+    def _construire_zone_contenu(self) -> None:
+        self.zone_contenu = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.zone_contenu.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+        self.zone_contenu.grid_columnconfigure(0, weight=1)
+        self.zone_contenu.grid_rowconfigure(1, weight=1)
+
+        self.titre_section = ctk.CTkLabel(
+            self.zone_contenu, text="", font=ctk.CTkFont(size=24, weight="bold")
         )
+        self.titre_section.grid(row=0, column=0, sticky="w", pady=(0, 15))
+
+        self.cadre_section = ctk.CTkFrame(self.zone_contenu, fg_color="transparent")
+        self.cadre_section.grid(row=1, column=0, sticky="nsew")
+
+    # -- navigation --------------------------------------------------------
+
+    def afficher_section(self, cle: str) -> None:
+        self.section_active = cle
+        for widget in self.cadre_section.winfo_children():
+            widget.destroy()
+
+        # Ne valent que pour l'écran qui vient d'être détruit -- remis à
+        # None avant de reconstruire, pour que les threads d'arrière-plan
+        # (journal, statut technique, statut serveur) sachent qu'ils
+        # doivent seulement mettre à jour leurs données, pas un widget
+        # qui n'existe plus.
+        self.log_box = None
+        self.tech_status_label = None
+        self.status_dot = None
+        self.status_label = None
+        self.address_entry = None
+        self.network_status_label = None
+
+        self.titre_section.configure(text=self._libelle_section(cle))
+
+        if cle == "accueil":
+            self._construire_ecran_accueil(self.cadre_section)
+        elif cle == "affichage":
+            self._construire_ecran_affichage(self.cadre_section)
+        elif cle == "reseau":
+            self._construire_ecran_reseau(self.cadre_section)
+        elif cle == "statut_technique":
+            self._construire_ecran_statut_technique(self.cadre_section)
+        elif cle == "journal":
+            self._construire_ecran_journal(self.cadre_section)
+        else:
+            raise ValueError(f"Section inconnue : {cle}")
+
+    # -- écran Accueil : statut, démarrer/arrêter, adresse, liens rapides --
+
+    def _construire_ecran_accueil(self, parent: ctk.CTkBaseClass) -> None:
+        statut_frame = ctk.CTkFrame(parent)
+        statut_frame.pack(fill="x", pady=(0, 8))
+
+        self.status_dot = ctk.CTkLabel(statut_frame, text="●", font=ctk.CTkFont(size=18))
         self.status_dot.pack(side="left", padx=(12, 4), pady=10)
 
-        self.status_label = ctk.CTkLabel(status_frame, text=self._t("status_stopped"))
+        self.status_label = ctk.CTkLabel(statut_frame, text=self._t("status_stopped"))
         self.status_label.pack(side="left", padx=(0, 12), pady=10)
 
         self.start_button = ctk.CTkButton(
-            status_frame, text=self._t("start"), width=100, command=self._start_server
+            statut_frame, text=self._t("start"), width=100, command=self._start_server
         )
         self.start_button.pack(side="right", padx=(4, 12), pady=10)
 
         self.stop_button = ctk.CTkButton(
-            status_frame,
+            statut_frame,
             text=self._t("stop"),
             width=100,
             command=self._stop_server,
@@ -367,55 +503,6 @@ class FletchTimeApp(ctk.CTk):
         )
         self.stop_button.pack(side="right", padx=4, pady=10)
 
-        # -- liens rapides -------------------------------------------
-        links_frame = ctk.CTkFrame(self)
-        links_frame.pack(fill="x", padx=16, pady=8)
-
-        self.home_button = ctk.CTkButton(
-            links_frame, text=self._t("home"), command=lambda: self._open_link("/")
-        )
-        self.home_button.pack(side="left", padx=12, pady=10, expand=True, fill="x")
-
-        self.control_button = ctk.CTkButton(
-            links_frame,
-            text=self._t("control"),
-            command=lambda: self._open_link("/control.html"),
-        )
-        self.control_button.pack(side="left", padx=(0, 12), pady=10, expand=True, fill="x")
-
-        self.display_button = ctk.CTkButton(
-            links_frame,
-            text=self._t("display"),
-            command=self._open_display,
-        )
-        self.display_button.pack(side="left", padx=(0, 12), pady=10, expand=True, fill="x")
-
-        # -- options d'affichage (lane à ouvrir, muet ou non) --------------
-        # Auparavant un simple raccourci vers lane=1 -- rendu configurable
-        # pour pouvoir ouvrir n'importe quelle lane et couper le son sur cet
-        # onglet précis (voir display.html, soundEnabled) directement
-        # depuis la fenêtre, comme c'est déjà possible depuis la page
-        # d'accueil.
-        display_options_frame = ctk.CTkFrame(self)
-        display_options_frame.pack(fill="x", padx=16, pady=(0, 8))
-
-        self.display_options_caption = ctk.CTkLabel(
-            display_options_frame,
-            text=self._t("displayOptionsCaption"),
-            font=ctk.CTkFont(size=11),
-            text_color="gray60",
-        )
-        self.display_options_caption.pack(side="left", padx=(12, 8), pady=8)
-
-        self.lane_entry = ctk.CTkEntry(display_options_frame, width=90, justify="center")
-        self.lane_entry.insert(0, "1")
-        self.lane_entry.pack(side="left", padx=(0, 12), pady=8)
-
-        self.mute_checkbox = ctk.CTkCheckBox(
-            display_options_frame, text=self._t("muteLabel"), width=20
-        )
-        self.mute_checkbox.pack(side="left", padx=(0, 12), pady=8)
-
         # -- adresse du serveur -----------------------------------------
         # CTkEntry (désactivée après affichage) plutôt qu'un simple
         # libellé : l'intention est de permettre de sélectionner/copier
@@ -423,8 +510,8 @@ class FletchTimeApp(ctk.CTk):
         # bouton de raccourci, ex. un téléphone d'archer) -- non vérifié
         # visuellement si "disabled" préserve la sélection de texte sur
         # toutes les plateformes ; à confirmer en conditions réelles.
-        address_frame = ctk.CTkFrame(self)
-        address_frame.pack(fill="x", padx=16, pady=(0, 8))
+        address_frame = ctk.CTkFrame(parent)
+        address_frame.pack(fill="x", pady=(0, 8))
 
         self.address_caption = ctk.CTkLabel(
             address_frame,
@@ -439,83 +526,137 @@ class FletchTimeApp(ctk.CTk):
         )
         self.address_entry.pack(side="left", padx=(0, 12), pady=8, expand=True, fill="x")
 
-        # -- réseau (ports) -----------------------------------------------
-        # Ports modifiables plutôt que figés : permet de faire tourner
-        # plusieurs salles de compétition sur le même PC -- une copie de
-        # dossier par salle, chacune avec des ports différents (voir
-        # config/gui.toml, config_store). Changer un port ici redémarre le
-        # serveur automatiquement s'il tournait déjà, pour que le
-        # changement prenne effet immédiatement (voir _on_apply_network).
-        network_frame = ctk.CTkFrame(self)
-        network_frame.pack(fill="x", padx=16, pady=(0, 8))
+        # -- liens rapides -------------------------------------------
+        # "Affichage" n'est plus un lien direct ici -- a besoin de choisir
+        # une lane/muet d'abord, voir l'écran dédié "Affichage".
+        links_frame = ctk.CTkFrame(parent)
+        links_frame.pack(fill="x", pady=8)
 
-        self.network_caption = ctk.CTkLabel(
-            network_frame,
-            text=self._t("networkCaption"),
-            font=ctk.CTkFont(size=11),
-            text_color="gray60",
+        self.home_button = ctk.CTkButton(
+            links_frame, text=self._t("home"), command=lambda: self._open_link("/")
         )
-        self.network_caption.pack(side="left", padx=(12, 8), pady=8)
+        self.home_button.pack(side="left", padx=12, pady=10, expand=True, fill="x")
 
-        self.http_port_entry = ctk.CTkEntry(network_frame, width=70, justify="center")
-        self.http_port_entry.insert(0, str(self.http_port))
-        self.http_port_entry.pack(side="left", padx=(0, 4), pady=8)
-
-        self.network_separator = ctk.CTkLabel(network_frame, text="/", text_color="gray60")
-        self.network_separator.pack(side="left", padx=2, pady=8)
-
-        self.ws_port_entry = ctk.CTkEntry(network_frame, width=70, justify="center")
-        self.ws_port_entry.insert(0, str(self.ws_port))
-        self.ws_port_entry.pack(side="left", padx=(4, 12), pady=8)
-
-        self.network_apply_button = ctk.CTkButton(
-            network_frame, text=self._t("apply"), width=90, command=self._on_apply_network
+        self.control_button = ctk.CTkButton(
+            links_frame,
+            text=self._t("control"),
+            command=lambda: self._open_link("/control.html"),
         )
-        self.network_apply_button.pack(side="left", padx=(0, 8), pady=8)
+        self.control_button.pack(side="left", padx=(0, 12), pady=10, expand=True, fill="x")
 
-        self.network_status_label = ctk.CTkLabel(network_frame, text="", text_color="gray60")
-        self.network_status_label.pack(side="left", padx=(4, 12), pady=8, fill="x", expand=True)
-
-        # -- statut technique ---------------------------------------------
-        # Les mêmes données techniques que celles déjà affichées dans la
-        # page de contrôle (écrans connectés, mode actif...), lues via
-        # /api/status -- voir _poll_technical_status ci-dessous, et
-        # fletchtime.server.http_static._DualRootHandler._build_status_body
-        # côté serveur.
-        tech_frame = ctk.CTkFrame(self)
-        tech_frame.pack(fill="x", padx=16, pady=(0, 8))
-
-        self.tech_status_label = ctk.CTkLabel(
-            tech_frame, text=self._t("techStatusUnavailable"), anchor="w", justify="left"
-        )
-        self.tech_status_label.pack(fill="x", padx=12, pady=8)
-
-        # -- journal ----------------------------------------------------
-        self.log_label = ctk.CTkLabel(self, text=self._t("log_title"), anchor="w")
-        self.log_label.pack(fill="x", padx=20, pady=(8, 0))
-
-        self.log_box = ctk.CTkTextbox(self, font=ctk.CTkFont(family="monospace", size=11))
-        self.log_box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
-        self.log_box.configure(state="disabled")
-
-        # -- pied de page -------------------------------------------------
         self.footer_label = ctk.CTkLabel(
-            self,
+            parent,
             text=f"{self._t('club_data')} {self.data_root}",
             font=ctk.CTkFont(size=11),
             text_color="gray60",
             anchor="w",
         )
-        self.footer_label.pack(fill="x", padx=20, pady=(0, 10))
+        self.footer_label.pack(fill="x", pady=(8, 0))
 
-        self.quit_button = ctk.CTkButton(
-            self,
-            text=self._t("quit"),
-            command=self._on_quit,
-            fg_color="#3a4354",
-            hover_color="#4a5568",
+        self._refresh_status()
+
+    # -- écran Affichage : lane à ouvrir, muet, bouton Ouvrir ---------------
+
+    def _construire_ecran_affichage(self, parent: ctk.CTkBaseClass) -> None:
+        cadre = ctk.CTkFrame(parent)
+        cadre.pack(fill="x")
+
+        ctk.CTkLabel(
+            cadre,
+            text=self._t("displayOptionsCaption"),
+            font=ctk.CTkFont(size=11),
+            text_color="gray60",
+        ).pack(side="left", padx=(12, 8), pady=12)
+
+        self.lane_entry = ctk.CTkEntry(cadre, width=90, justify="center")
+        self.lane_entry.insert(0, "1")
+        self.lane_entry.pack(side="left", padx=(0, 12), pady=12)
+
+        self.mute_checkbox = ctk.CTkCheckBox(cadre, text=self._t("muteLabel"), width=20)
+        self.mute_checkbox.pack(side="left", padx=(0, 12), pady=12)
+
+        ctk.CTkButton(cadre, text=self._t("open"), command=self._open_display).pack(
+            side="left", padx=(0, 12), pady=12
         )
-        self.quit_button.pack(padx=16, pady=(0, 12))
+
+    # -- écran Réseau : ports HTTP/WS ---------------------------------------
+
+    def _construire_ecran_reseau(self, parent: ctk.CTkBaseClass) -> None:
+        # Ports modifiables plutôt que figés : permet de faire tourner
+        # plusieurs salles de compétition sur le même PC -- une copie de
+        # dossier par salle, chacune avec des ports différents (voir
+        # config/gui.toml, config_store). Changer un port ici redémarre
+        # le serveur automatiquement s'il tournait déjà, pour que le
+        # changement prenne effet immédiatement (voir _on_apply_network).
+        cadre = ctk.CTkFrame(parent)
+        cadre.pack(fill="x")
+
+        self.network_caption = ctk.CTkLabel(
+            cadre,
+            text=self._t("networkCaption"),
+            font=ctk.CTkFont(size=11),
+            text_color="gray60",
+        )
+        self.network_caption.pack(side="left", padx=(12, 8), pady=12)
+
+        self.http_port_entry = ctk.CTkEntry(cadre, width=70, justify="center")
+        self.http_port_entry.insert(0, str(self.http_port))
+        self.http_port_entry.pack(side="left", padx=(0, 4), pady=12)
+
+        ctk.CTkLabel(cadre, text="/", text_color="gray60").pack(side="left", padx=2, pady=12)
+
+        self.ws_port_entry = ctk.CTkEntry(cadre, width=70, justify="center")
+        self.ws_port_entry.insert(0, str(self.ws_port))
+        self.ws_port_entry.pack(side="left", padx=(4, 12), pady=12)
+
+        self.network_apply_button = ctk.CTkButton(
+            cadre, text=self._t("apply"), width=90, command=self._on_apply_network
+        )
+        self.network_apply_button.pack(side="left", padx=(0, 8), pady=12)
+
+        self.network_status_label = ctk.CTkLabel(cadre, text="", text_color="gray60")
+        self.network_status_label.pack(side="left", padx=(4, 12), pady=12, fill="x", expand=True)
+
+    # -- écran Statut technique : mêmes données que /api/status -----------
+
+    def _construire_ecran_statut_technique(self, parent: ctk.CTkBaseClass) -> None:
+        self.tech_status_label = ctk.CTkLabel(
+            parent, text=self._texte_statut_technique(), anchor="w", justify="left"
+        )
+        self.tech_status_label.pack(fill="x", padx=4, pady=8)
+
+    def _texte_statut_technique(self) -> str:
+        data = self.tech_status_data
+        if not data or not data.get("available"):
+            return self._t("techStatusUnavailable")
+        lanes = ", ".join(data["connected_lanes"]) or self._t("techStatusNoLanes")
+        mode = data["active_mode"] or self._t("techStatusNoMode")
+        phase = data["match_phase"] or "--"
+        return (
+            f"{self._t('techStatusClients')} {data['connected_clients']}\n"
+            f"{self._t('techStatusLanes')} {lanes}\n"
+            f"{self._t('techStatusMode')} {mode}\n"
+            f"{self._t('techStatusPhase')} {phase}\n"
+            f"{self._t('techStatusSound')} {data['sound_pack']}\n"
+            f"{self._t('techStatusAuth')} "
+            f"{self._t('yes') if data['password_configured'] else self._t('no')}"
+        )
+
+    # -- écran Journal : sortie standard capturée --------------------------
+
+    def _construire_ecran_journal(self, parent: ctk.CTkBaseClass) -> None:
+        self.log_box = ctk.CTkTextbox(parent, font=ctk.CTkFont(family="monospace", size=11))
+        self.log_box.pack(fill="both", expand=True)
+        self.log_box.configure(state="normal")
+        # Une ligne à la fois, chacune suivie d'un saut de ligne -- même
+        # motif que _poll_log_queue (voir plus bas) pour la mise à jour en
+        # direct, sinon la toute première ligne ajoutée en direct après
+        # cette construction se retrouve collée à la dernière ligne
+        # historique (pas de saut de ligne final sur un "\n".join(...)).
+        for ligne in self.log_lines:
+            self.log_box.insert("end", ligne + "\n")
+        self.log_box.see("end")
+        self.log_box.configure(state="disabled")
 
     # -- actions ---------------------------------------------------------
 
@@ -542,18 +683,26 @@ class FletchTimeApp(ctk.CTk):
         self._refresh_status()
 
     def _refresh_status(self) -> None:
-        if self.runtime.is_running:
-            self.status_dot.configure(text_color="#2fb344")
-            self.status_label.configure(text=self._t("status_running", ip=local_ip()))
-        else:
-            self.status_dot.configure(text_color="gray50")
-            self.status_label.configure(text=self._t("status_stopped"))
+        running = self.runtime.is_running
+        couleur = "#2fb344" if running else "gray50"
+        texte = self._t("status_running", ip=local_ip()) if running else self._t("status_stopped")
+
+        self.barre_status_dot.configure(text_color=couleur)
+        self.barre_status_label.configure(text=texte)
+
+        if self.status_dot is not None:
+            self.status_dot.configure(text_color=couleur)
+        if self.status_label is not None:
+            self.status_label.configure(text=texte)
         self._refresh_address()
 
     def _refresh_address(self) -> None:
         """L'adresse ne dépend pas de si le serveur tourne réellement --
         affichée dans tous les cas (utile même à l'arrêt, pour préparer
-        la config réseau à l'avance sur un autre appareil)."""
+        la config réseau à l'avance sur un autre appareil). Seulement si
+        l'écran Accueil est actif -- self.address_entry est None sinon."""
+        if self.address_entry is None:
+            return
         address = f"http://{local_ip()}:{self.http_port}/"
         # CTkEntry ne supporte que "normal"/"disabled" (contrairement à
         # ttk.Entry, qui a un vrai état "readonly") -- il faut donc la
@@ -567,28 +716,20 @@ class FletchTimeApp(ctk.CTk):
     def _on_language_change(self, value: str) -> None:
         self.language = value.lower()
         self.title(self._t("title"))
-        self.start_button.configure(text=self._t("start"))
-        self.stop_button.configure(text=self._t("stop"))
-        self.home_button.configure(text=self._t("home"))
-        self.control_button.configure(text=self._t("control"))
-        self.display_button.configure(text=self._t("display"))
-        self.display_options_caption.configure(text=self._t("displayOptionsCaption"))
-        self.mute_checkbox.configure(text=self._t("muteLabel"))
-        self.address_caption.configure(text=self._t("addressCaption"))
-        self.log_label.configure(text=self._t("log_title"))
-        self.quit_button.configure(text=self._t("quit"))
-        self.footer_label.configure(text=f"{self._t('club_data')} {self.data_root}")
-        # Les valeurs du menu de thème sont des libellés traduits (pas des
-        # codes internes comme "FR"/"EN") -- il faut donc reconstruire la
-        # liste ET repositionner la sélection sur le thème actuel, pas
-        # juste changer le texte d'un widget existant.
+        for cle, bouton in self.boutons_sections.items():
+            bouton.configure(text=self._libelle_section(cle))
+        self.langue_caption.configure(text=self._t("languageCaption"))
+        self.theme_caption.configure(text=self._t("themeCaption"))
         self.theme_menu.configure(
             values=[self._t("themeSystem"), self._t("themeLight"), self._t("themeDark")]
         )
         self.theme_menu.set(self._theme_label(self.theme))
-        self.network_caption.configure(text=self._t("networkCaption"))
-        self.network_apply_button.configure(text=self._t("apply"))
-        self._refresh_status()
+        self.quit_button.configure(text=self._t("quit"))
+        # Reconstruit l'écran actif pour retraduire tout son contenu --
+        # plus simple et plus sûr que de retrouver et reconfigurer
+        # individuellement chaque widget d'un écran qui pourrait ne même
+        # pas être l'écran actuellement affiché.
+        self.afficher_section(self.section_active)
 
     def _theme_label(self, theme: str) -> str:
         return {
@@ -666,7 +807,21 @@ class FletchTimeApp(ctk.CTk):
         self.runtime.stop()
         self.destroy()
 
-    # -- journal (file thread-safe -> widget) ------------------------------
+    # -- journal (file thread-safe -> buffer, + widget si l'écran est actif) --
+
+    def _poll_log_queue(self) -> None:
+        try:
+            while True:
+                line = self.log_queue.get_nowait()
+                self.log_lines.append(line)
+                if self.log_box is not None:
+                    self.log_box.configure(state="normal")
+                    self.log_box.insert("end", line + "\n")
+                    self.log_box.see("end")
+                    self.log_box.configure(state="disabled")
+        except queue.Empty:
+            pass
+        self.after(200, self._poll_log_queue)
 
     # -- statut technique (thread séparé pour la requête HTTP -> file) -----
 
@@ -706,34 +861,9 @@ class FletchTimeApp(ctk.CTk):
         self.after(200, self._drain_status_queue)
 
     def _render_technical_status(self, data: dict | None) -> None:
-        if not data or not data.get("available"):
-            self.tech_status_label.configure(text=self._t("techStatusUnavailable"))
-            return
-        lanes = ", ".join(data["connected_lanes"]) or self._t("techStatusNoLanes")
-        mode = data["active_mode"] or self._t("techStatusNoMode")
-        phase = data["match_phase"] or "--"
-        text = (
-            f"{self._t('techStatusClients')} {data['connected_clients']}  |  "
-            f"{self._t('techStatusLanes')} {lanes}  |  "
-            f"{self._t('techStatusMode')} {mode}  |  "
-            f"{self._t('techStatusPhase')} {phase}  |  "
-            f"{self._t('techStatusSound')} {data['sound_pack']}  |  "
-            f"{self._t('techStatusAuth')} "
-            f"{self._t('yes') if data['password_configured'] else self._t('no')}"
-        )
-        self.tech_status_label.configure(text=text)
-
-    def _poll_log_queue(self) -> None:
-        try:
-            while True:
-                line = self.log_queue.get_nowait()
-                self.log_box.configure(state="normal")
-                self.log_box.insert("end", line + "\n")
-                self.log_box.see("end")
-                self.log_box.configure(state="disabled")
-        except queue.Empty:
-            pass
-        self.after(200, self._poll_log_queue)
+        self.tech_status_data = data
+        if self.tech_status_label is not None:
+            self.tech_status_label.configure(text=self._texte_statut_technique())
 
 
 def run_gui() -> None:

@@ -346,16 +346,47 @@ Points clés :
   d'accès HTTP (`http.server` écrit sur stderr) sans avoir à instrumenter
   chaque site d'appel.
 
+### Panneau latéral avec écrans (depuis issue #7)
+
+`fletchtime.gui` est passé d'un unique panneau qui empilait tout
+verticalement à un panneau latéral gauche (bouton par écran : Accueil,
+Affichage, Réseau, Statut technique, Journal) qui bascule la zone de
+contenu -- même principe que `fletchscore/gui/app.py::afficher_section`,
+pour une navigation cohérente entre les deux outils (voir aussi la
+convention de panneau latéral actée dans le `CLAUDE.md` global suite à
+fletchapps#1). Langue (FR/EN), thème et bouton Quitter vivent dans le
+panneau latéral lui-même, pas dans un écran.
+
+Point d'attention propre à FletchTime (FletchScore n'a pas cet
+équivalent) : le journal et le statut technique sont alimentés en
+continu par des threads d'arrière-plan (`_poll_log_queue`,
+`_poll_technical_status`/`_drain_status_queue`) **indépendamment de
+l'écran affiché** -- ils continuent de tourner même quand on est sur un
+autre écran. Comme chaque écran est détruit et reconstruit à la
+navigation (`for widget in self.cadre_section.winfo_children():
+widget.destroy()`), leurs données ne peuvent pas vivre uniquement dans
+le widget qui les affiche, sous peine d'être perdues à chaque
+changement d'écran. Elles sont donc stockées sur la fenêtre elle-même
+(`self.log_lines`, `self.tech_status_data`), mises à jour en continu ;
+le widget correspondant (`self.log_box`, `self.tech_status_label`) vaut
+`None` quand son écran n'est pas actif -- les threads d'arrière-plan
+vérifient sa présence avant d'y écrire, pour ne jamais toucher un widget
+détruit. Même logique pour le statut serveur (démarré/arrêté) : un
+indicateur compact (point coloré + libellé) reste en permanence dans le
+panneau latéral, en plus de la version complète avec les boutons
+démarrer/arrêter sur l'écran Accueil.
+
 ```{warning}
-Le rendu de la fenêtre elle-même n'a pas pu être testé visuellement lors
-de son écriture initiale (pas d'affichage graphique disponible dans
-l'environnement de développement utilisé). La logique de cycle de vie
-qu'elle pilote (`ServerRuntime`) est testée pour de vrai (voir
-`tests/test_runtime.py` : démarrage, requête HTTP réelle, arrêt, vérifi-
-cation que le port est bien libéré, redémarrage sur le même port). Un
-premier lancement réel sur PC et sur Pydroid reste nécessaire pour
-confirmer le rendu et l'ergonomie tactile -- voir aussi le piège
-PyInstaller/`customtkinter` documenté dans {doc}`dev-guide/index`.
+Le rendu du panneau latéral (customtkinter) a été vérifié visuellement
+via Xvfb (voir CLAUDE.md global, section Environnement) -- les 5 écrans,
+le changement de langue et de thème, et le redimensionnement dans les
+deux sens (le `log_box` en particulier doit pouvoir s'étirer). Pas
+encore vérifié sur un vrai poste ni sur Pydroid. La logique de cycle de
+vie que la fenêtre pilote (`ServerRuntime`) est testée pour de vrai
+(voir `tests/test_runtime.py` : démarrage, requête HTTP réelle, arrêt,
+vérification que le port est bien libéré, redémarrage sur le même
+port) -- voir aussi le piège PyInstaller/`customtkinter` documenté dans
+{doc}`dev-guide/index`.
 ```
 
 ## Résilience de la boucle de décompte
