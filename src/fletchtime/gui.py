@@ -71,6 +71,17 @@ _TRANSLATIONS = {
         "techStatusTitle": "Statut technique",
         "languageCaption": "Langue",
         "themeCaption": "Thème",
+        "shortcutsTitle": "Accès rapide",
+        "shortcutDisplayDesc": "Choisir la lane à ouvrir et couper le son avant de lancer l'écran",
+        "shortcutNetworkDesc": "Modifier les ports HTTP/WebSocket du serveur",
+        "shortcutTechDesc": "Voir les écrans connectés, le mode et la phase en cours",
+        "shortcutLogDesc": "Consulter le journal de l'application",
+        "shortcutHomeWeb": "Accueil ↗",
+        "shortcutHomeWebDesc": "Ouvrir la page d'accueil web dans le navigateur",
+        "shortcutControlWeb": "Contrôle ↗",
+        "shortcutControlWebDesc": "Ouvrir le poste de contrôle dans le navigateur",
+        "shortcutDisplayWeb": "Écran d'affichage ↗",
+        "shortcutDisplayWebDesc": "Ouvrir l'écran d'affichage (lane 1) dans le navigateur",
         "status_stopped": "Serveur arrêté",
         "status_running": "Serveur en cours -- {ip}",
         "log_title": "Journal",
@@ -112,6 +123,17 @@ _TRANSLATIONS = {
         "techStatusTitle": "Technical status",
         "languageCaption": "Language",
         "themeCaption": "Theme",
+        "shortcutsTitle": "Quick access",
+        "shortcutDisplayDesc": "Choose the lane to open and mute before launching the display",
+        "shortcutNetworkDesc": "Change the server's HTTP/WebSocket ports",
+        "shortcutTechDesc": "See connected screens, active mode and phase",
+        "shortcutLogDesc": "View the application log",
+        "shortcutHomeWeb": "Home ↗",
+        "shortcutHomeWebDesc": "Open the web home page in your browser",
+        "shortcutControlWeb": "Control ↗",
+        "shortcutControlWebDesc": "Open the control station in your browser",
+        "shortcutDisplayWeb": "Display screen ↗",
+        "shortcutDisplayWebDesc": "Open the display screen (lane 1) in your browser",
         "status_stopped": "Server stopped",
         "status_running": "Server running -- {ip}",
         "log_title": "Log",
@@ -526,23 +548,7 @@ class FletchTimeApp(ctk.CTk):
         )
         self.address_entry.pack(side="left", padx=(0, 12), pady=8, expand=True, fill="x")
 
-        # -- liens rapides -------------------------------------------
-        # "Affichage" n'est plus un lien direct ici -- a besoin de choisir
-        # une lane/muet d'abord, voir l'écran dédié "Affichage".
-        links_frame = ctk.CTkFrame(parent)
-        links_frame.pack(fill="x", pady=8)
-
-        self.home_button = ctk.CTkButton(
-            links_frame, text=self._t("home"), command=lambda: self._open_link("/")
-        )
-        self.home_button.pack(side="left", padx=12, pady=10, expand=True, fill="x")
-
-        self.control_button = ctk.CTkButton(
-            links_frame,
-            text=self._t("control"),
-            command=lambda: self._open_link("/control.html"),
-        )
-        self.control_button.pack(side="left", padx=(0, 12), pady=10, expand=True, fill="x")
+        self._construire_raccourcis(parent)
 
         self.footer_label = ctk.CTkLabel(
             parent,
@@ -554,6 +560,87 @@ class FletchTimeApp(ctk.CTk):
         self.footer_label.pack(fill="x", pady=(8, 0))
 
         self._refresh_status()
+
+    def _construire_raccourcis(self, parent: ctk.CTkBaseClass) -> None:
+        """Grille de raccourcis façon FletchScore (gui/ecran_accueil.py::
+        _RACCOURCIS) -- une carte par destination, titre + description
+        courte. Mélange volontairement deux natures de destination :
+        écrans internes (reste dans l'appli) et pages web (ouvre le
+        navigateur) -- distingués par une couleur différente et un
+        suffixe "↗" sur les cartes web, pour ne jamais laisser croire
+        qu'un clic va rester dans la fenêtre alors qu'il l'ouvre ailleurs
+        (voir issue #9)."""
+        ctk.CTkLabel(
+            parent, text=self._t("shortcutsTitle"), font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(fill="x", pady=(8, 10), anchor="w")
+
+        cadre = ctk.CTkFrame(parent, fg_color="transparent")
+        cadre.pack(fill="x")
+        cadre.grid_columnconfigure((0, 1), weight=1)
+
+        raccourcis = [
+            (
+                self._libelle_section("affichage"),
+                self._t("shortcutDisplayDesc"),
+                lambda: self.afficher_section("affichage"),
+                False,
+            ),
+            (
+                self._libelle_section("reseau"),
+                self._t("shortcutNetworkDesc"),
+                lambda: self.afficher_section("reseau"),
+                False,
+            ),
+            (
+                self._libelle_section("statut_technique"),
+                self._t("shortcutTechDesc"),
+                lambda: self.afficher_section("statut_technique"),
+                False,
+            ),
+            (
+                self._libelle_section("journal"),
+                self._t("shortcutLogDesc"),
+                lambda: self.afficher_section("journal"),
+                False,
+            ),
+            (
+                self._t("shortcutHomeWeb"),
+                self._t("shortcutHomeWebDesc"),
+                lambda: self._open_link("/"),
+                True,
+            ),
+            (
+                self._t("shortcutControlWeb"),
+                self._t("shortcutControlWebDesc"),
+                lambda: self._open_link("/control.html"),
+                True,
+            ),
+            (
+                self._t("shortcutDisplayWeb"),
+                self._t("shortcutDisplayWebDesc"),
+                lambda: self._open_link("/display.html?lane=1"),
+                True,
+            ),
+        ]
+
+        for index, (titre, description, commande, web) in enumerate(raccourcis):
+            kwargs = {}
+            if web:
+                # Même bleu que CTkOptionMenu (voir _apply_brand_colors) --
+                # réutilise un langage de couleur déjà présent dans l'appli
+                # ("bleu = interactif/sort de l'appli") plutôt que
+                # d'inventer une nouvelle couleur.
+                kwargs["fg_color"] = ("#3357bf", "#4c7bdb")
+            bouton = ctk.CTkButton(
+                cadre, text=f"{titre}\n{description}", height=60, command=commande, **kwargs
+            )
+            bouton.grid(
+                row=index // 2,
+                column=index % 2,
+                sticky="ew",
+                padx=(0, 10) if index % 2 == 0 else 0,
+                pady=(0, 10),
+            )
 
     # -- écran Affichage : lane à ouvrir, muet, bouton Ouvrir ---------------
 
