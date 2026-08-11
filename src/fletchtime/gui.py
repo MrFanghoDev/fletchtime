@@ -35,6 +35,7 @@ from __future__ import annotations
 import json
 import logging
 import queue
+import signal
 import sys
 import threading
 import urllib.error
@@ -1097,6 +1098,32 @@ def run_gui() -> None:
     app = None
     try:
         app = FletchTimeApp()
+
+        # Ctrl+C/kill doivent fermer proprement même pendant une boucle Tk
+        # imbriquée (wait_window() d'une popup modale, ex. confirmation de
+        # fermeture) -- sans ce gestionnaire explicite, le KeyboardInterrupt
+        # par défaut de Python n'est pas délivré de façon fiable tant
+        # qu'une boucle modale est active, laissant le process pendu
+        # jusqu'à un kill -9 (bug réel observé -- popup de confirmation
+        # ajoutée sans ce filet). Même modèle que FletchScore (voir
+        # gui/robustesse.py::construire_gestionnaire_arret côté ce
+        # dépôt frère) : appelle destroy() directement, qui casse aussi
+        # bien la boucle principale qu'une boucle modale imbriquée.
+        def _gestionnaire_arret(signum: int, frame: object) -> None:
+            print("\nFletchTime interrompu -- fermeture propre en cours...")
+            app.destroy()
+
+        for signal_gere in (signal.SIGINT, signal.SIGTERM):
+            try:
+                signal.signal(signal_gere, _gestionnaire_arret)
+            except (ValueError, OSError, AttributeError):
+                # ValueError : pas dans le thread principal.
+                # OSError/AttributeError : signal non disponible sur cette
+                # plateforme (ex. SIGTERM a un support limité sous Windows).
+                # Ctrl+C reste rattrapé en dernier recours par le
+                # KeyboardInterrupt par défaut de Python.
+                pass
+
         app.mainloop()
     except Exception:
         # Si la construction de la fenêtre échoue après que le serveur ait
