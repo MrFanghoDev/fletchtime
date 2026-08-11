@@ -72,6 +72,9 @@ _TRANSLATIONS = {
         "start": "Démarrer",
         "stop": "Arrêter",
         "quit": "Quitter",
+        "quitConfirmMessage": "Veux-tu vraiment quitter FletchTime ?",
+        "quitConfirmServerNote": "Le serveur sera arrêté et tous les écrans connectés seront déconnectés.",
+        "cancel": "Annuler",
         "homeWelcome": "Bienvenue sur FletchTime",
         "homeTagline": "Chronométrage open source pour compétitions d'archerie FFTL -- Indoor & Flint",
         "home": "Accueil",
@@ -134,6 +137,9 @@ _TRANSLATIONS = {
         "start": "Start",
         "stop": "Stop",
         "quit": "Quit",
+        "quitConfirmMessage": "Do you really want to quit FletchTime?",
+        "quitConfirmServerNote": "The server will stop and all connected screens will be disconnected.",
+        "cancel": "Cancel",
         "homeWelcome": "Welcome to FletchTime",
         "homeTagline": "Open source timing software for FFTL archery competitions -- Indoor & Flint",
         "home": "Home",
@@ -986,8 +992,46 @@ class FletchTimeApp(ctk.CTk):
         self._refresh_status()
 
     def _on_quit(self) -> None:
+        if not self._confirm_quit():
+            return
         self.runtime.stop()
         self.destroy()
+
+    def _confirm_quit(self) -> bool:
+        """Popup de confirmation -- évite une fermeture accidentelle (clic
+        malheureux sur « Quitter » ou sur la croix de la fenêtre) alors
+        qu'un concours est en cours et des écrans connectés."""
+        result = {"ok": False}
+
+        dialog = ctk.CTkToplevel(self)
+        dialog.title(self._t("quit"))
+        dialog.geometry("340x160")
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+
+        message = self._t("quitConfirmMessage")
+        if self.runtime.is_running:
+            message += "\n\n" + self._t("quitConfirmServerNote")
+        ctk.CTkLabel(dialog, text=message, wraplength=300, justify="left").pack(
+            padx=20, pady=(20, 15)
+        )
+
+        def confirm() -> None:
+            result["ok"] = True
+            dialog.destroy()
+
+        buttons_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        buttons_frame.pack(pady=10)
+        ctk.CTkButton(buttons_frame, text=self._t("quit"), fg_color="gray40", command=confirm).pack(
+            side="left", padx=5
+        )
+        ctk.CTkButton(buttons_frame, text=self._t("cancel"), command=dialog.destroy).pack(
+            side="left", padx=5
+        )
+
+        dialog.transient(self)
+        dialog.after(50, dialog.grab_set)
+        self.wait_window(dialog)
+        return result["ok"]
 
     # -- journal (file thread-safe -> buffer, + widget si l'écran est actif) --
 
