@@ -60,6 +60,14 @@ from fletchtime.server import config_store
 
 SECTIONS = ["accueil", "affichage", "reseau", "statut_technique", "journal", "aide"]
 
+# Mêmes icônes que la vue web (theme.css, boutons .theme-btn) et que le
+# sélecteur de thème de FletchScore (gui/app.py::ICONES_THEME, issue #49)
+# -- reprises telles quelles ici (issue #15) pour remplacer le dropdown
+# texte "Système"/"Clair"/"Sombre" d'avant, qui devait être retraduit à
+# chaque changement de langue.
+ICONES_THEME = {"system": "◐", "light": "☀", "dark": "☾"}
+_THEME_PAR_ICONE = {icone: theme for theme, icone in ICONES_THEME.items()}
+
 # Même fichier que celui utilisé comme icône de fletchtime.spec -- pas de
 # nouvel asset à ajouter, seulement "*.ico" au package-data pip (voir
 # pyproject.toml, absent jusqu'ici -- déjà embarqué par PyInstaller, qui
@@ -110,9 +118,6 @@ _TRANSLATIONS = {
         "log_title": "Journal",
         "club_data": "Données du club :",
         "addressCaption": "Adresse :",
-        "themeSystem": "Système",
-        "themeLight": "Clair",
-        "themeDark": "Sombre",
         "networkCaption": "Ports (HTTP/WS) :",
         "displayOptionsCaption": "Lane à ouvrir :",
         "muteLabel": "Muet",
@@ -175,9 +180,6 @@ _TRANSLATIONS = {
         "log_title": "Log",
         "club_data": "Club data:",
         "addressCaption": "Address:",
-        "themeSystem": "System",
-        "themeLight": "Light",
-        "themeDark": "Dark",
         "networkCaption": "Ports (HTTP/WS):",
         "displayOptionsCaption": "Lane to open:",
         "muteLabel": "Muted",
@@ -458,23 +460,23 @@ class FletchTimeApp(ctk.CTk):
         self.langue_caption = ctk.CTkLabel(self.barre_laterale, text=self._t("languageCaption"))
         self.langue_caption.grid(row=ligne, column=0, padx=20, pady=(10, 0), sticky="w")
         ligne += 1
-        self.lang_menu = ctk.CTkOptionMenu(
+        self.segment_langue = ctk.CTkSegmentedButton(
             self.barre_laterale, values=["FR", "EN"], command=self._on_language_change
         )
-        self.lang_menu.set(self.language.upper())
-        self.lang_menu.grid(row=ligne, column=0, padx=20, pady=(5, 10), sticky="ew")
+        self.segment_langue.set(self.language.upper())
+        self.segment_langue.grid(row=ligne, column=0, padx=20, pady=(5, 10), sticky="ew")
         ligne += 1
 
         self.theme_caption = ctk.CTkLabel(self.barre_laterale, text=self._t("themeCaption"))
         self.theme_caption.grid(row=ligne, column=0, padx=20, pady=(0, 0), sticky="w")
         ligne += 1
-        self.theme_menu = ctk.CTkOptionMenu(
+        self.segment_theme = ctk.CTkSegmentedButton(
             self.barre_laterale,
-            values=[self._t("themeSystem"), self._t("themeLight"), self._t("themeDark")],
+            values=list(ICONES_THEME.values()),
             command=self._on_theme_change,
         )
-        self.theme_menu.set(self._theme_label(self.theme))
-        self.theme_menu.grid(row=ligne, column=0, padx=20, pady=(5, 15), sticky="ew")
+        self.segment_theme.set(ICONES_THEME[self.theme])
+        self.segment_theme.grid(row=ligne, column=0, padx=20, pady=(5, 15), sticky="ew")
         ligne += 1
 
         self.quit_button = ctk.CTkButton(
@@ -909,10 +911,6 @@ class FletchTimeApp(ctk.CTk):
             bouton.configure(text=self._libelle_section(cle))
         self.langue_caption.configure(text=self._t("languageCaption"))
         self.theme_caption.configure(text=self._t("themeCaption"))
-        self.theme_menu.configure(
-            values=[self._t("themeSystem"), self._t("themeLight"), self._t("themeDark")]
-        )
-        self.theme_menu.set(self._theme_label(self.theme))
         self.quit_button.configure(text=self._t("quit"))
         # Reconstruit l'écran actif pour retraduire tout son contenu --
         # plus simple et plus sûr que de retrouver et reconfigurer
@@ -920,20 +918,8 @@ class FletchTimeApp(ctk.CTk):
         # pas être l'écran actuellement affiché.
         self.afficher_section(self.section_active)
 
-    def _theme_label(self, theme: str) -> str:
-        return {
-            "system": self._t("themeSystem"),
-            "light": self._t("themeLight"),
-            "dark": self._t("themeDark"),
-        }.get(theme, self._t("themeSystem"))
-
-    def _on_theme_change(self, label: str) -> None:
-        reverse = {
-            self._t("themeSystem"): "system",
-            self._t("themeLight"): "light",
-            self._t("themeDark"): "dark",
-        }
-        theme = reverse.get(label, "system")
+    def _on_theme_change(self, icone: str) -> None:
+        theme = _THEME_PAR_ICONE[icone]
         self.theme = theme
         ctk.set_appearance_mode(theme)
         config_store.save_gui_config({"theme": theme})
