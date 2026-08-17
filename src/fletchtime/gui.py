@@ -319,7 +319,7 @@ class FletchTimeApp(ctk.CTk):
 
         super().__init__()
 
-        self.language = "fr"
+        self.language = gui_config["language"]
         self.log_queue: queue.Queue[str] = queue.Queue()
         self.status_queue: queue.Queue = queue.Queue()
         # Sources de vérité pour le journal et le statut technique --
@@ -906,6 +906,7 @@ class FletchTimeApp(ctk.CTk):
 
     def _on_language_change(self, value: str) -> None:
         self.language = value.lower()
+        config_store.save_gui_config({"language": self.language})
         self.title(self._t("title"))
         for cle, bouton in self.boutons_sections.items():
             bouton.configure(text=self._libelle_section(cle))

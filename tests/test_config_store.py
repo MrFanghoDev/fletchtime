@@ -16,11 +16,13 @@ class TestConfigStore(unittest.TestCase):
         self._original_app = config_store.APP_TOML
         self._original_auth = config_store.AUTH_TOML
         self._original_match_state = config_store.MATCH_STATE_JSON
+        self._original_gui = config_store.GUI_TOML
         config_store.INDOOR_TOML = Path(self._tmpdir.name) / "indoor.toml"
         config_store.FLINT_TOML = Path(self._tmpdir.name) / "flint.toml"
         config_store.APP_TOML = Path(self._tmpdir.name) / "app.toml"
         config_store.AUTH_TOML = Path(self._tmpdir.name) / "auth.toml"
         config_store.MATCH_STATE_JSON = Path(self._tmpdir.name) / "match_state.json"
+        config_store.GUI_TOML = Path(self._tmpdir.name) / "gui.toml"
 
     def tearDown(self) -> None:
         config_store.INDOOR_TOML = self._original_indoor
@@ -28,6 +30,7 @@ class TestConfigStore(unittest.TestCase):
         config_store.APP_TOML = self._original_app
         config_store.AUTH_TOML = self._original_auth
         config_store.MATCH_STATE_JSON = self._original_match_state
+        config_store.GUI_TOML = self._original_gui
         self._tmpdir.cleanup()
 
     def test_missing_file_falls_back_to_dataclass_defaults(self) -> None:
@@ -62,6 +65,28 @@ class TestConfigStore(unittest.TestCase):
         )
         cfg = config_store.load_indoor_config()
         self.assertEqual(cfg.shoot_time, 210.0)
+
+    def test_gui_config_defaults_to_french(self) -> None:
+        # issue #16 : la langue n'avait pas de valeur par défaut avant ce
+        # ticket -- absente de DEFAULT_GUI_CONFIG.
+        cfg = config_store.load_gui_config()
+        self.assertEqual(cfg["language"], "fr")
+
+    def test_gui_config_language_round_trip(self) -> None:
+        config_store.save_gui_config({"language": "en"})
+        self.assertEqual(config_store.load_gui_config()["language"], "en")
+
+    def test_gui_config_invalid_language_raises_and_does_not_write(self) -> None:
+        with self.assertRaises(ValueError):
+            config_store.save_gui_config({"language": "de"})
+        self.assertFalse(config_store.GUI_TOML.exists())
+
+    def test_gui_config_language_survives_alongside_theme(self) -> None:
+        config_store.save_gui_config({"theme": "dark"})
+        config_store.save_gui_config({"language": "en"})
+        cfg = config_store.load_gui_config()
+        self.assertEqual(cfg["theme"], "dark")
+        self.assertEqual(cfg["language"], "en")
 
     def test_flint_distances_round_trip_as_lists(self) -> None:
         custom = ["1 yard", "2 yards", "3 yards", "4 yards", "5 yards", "6 yards"]
