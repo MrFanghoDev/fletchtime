@@ -81,6 +81,7 @@ _TRANSLATIONS = {
         "start": "Démarrer",
         "stop": "Arrêter",
         "quit": "Quitter",
+        "fletchappsLink": "Découvre les autres outils du club sur fletchapps →",
         "quitConfirmMessage": "Veux-tu vraiment quitter FletchTime ?",
         "quitConfirmServerNote": "Le serveur sera arrêté et tous les écrans connectés seront déconnectés.",
         "cancel": "Annuler",
@@ -143,6 +144,7 @@ _TRANSLATIONS = {
         "start": "Start",
         "stop": "Stop",
         "quit": "Quit",
+        "fletchappsLink": "Discover the club's other tools on fletchapps →",
         "quitConfirmMessage": "Do you really want to quit FletchTime?",
         "quitConfirmServerNote": "The server will stop and all connected screens will be disconnected.",
         "cancel": "Cancel",
@@ -487,6 +489,27 @@ class FletchTimeApp(ctk.CTk):
             hover_color="#4a5568",
         )
         self.quit_button.grid(row=ligne, column=0, padx=20, pady=(0, 15), sticky="ew")
+        ligne += 1
+
+        # Lien croisé vers fletchapps (retour utilisateur, ticket #17) --
+        # juste au-dessus du numéro de version, même convention que les
+        # pages web des projets frères (voir CLAUDE.md global, section
+        # "Footer/signature des sites web"). CTkLabel + bind clic plutôt
+        # qu'un CTkButton : customtkinter n'a pas de widget "lien" natif,
+        # et un vrai bouton aurait été visuellement trop proche de
+        # "Quitter" juste au-dessus pour un simple lien externe.
+        self.fletchapps_link = ctk.CTkLabel(
+            self.barre_laterale,
+            text=self._t("fletchappsLink"),
+            font=ctk.CTkFont(size=11),
+            text_color=("#a8781f", "#d1a13d"),
+            cursor="hand2",
+        )
+        self.fletchapps_link.grid(row=ligne, column=0, padx=20, pady=(0, 8), sticky="w")
+        self.fletchapps_link.bind(
+            "<Button-1>",
+            lambda _evenement: webbrowser.open("https://mrfanghodev.github.io/fletchapps/"),
+        )
         ligne += 1
 
         ctk.CTkLabel(
@@ -913,6 +936,7 @@ class FletchTimeApp(ctk.CTk):
         self.langue_caption.configure(text=self._t("languageCaption"))
         self.theme_caption.configure(text=self._t("themeCaption"))
         self.quit_button.configure(text=self._t("quit"))
+        self.fletchapps_link.configure(text=self._t("fletchappsLink"))
         # Reconstruit l'écran actif pour retraduire tout son contenu --
         # plus simple et plus sûr que de retrouver et reconfigurer
         # individuellement chaque widget d'un écran qui pourrait ne même

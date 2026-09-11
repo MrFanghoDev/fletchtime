@@ -59,6 +59,11 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 language = "fr"
 
+# Template maison (docs/_templates/page.html) -- ajoute le lien croisé
+# vers fletchapps en pied de page (retour utilisateur, ticket #17), voir
+# ce fichier pour le détail.
+templates_path = ["_templates"]
+
 # -- Options for HTML output --------------------------------------------------
 
 html_theme = "furo"  # thème moderne, responsive, lisible sur mobile

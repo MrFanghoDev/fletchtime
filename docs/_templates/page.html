@@ -1,0 +1,21 @@
+{# Lien croisé vers fletchapps en pied de page (retour utilisateur,
+   ticket #17) -- étend le bloc "footer" du thème furo plutôt que de le
+   remplacer, pour garder la navigation précédente/suivante, le
+   copyright et le crédit Sphinx/Furo déjà en place. `{{ super() }}`
+   restitue tout le contenu d'origine du bloc avant d'ajouter notre
+   ligne. Même phrase que sur les pages web des projets frères (voir
+   CLAUDE.md global, section "Footer/signature des sites web"), pas de
+   variante EN : cette doc est entièrement en français (`language =
+   "fr"` dans conf.py, pas de bascule de langue ici contrairement aux
+   pages web JS des projets). #}
+{% extends "!page.html" %}
+{% block footer %}
+{{ super() }}
+<div class="bottom-of-page">
+  <div class="left-details">
+    <div class="copyright">
+      <a class="muted-link" href="https://mrfanghodev.github.io/fletchapps/" target="_blank" rel="noopener">Découvre les autres outils du club sur fletchapps →</a>
+    </div>
+  </div>
+</div>
+{% endblock footer %}
