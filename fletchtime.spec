@@ -38,7 +38,11 @@ a = Analysis(
         # projet customtkinter lui-même).
         *collect_data_files("customtkinter"),
     ],
-    hiddenimports=["websockets", "customtkinter"],
+    # PIL._tkinter_finder : importé dynamiquement par PIL.ImageTk (donc par
+    # CTkImage), jamais détecté par l'analyse statique de PyInstaller --
+    # sans lui, l'exécutable gelé retombait en mode terminal avec "No
+    # module named 'PIL._tkinter_finder'" dès l'ouverture de la fenêtre.
+    hiddenimports=["websockets", "customtkinter", "PIL._tkinter_finder"],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
