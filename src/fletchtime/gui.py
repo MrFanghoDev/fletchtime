@@ -73,7 +73,15 @@ _THEME_PAR_ICONE = {icone: theme for theme, icone in ICONES_THEME.items()}
 # pyproject.toml, absent jusqu'ici -- déjà embarqué par PyInstaller, qui
 # prend tout web/ sans filtre, contrairement à pip). PIL charge un .ico
 # directement (plusieurs résolutions internes, dont un 256x256 RGBA propre).
-CHEMIN_LOGO = Path(__file__).resolve().parent / "web" / "logo.ico"
+#
+# Chemin résolu via _app_web_dir() et non Path(__file__).parent / "web" :
+# empaqueté par PyInstaller (contents_directory="."), __file__ vaut
+# <dossier de l'exe>/fletchtime/gui.pyc, donc "web/" y serait cherché dans
+# <exe>/fletchtime/web/ alors que fletchtime.spec le place directement à
+# côté de l'exe -- la fenêtre ne s'ouvrait pas (logo introuvable).
+def chemin_logo() -> Path:
+    return _app_web_dir() / "logo.ico"
+
 
 _TRANSLATIONS = {
     "fr": {
@@ -416,7 +424,9 @@ class FletchTimeApp(ctk.CTk):
         entete.grid(row=ligne, column=0, padx=20, pady=(20, 10))
 
         image_logo = ctk.CTkImage(
-            light_image=Image.open(CHEMIN_LOGO), dark_image=Image.open(CHEMIN_LOGO), size=(28, 28)
+            light_image=Image.open(chemin_logo()),
+            dark_image=Image.open(chemin_logo()),
+            size=(28, 28),
         )
         ctk.CTkLabel(entete, image=image_logo, text="").pack(side="left", padx=(0, 8))
         ctk.CTkLabel(entete, text="FletchTime", font=ctk.CTkFont(size=20, weight="bold")).pack(
