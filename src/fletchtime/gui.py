@@ -68,6 +68,7 @@ SECTIONS = ["accueil", "affichage", "reseau", "statut_technique", "journal", "ai
 ICONES_THEME = {"system": "◐", "light": "☀", "dark": "☾"}
 _THEME_PAR_ICONE = {icone: theme for theme, icone in ICONES_THEME.items()}
 
+
 # Même fichier que celui utilisé comme icône de fletchtime.spec -- pas de
 # nouvel asset à ajouter, seulement "*.ico" au package-data pip (voir
 # pyproject.toml, absent jusqu'ici -- déjà embarqué par PyInstaller, qui
