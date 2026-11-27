@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<title>FletchTime — Télécommande</title>
+<style>
+  :root {
+    --bg: #0f1216;
+    --surface: #171b22;
+    --surface-2: #1d232c;
+    --border: #2a3140;
+    --text: #e8ebf1;
+    --text-muted: #8a93a6;
+    --text-faint: #5c6579;
+    --gold: #d1a13d;
+    --gold-dim: #4a3d21;
+    --blue: #4c7bdb;
+    --red: #d6534a;
+    --green: #3f9868;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    --radius: 10px;
+  }
+
+  /* Mode clair : suit la préférence système par défaut, ou le choix
+     explicite de l'utilisateur (voir theme.js) qui prime toujours. */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #eef1f6; --surface: #ffffff; --surface-2: #f2f4f9; --border: #d7dce6;
+      --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0;
+      --gold: #a8781f; --blue: #3357bf; --red: #b8392f; --green: #227a52;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f6; --surface: #ffffff; --surface-2: #f2f4f9; --border: #d7dce6;
+    --text: #1b2333; --text-muted: #5b6478; --text-faint: #838da0;
+    --gold: #a8781f; --blue: #3357bf; --red: #b8392f; --green: #227a52;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --surface: #171b22; --surface-2: #1d232c; --border: #2a3140;
+    --text: #e8ebf1; --text-muted: #8a93a6; --text-faint: #5c6579;
+    --gold: #d1a13d; --blue: #4c7bdb; --red: #d6534a; --green: #3f9868;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: var(--font-ui); -webkit-tap-highlight-color: transparent;
+    overflow: hidden; overscroll-behavior: none;
+  }
+  /* Une télécommande tient dans l'écran, sans défilement : 100dvh suit la
+     vraie hauteur visible sur mobile (barre d'adresse comprise). */
+  body {
+    display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+    user-select: none; -webkit-user-select: none;
+  }
+
+  /* ---------- bandeau de connexion perdue ---------- */
+  #disconnect-banner {
+    display: none; align-items: center; justify-content: center; gap: 0.6rem;
+    background: var(--red); color: #fff; font-weight: 700; font-size: 1rem;
+    padding: 0.7rem 1rem; text-align: center;
+  }
+  #disconnect-banner.visible { display: flex; }
+  #disconnect-banner .dot {
+    width: 10px; height: 10px; border-radius: 50%; background: #fff;
+    animation: pulse 1s infinite; flex-shrink: 0;
+  }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  /* ---------- barre du haut + ligne d'état ---------- */
+  .bar {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border);
+  }
+  .bar a.back {
+    color: var(--text-muted); text-decoration: none; font-size: 0.9rem;
+    padding: 0.4rem 0.2rem;
+  }
+  #status {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    font-size: 0.8rem; color: var(--text-muted);
+  }
+  #status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-faint); }
+  #status.connected .dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  #status.disconnected .dot { background: var(--red); animation: pulse 1s infinite; }
+  /* Icône SVG intégrée plutôt qu'un glyphe (« ⛶ ») : rare, absent de beaucoup
+     de polices de téléphone, il s'affichait en carré vide. */
+  #fs-btn {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.5rem 0.6rem; cursor: pointer; display: flex;
+  }
+  #fs-btn[hidden] { display: none; }
+  #fs-btn svg { width: 22px; height: 22px; }
+  #fs-btn .ic-exit { display: none; }
+  #fs-btn.is-fs .ic-enter { display: none; }
+  #fs-btn.is-fs .ic-exit { display: block; }
+
+  .state-line {
+    padding: 0.55rem 0.9rem; font-size: 1rem; font-weight: 600; text-align: center;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    border-left: 6px solid var(--text-faint); min-height: 2.6rem;
+  }
+  .state-line[data-phase="red"]       { border-left-color: var(--red); }
+  .state-line[data-phase="green"]     { border-left-color: var(--green); }
+  .state-line[data-phase="orange"]    { border-left-color: var(--gold); }
+  .state-line[data-phase="emergency"] { border-left-color: var(--red); background: var(--red); color: #fff; }
+
+  /* ---------- le pavé de boutons ---------- */
+  .pad {
+    flex: 1; min-height: 0; display: grid; gap: 0.75rem; padding: 0.75rem;
+    /* Portrait : démarrer, Next (le plus grand), pause/reprendre, arrêt,
+       urgence/reprise. Chaque bouton garde TOUJOURS sa place (grisé quand il
+       ne s'applique pas) pour qu'on le retrouve sans regarder. */
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 2.4fr 1.2fr 1fr 1.7fr;
+    grid-template-areas:
+      "si sf"
+      "nx nx"
+      "pa pl"
+      "st st"
+      "em rs";
+  }
+  @media (orientation: landscape) {
+    .pad {
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-template-rows: 1.5fr 1fr 1.2fr;
+      grid-template-areas:
+        "nx nx pa pl"
+        "nx nx st st"
+        "si sf em rs";
+    }
+  }
+
+  .b {
+    font-family: var(--font-ui); font-weight: 800; color: #fff; border: none;
+    border-radius: 14px; cursor: pointer; padding: 0.4rem;
+    font-size: clamp(1rem, 4.6vmin, 2.4rem); line-height: 1.15;
+    touch-action: manipulation; transition: transform 0.05s ease, filter 0.1s ease;
+  }
+  .b:active:not(:disabled) { transform: scale(0.97); filter: brightness(1.15); }
+  .b:disabled { opacity: 0.3; cursor: not-allowed; }
+  body.offline .b { opacity: 0.3; }          /* connexion perdue : tout est grisé, mais un appui prévient */
+  #start-indoor-btn { grid-area: si; background: var(--blue); }
+  #start-flint-btn  { grid-area: sf; background: var(--blue); }
+  #next-btn  { grid-area: nx; background: var(--gold); color: #1a1206; font-size: clamp(2rem, 11vmin, 5.5rem); }
+  #pause-btn { grid-area: pa; background: var(--surface-2); color: var(--text); border: 2px solid var(--border); }
+  #play-btn  { grid-area: pl; background: var(--surface-2); color: var(--text); border: 2px solid var(--border); }
+  #stop-btn  { grid-area: st; background: var(--red); }
+  #emergency-btn { grid-area: em; background: var(--red); font-size: clamp(1.2rem, 6vmin, 3rem); box-shadow: 0 0 0 4px rgba(214, 83, 74, 0.35); }
+  #resume-btn    { grid-area: rs; background: var(--green); }
+
+  /* ---------- retour : un appui qui n'a pas pu partir ne doit jamais être muet ---------- */
+  #toast {
+    position: fixed; left: 50%; bottom: calc(1rem + env(safe-area-inset-bottom));
+    transform: translateX(-50%); background: var(--red); color: #fff; font-weight: 700;
+    padding: 0.8rem 1.2rem; border-radius: 12px; font-size: 1.05rem; max-width: 92vw;
+    text-align: center; display: none; z-index: 20;
+  }
+  #toast.visible { display: block; }
+
+  /* ---------- mot de passe (même mécanisme que le poste de contrôle) ---------- */
+  .auth-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85);
+    align-items: center; justify-content: center; z-index: 50; padding: 1rem;
+  }
+  .auth-overlay.visible { display: flex; }
+  .auth-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1.4rem; width: 100%; max-width: 22rem;
+  }
+  .auth-box h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+  .auth-box p { color: var(--text-muted); font-size: 0.85rem; margin: 0 0 1.2rem; }
+  .auth-box input {
+    width: 100%; font-size: 1rem; padding: 0.7rem; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); margin-bottom: 0.8rem;
+    user-select: text; -webkit-user-select: text;
+  }
+  .auth-box button {
+    width: 100%; font-size: 1rem; font-weight: 700; padding: 0.8rem; border: none;
+    border-radius: 8px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+  .auth-error { color: var(--red); font-size: 0.85rem; margin-top: 0.6rem; min-height: 1.2em; }
+</style>
+</head>
+<body>
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-box">
+      <h2 data-i18n="authTitle">Mot de passe requis</h2>
+      <p data-i18n="authDescRemote">Cette télécommande est protégée -- demande le mot de passe au responsable du chronométrage.</p>
+      <input type="password" id="auth-password-input" data-i18n-placeholder="authPlaceholder" placeholder="Mot de passe" autocomplete="off">
+      <button onclick="submitAuthPassword()" data-i18n="authSubmit">Se connecter</button>
+      <div class="auth-error" id="auth-error"></div>
+    </div>
+  </div>
+
+  <div id="disconnect-banner"><span class="dot"></span><span id="disconnect-banner-text"></span></div>
+
+  <div class="bar">
+    <a class="back" href="control.html" data-i18n="remoteBack">← Contrôle</a>
+    <div id="status"><span class="dot"></span><span id="status-text"></span></div>
+    <button id="fs-btn" type="button" onclick="toggleFullscreen()" hidden>
+      <svg class="ic-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      <svg class="ic-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+    </button>
+  </div>
+
+  <div class="state-line" id="state-line" data-phase="wait"></div>
+
+  <main class="pad">
+    <button class="b" id="start-indoor-btn" data-i18n="startIndoor" onclick="press({action:'start_indoor'})">▶ Démarrer Indoor</button>
+    <button class="b" id="start-flint-btn" data-i18n="startFlint" onclick="press({action:'start_flint'})">▶ Démarrer Flint</button>
+    <button class="b" id="next-btn" data-i18n="next" onclick="press({action:'next'})">Next ▶</button>
+    <button class="b" id="pause-btn" data-i18n="pause" onclick="press({action:'pause'})">⏸ Pause</button>
+    <button class="b" id="play-btn" data-i18n="resume" onclick="press({action:'play'})">▶ Reprendre</button>
+    <button class="b" id="stop-btn" data-i18n="stopMatch" onclick="press({action:'stop'})">⏹ Arrêt du match</button>
+    <button class="b" id="emergency-btn" data-i18n="emergency" onclick="press({action:'emergency'})">🚨 Urgence</button>
+    <button class="b" id="resume-btn" data-i18n="resumeAfterEmergency" onclick="press({action:'resume'})">✅ Reprise après urgence</button>
+  </main>
+
+  <div id="toast" role="alert"></div>
+
+<script src="i18n.js"></script>
+<script src="theme.js"></script>
+<script>
+  let ws = null;
+  let wsPort = 8765;
+  let currentLanguage = localStorage.getItem("fletchtime_lang") || "fr";
+  let currentStatusKey = "connecting";
+  let lastState = null;
+  let hasSyncedLanguageFromServer = false;
+  let isAuthenticated = false;
+  let toastTimer = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  // --- textes ---------------------------------------------------------------
+  const PHASE_KEYS = {
+    red: "remotePhaseRed", green: "remotePhaseGreen", orange: "remotePhaseOrange",
+    pause: "remotePhasePause", emergency: "remotePhaseEmergency",
+    finished: "remotePhaseFinished", wait: "remotePhaseWait",
+  };
+
+  function applyTranslations() {
+    document.title = t(currentLanguage, "remoteTitle");
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t(currentLanguage, el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      el.placeholder = t(currentLanguage, el.getAttribute("data-i18n-placeholder"));
+    });
+    $("fs-btn").title = t(currentLanguage, "remoteFullscreen");
+    $("fs-btn").setAttribute("aria-label", t(currentLanguage, "remoteFullscreen"));
+    renderStatus();
+    renderStateLine();
+  }
+
+  function renderStatus() {
+    $("status-text").textContent = t(currentLanguage, currentStatusKey);
+    $("status").className = currentStatusKey === "connected" ? "connected"
+      : currentStatusKey === "disconnected" ? "disconnected" : "";
+    const offline = currentStatusKey === "disconnected";
+    document.body.classList.toggle("offline", offline);
+    $("disconnect-banner").classList.toggle("visible", offline);
+    if (offline) $("disconnect-banner-text").textContent = t(currentLanguage, "disconnectBannerText");
+  }
+
+  // Une ligne suffit : le marshal a déjà l'œil sur l'écran du chrono, c'est
+  // juste de quoi confirmer que la télécommande voit le même match.
+  function renderStateLine() {
+    const line = $("state-line");
+    const s = lastState;
+    if (!s) {
+      line.textContent = t(currentLanguage, "remoteNoMatch");
+      line.dataset.phase = "wait";
+      return;
+    }
+    if (s.finished) {
+      // Un match terminé n'a plus de volée (le moteur renvoie 0/0) : inutile de l'afficher.
+      line.textContent = t(currentLanguage, "remotePhaseFinished");
+      line.dataset.phase = "finished";
+      return;
+    }
+    const parts = [
+      t(currentLanguage, "series") + " " + s.unit_number,
+      t(currentLanguage, "volee") + " " + s.end_number + "/" + s.total_ends,
+    ];
+    if (s.arrow_in_end) {
+      parts.push(t(currentLanguage, "arrowWord") + " " + s.arrow_in_end + "/" + s.total_arrows_in_end);
+    }
+    if (s.current_turn) parts.push(s.current_turn);
+    parts.push(t(currentLanguage, PHASE_KEYS[s.phase] || "remotePhaseWait"));
+    line.textContent = parts.join(" · ");
+    line.dataset.phase = s.phase;
+  }
+
+  function showToast(text) {
+    const el = $("toast");
+    el.textContent = text;
+    el.classList.add("visible");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("visible"), 2500);
+  }
+
+  // --- envoi ----------------------------------------------------------------
+  // Un appui sur une connexion coupée ne doit jamais être muet : sans retour,
+  // le marshal croirait avoir lancé la volée alors que rien n'est parti.
+  function press(obj) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(obj));
+      if (navigator.vibrate) navigator.vibrate(30);
+    } else {
+      showToast(t(currentLanguage, "remoteNotSent"));
+      if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+    }
+  }
+  function submitAuthPassword() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({action: "authenticate", password: $("auth-password-input").value}));
+    }
+  }
+  $("auth-password-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitAuthPassword();
+  });
+
+  // --- connexion ------------------------------------------------------------
+  async function fetchWsPort() {
+    try {
+      const res = await fetch("/api/version");
+      const data = await res.json();
+      if (data.ws_port) wsPort = data.ws_port;
+    } catch (e) {
+      // Repli silencieux sur la valeur par défaut ci-dessus.
+    }
+  }
+
+  function connect() {
+    ws = new WebSocket("ws://" + location.hostname + ":" + wsPort);
+    ws.onopen = () => { currentStatusKey = "connected"; renderStatus(); };
+    ws.onclose = () => {
+      currentStatusKey = "disconnected";
+      renderStatus();
+      setTimeout(connect, 2000);
+    };
+    ws.onerror = () => ws.close();
+
+    ws.onmessage = (evt) => {
+      const data = JSON.parse(evt.data);
+      if (data.type === "auth_required") {
+        isAuthenticated = false;
+        $("auth-overlay").classList.add("visible");
+        return;
+      }
+      if (data.type === "auth_result") {
+        if (data.ok) {
+          isAuthenticated = true;
+          $("auth-overlay").classList.remove("visible");
+          $("auth-error").textContent = "";
+        } else {
+          $("auth-error").textContent = t(currentLanguage, "authError");
+        }
+        return;
+      }
+      if (data.type !== "state") return;
+
+      if (data.auth_required && !isAuthenticated) {
+        $("auth-overlay").classList.add("visible");
+      } else if (!data.auth_required) {
+        isAuthenticated = false;
+        $("auth-overlay").classList.remove("visible");
+      }
+
+      // Comme le poste de contrôle : on adopte la langue déjà diffusée par le
+      // serveur à la première connexion, sans jamais la modifier d'ici.
+      if (!hasSyncedLanguageFromServer) {
+        hasSyncedLanguageFromServer = true;
+        if (data.language && data.language !== currentLanguage) {
+          currentLanguage = data.language;
+          localStorage.setItem("fletchtime_lang", currentLanguage);
+          applyTranslations();
+        }
+      }
+
+      lastState = data.state || null;
+      renderStateLine();
+
+      // Mêmes règles d'activation que le poste de contrôle.
+      const hasMatch = !!data.state;
+      const running = hasMatch && !data.state.finished;
+      const inEmergency = hasMatch && data.state.phase === "emergency";
+      $("start-indoor-btn").disabled = running;
+      $("start-flint-btn").disabled = running;
+      $("next-btn").disabled = !running || inEmergency;
+      $("pause-btn").disabled = !running;
+      $("play-btn").disabled = !running;
+      $("stop-btn").disabled = !running;
+      $("emergency-btn").disabled = !running || inEmergency;
+      $("resume-btn").disabled = !inEmergency;
+    };
+  }
+
+  // --- plein écran + écran toujours allumé -----------------------------------
+  const fsBtn = $("fs-btn");
+  if (document.documentElement.requestFullscreen) fsBtn.hidden = false;  // absent sur certains navigateurs (ex. iPhone)
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  }
+  document.addEventListener("fullscreenchange", () => {
+    fsBtn.classList.toggle("is-fs", !!document.fullscreenElement);
+  });
+
+  async function requestWakeLock() {
+    try {
+      if ("wakeLock" in navigator) await navigator.wakeLock.request("screen");
+    } catch (e) { /* refusé (batterie faible, etc.) -- pas bloquant */ }
+  }
+  requestWakeLock();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") requestWakeLock();
+  });
+
+  applyTranslations();
+  fetchWsPort().then(connect);
+</script>
+</body>
+</html>

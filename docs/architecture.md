@@ -426,6 +426,40 @@ port) -- voir aussi le piège PyInstaller/`customtkinter` documenté dans
 {doc}`dev-guide/index`.
 ```
 
+## Télécommande (`remote.html`)
+
+Page plein écran à gros boutons pour le marshal, qui a déjà l'œil sur l'écran du
+chrono : elle sert seulement à **commander**, pas à surveiller. On y accède par
+le bouton « 📱 Télécommande » du poste de contrôle (seule modification de cette
+page) ; « ← Contrôle » y ramène. Aucun serveur ni protocole nouveau : elle parle
+au même WebSocket, avec les mêmes commandes, et réutilise `i18n.js`, `theme.js`
+et la palette (le test de dérive de thème la couvre).
+
+- **Huit commandes, rien d'autre** : `start_indoor`, `start_flint`, `next`,
+  `pause`, `play`, `stop`, `emergency`, `resume` -- pas de `goto`, de message ni
+  de réglage (voir le poste de contrôle). Un test vérifie que cette liste est
+  exacte et que chaque commande est dans `PROTECTED_ACTIONS` (donc couverte par
+  le mot de passe quand il est configuré).
+- **Aucune confirmation, par décision** : un appui agit tout de suite. Attention,
+  `next()` avance d'une étape **quel que soit l'état**, tir en cours compris
+  (voir `MatchEngine.next`) : un appui involontaire sur Next pendant une volée la
+  coupe.
+- **Positions fixes** : chaque bouton garde sa place et est grisé quand il ne
+  s'applique pas (mêmes règles d'activation que le poste de contrôle), pour qu'on
+  le retrouve sans regarder. Portrait : démarrer, Next (le plus grand),
+  pause/reprendre, arrêt, urgence/reprise ; paysage : grille 4×3.
+- **Une ligne d'état** (série · volée · relais · phase) pour confirmer que la
+  télécommande voit le même match. Un match terminé affiche seulement « Terminé »
+  (le moteur renvoie alors volée 0/0).
+- **Jamais muette** : si la connexion est coupée, bandeau rouge, boutons grisés, et
+  un appui affiche « Non envoyé : connexion perdue » (même principe que « Aller à »
+  du poste de contrôle).
+- **Mot de passe** : même écran de connexion que le poste de contrôle. **Langue** :
+  adoptée depuis le serveur à la première connexion (jamais modifiée d'ici).
+- **Plein écran** par l'API Fullscreen (icône SVG, pas un glyphe de police ; bouton
+  masqué si l'API manque, par exemple sur iPhone -- non vérifié sur ce matériel)
+  et écran maintenu allumé (Wake Lock). Aucun son (les écrans de tir ont les leurs).
+
 ## Résilience de la boucle de décompte
 
 `MatchServer.tick_loop()` capture désormais toute exception imprévue en
