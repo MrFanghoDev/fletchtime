@@ -343,6 +343,92 @@ class TestMatchServer(unittest.IsolatedAsyncioTestCase):
         after = self.display.last_state()
         self.assertEqual(before, after)  # unchanged, no crash
 
+    # -- retour visible de « Aller à » (goto_result) ----------------------------
+
+    @staticmethod
+    def _goto_replies(client: FakeWebSocket) -> list[dict]:
+        return [
+            parsed
+            for parsed in (json.loads(raw) for raw in client.sent)
+            if parsed.get("type") == "goto_result"
+        ]
+
+    async def _goto(self, **champs) -> dict:
+        """Envoie un goto depuis le poste de contrôle et renvoie sa réponse."""
+        avant = len(self._goto_replies(self.control))
+        await self.server.handle_command(
+            json.dumps({"action": "goto", **champs}), websocket=self.control
+        )
+        reponses = self._goto_replies(self.control)
+        self.assertEqual(len(reponses), avant + 1, "exactement une réponse par goto")
+        return reponses[-1]
+
+    async def test_goto_reussi_repond_avec_la_position_et_la_phase(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        reponse = await self._goto(unit=2, end=4, turn="C-D")
+        self.assertTrue(reponse["ok"])
+        self.assertEqual((reponse["unit"], reponse["end"], reponse["turn"]), (2, 4, "C-D"))
+        self.assertEqual(reponse["total_ends"], 6)
+        self.assertEqual(reponse["phase"], "pause")  # on atterrit en pause : Next lance la volée
+
+    async def test_goto_vers_la_premiere_volee_demarre_directement(self) -> None:
+        # Pas de pause avant la toute première étape : la réponse le dit
+        # (phase != pause) pour que la page prévienne que le chrono tourne.
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        reponse = await self._goto(unit=1, end=1)
+        self.assertTrue(reponse["ok"])
+        self.assertNotEqual(reponse["phase"], "pause")
+
+    async def test_goto_second_relais_d_une_volee_indoor_demarre_directement(self) -> None:
+        # En Indoor, aucune pause entre les deux relais d'une même volée :
+        # y aller démarre le chrono tout de suite (et la réponse le dit).
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        premier = await self._goto(unit=1, end=3, turn="A-B")
+        second = await self._goto(unit=1, end=3, turn="C-D")
+        self.assertEqual(premier["phase"], "pause")
+        self.assertNotEqual(second["phase"], "pause")
+
+    async def test_goto_cible_absente_dit_ce_qui_existe(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        reponse = await self._goto(unit=1, end=7)  # Indoor : 6 volées par série
+        self.assertFalse(reponse["ok"])
+        self.assertEqual(reponse["reason"], "not_found")
+        self.assertEqual(reponse["requested"]["end"], 7)
+        self.assertEqual(reponse["bounds"]["max_end"], 6)
+        self.assertEqual(reponse["bounds"]["units"], [1, 2])
+
+    async def test_goto_sans_match_repond_aucun_match(self) -> None:
+        reponse = await self._goto(unit=1, end=1)
+        self.assertFalse(reponse["ok"])
+        self.assertEqual(reponse["reason"], "no_match")
+
+    async def test_goto_valeurs_non_numeriques_repond_invalide_sans_planter(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        avant = self.display.last_state()
+        reponse = await self._goto(unit="abc", end=None)
+        self.assertFalse(reponse["ok"])
+        self.assertEqual(reponse["reason"], "invalid")
+        self.assertEqual(self.display.last_state(), avant)
+
+    async def test_goto_refuse_laisse_le_match_inchange(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self._goto(unit=2, end=3, turn="C-D")
+        avant = self.display.last_state()
+        await self._goto(unit=9, end=9)
+        self.assertEqual(self.display.last_state(), avant)
+
+    async def test_la_reponse_goto_n_est_envoyee_qu_a_l_emetteur(self) -> None:
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        await self._goto(unit=1, end=3)
+        self.assertEqual(self._goto_replies(self.display), [])
+
+    async def test_l_etat_diffuse_annonce_les_bornes_de_goto(self) -> None:
+        self.assertIsNone(json.loads(self.control.sent[-1]).get("goto_bounds", "absent"))
+        await self.server.handle_command(json.dumps({"action": "start_indoor"}))
+        bornes = json.loads(self.control.sent[-1])["goto_bounds"]
+        self.assertEqual(bornes["units"], [1, 2])
+        self.assertEqual(bornes["max_end"], 6)
+
 
 class TestMatchServerLaneTracking(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:

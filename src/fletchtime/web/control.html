@@ -183,6 +183,26 @@
   }
   .btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
+  /* « Aller à une volée précise » : chaque libellé AU-DESSUS de son champ
+     (placé après, il se retrouvait accolé au mauvais champ quand la ligne
+     passait à la ligne sur téléphone). 2 colonnes sur mobile, 4 au-delà. */
+  .goto-group { gap: 0.6rem; }
+  .goto-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem 0.8rem; max-width: 26rem;
+  }
+  @media (min-width: 640px) {
+    .goto-grid { grid-template-columns: repeat(4, minmax(0, 9rem)); max-width: none; }
+  }
+  .goto-field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.72rem; color: var(--text-muted); }
+  .goto-field input[type=number], .goto-field select { width: 100%; box-sizing: border-box; }
+  .goto-hint { font-size: 0.8rem; color: var(--text-muted); }
+  .goto-feedback { min-height: 1.3em; font-size: 0.88rem; font-weight: 600; }
+  .goto-feedback.ok { color: var(--green); }
+  .goto-feedback.warn { color: var(--gold); }
+  .goto-feedback.err { color: var(--red); }
+  .goto-feedback.pending { color: var(--text-muted); font-weight: 500; }
+
   /* ---------- contrôles ---------- */
   button {
     font-family: var(--font-ui); font-size: 0.92rem; font-weight: 600;
@@ -376,22 +396,32 @@
             onclick="send({action:'resume'})" disabled>✅ Reprise après urgence</button>
         </div>
 
-        <div class="field-group">
-          <div class="panel-subhead" data-i18n="gotoLabel">Aller à : unité</div>
-          <div class="row">
-            <input type="number" id="goto-unit" value="1" min="1">
-            <span data-i18n="gotoVolee">volée</span>
-            <input type="number" id="goto-end" value="1" min="1">
-            <span data-i18n="gotoArrow">flèche (walk-up)</span>
-            <input type="number" id="goto-arrow" value="0" min="0">
-            <span data-i18n="gotoRelay">relais</span>
-            <select id="goto-turn">
-              <option value="" data-i18n="gotoAny">(peu importe)</option>
-              <option value="A-B">A-B</option>
-              <option value="C-D">C-D</option>
-            </select>
-            <button class="btn-quiet" data-i18n="gotoButton" onclick="sendGoto()">Aller à cette volée</button>
+        <div class="field-group goto-group">
+          <div class="panel-subhead" data-i18n="gotoLabel">Aller à une volée précise</div>
+          <div class="goto-grid">
+            <label class="goto-field"><span data-i18n="gotoSeries">Série</span>
+              <input type="number" id="goto-unit" value="1" min="1">
+            </label>
+            <label class="goto-field"><span data-i18n="gotoVolee">Volée</span>
+              <input type="number" id="goto-end" value="1" min="1">
+            </label>
+            <label class="goto-field" id="goto-arrow-field"><span data-i18n="gotoArrow">Flèche (walk-up)</span>
+              <input type="number" id="goto-arrow" value="0" min="0">
+            </label>
+            <label class="goto-field" id="goto-turn-field"><span data-i18n="gotoRelay">Relais</span>
+              <select id="goto-turn">
+                <option value="" data-i18n="gotoAny">(peu importe)</option>
+                <option value="A-B">A-B</option>
+                <option value="C-D">C-D</option>
+              </select>
+            </label>
           </div>
+          <div class="btn-row">
+            <button class="btn-quiet" id="goto-btn" data-i18n="gotoButton"
+              onclick="sendGoto()" disabled>Aller à cette volée</button>
+          </div>
+          <div class="goto-hint" data-i18n="gotoHint"></div>
+          <div class="goto-feedback" id="goto-feedback" role="status" aria-live="polite"></div>
         </div>
       </div>
     </details>
@@ -504,9 +534,93 @@
     document.getElementById("lang-en-btn").classList.toggle("active", currentLanguage === "en");
     renderQuickMessages();
     renderStatus();
+    renderGotoFeedback();
   }
 
   let currentStatusKey = "connecting";
+
+  // --- « Aller à une volée précise » : retour visible à chaque appui ------
+  let gotoResult = null;  // dernière réponse du serveur (ou erreur locale) à afficher
+  let gotoTimer = null;   // délai d'attente de la réponse du serveur
+
+  function fillTemplate(template, values) {
+    return template.replace(/\{(\w+)\}/g, (_, key) => (values[key] === undefined ? "" : values[key]));
+  }
+  function gotoPartTurn(turn) {
+    return turn ? fillTemplate(t(currentLanguage, "gotoPartTurn"), {turn: turn}) : "";
+  }
+  function gotoPartArrow(arrow) {
+    return arrow ? fillTemplate(t(currentLanguage, "gotoPartArrow"), {arrow: arrow}) : "";
+  }
+  function describeGotoRequest(req) {
+    return fillTemplate(t(currentLanguage, "gotoReqText"), {
+      unit: req.unit, end: req.end,
+      arrowPart: gotoPartArrow(req.arrow), turnPart: gotoPartTurn(req.turn),
+    });
+  }
+  function describeGotoBounds(b) {
+    if (!b) return "";
+    const first = b.units[0], last = b.units[b.units.length - 1];
+    const parts = [
+      first === last
+        ? fillTemplate(t(currentLanguage, "gotoDescSeriesOne"), {a: first})
+        : fillTemplate(t(currentLanguage, "gotoDescSeriesMany"), {a: first, b: last}),
+      fillTemplate(t(currentLanguage, "gotoDescEnds"), {n: b.max_end}),
+    ];
+    if (b.turns.length) parts.push(fillTemplate(t(currentLanguage, "gotoDescTurns"), {list: b.turns.join(" / ")}));
+    if (b.walkup_end) {
+      parts.push(fillTemplate(t(currentLanguage, "gotoDescWalkup"), {end: b.walkup_end, n: b.max_arrow}));
+    }
+    return parts.join(", ");
+  }
+  function renderGotoFeedback() {
+    const el = document.getElementById("goto-feedback");
+    const r = gotoResult;
+    let kind = "err", text = "";
+    if (!r) {
+      el.className = "goto-feedback";
+      el.textContent = "";
+      return;
+    }
+    if (r.local === "pending") { kind = "pending"; text = t(currentLanguage, "gotoSending"); }
+    else if (r.local === "not_connected") text = t(currentLanguage, "gotoErrNoServer");
+    else if (r.local === "timeout") text = t(currentLanguage, "gotoErrTimeout");
+    else if (r.local === "auth") text = t(currentLanguage, "gotoErrAuth");
+    else if (r.ok) {
+      const running = r.phase !== "pause";
+      kind = running ? "warn" : "ok";
+      text = fillTemplate(t(currentLanguage, running ? "gotoOkRunning" : "gotoOkPause"), {
+        unit: r.unit, end: r.end, total: r.total_ends,
+        arrowPart: gotoPartArrow(r.arrow), turnPart: gotoPartTurn(r.turn),
+      });
+    } else if (r.reason === "no_match") text = t(currentLanguage, "gotoErrNoMatch");
+    else if (r.reason === "invalid") {
+      text = t(currentLanguage, "gotoErrInvalid") + " " +
+        fillTemplate(t(currentLanguage, "gotoAvailable"), {available: describeGotoBounds(r.bounds)});
+    } else {
+      text = fillTemplate(t(currentLanguage, "gotoErrNotFound"), {requested: describeGotoRequest(r.requested)}) +
+        " " + fillTemplate(t(currentLanguage, "gotoAvailable"), {available: describeGotoBounds(r.bounds)});
+    }
+    el.className = "goto-feedback " + kind;
+    el.textContent = text;
+  }
+  // Borne les champs sur ce que le match en cours contient réellement, et
+  // masque ce qui n'existe pas (relais absents du mode, flèches sans walk-up).
+  function applyGotoBounds(b, hasMatch) {
+    const turnEl = document.getElementById("goto-turn");
+    document.getElementById("goto-unit").max = b ? b.units[b.units.length - 1] : "";
+    document.getElementById("goto-end").max = b ? b.max_end : "";
+    document.getElementById("goto-arrow").max = b ? b.max_arrow : "";
+    document.getElementById("goto-arrow-field").style.display = b && b.max_arrow === 0 ? "none" : "";
+    document.getElementById("goto-turn-field").style.display = b && b.turns.length === 0 ? "none" : "";
+    Array.from(turnEl.options).forEach((option) => {
+      if (!option.value) return;
+      option.disabled = option.hidden = !!b && !b.turns.includes(option.value);
+    });
+    if (turnEl.selectedOptions[0] && turnEl.selectedOptions[0].disabled) turnEl.value = "";
+    document.getElementById("goto-btn").disabled = !hasMatch;
+  }
+
   function renderStatus() {
     statusEl.textContent = "";
     const dot = document.createElement("span");
@@ -588,6 +702,17 @@
         // encore) authentifiée : ré-affiche la fenêtre de connexion.
         isAuthenticated = false;
         document.getElementById("auth-overlay").classList.add("visible");
+        if (gotoResult && gotoResult.local === "pending") {
+          clearTimeout(gotoTimer);
+          gotoResult = {local: "auth"};
+          renderGotoFeedback();
+        }
+        return;
+      }
+      if (data.type === "goto_result") {
+        clearTimeout(gotoTimer);
+        gotoResult = data;
+        renderGotoFeedback();
         return;
       }
       if (data.type === "auth_result") {
@@ -664,6 +789,17 @@
         document.getElementById("play-btn").disabled = !matchIsRunning;
         document.getElementById("restart-btn").disabled = !hasMatch;
 
+        // « Aller à » reste utilisable match terminé (comme Recommencer) :
+        // c'est justement la décision explicite à prendre après une coupure
+        // qui a terminé le match. Le message de résultat devient obsolète
+        // dès que la phase change (Next pressé, volée terminée...).
+        applyGotoBounds(data.goto_bounds, hasMatch);
+        if (gotoResult && gotoResult.ok && data.state
+            && (gotoResult.phase === "pause") !== (data.state.phase === "pause")) {
+          gotoResult = null;
+          renderGotoFeedback();
+        }
+
         // Urgence : seulement pendant un match actif, pas déjà en urgence.
         // Reprise : seulement quand on est effectivement en urgence.
         const inEmergency = hasMatch && data.state.phase === "emergency";
@@ -720,13 +856,30 @@
     send({action: "set_event_title", value: val});
   }
   function sendGoto() {
-    send({
+    // Chaque appui doit produire un retour visible : avant, une cible
+    // inexistante (ou une connexion coupée) donnait un bouton qui semblait
+    // ne rien faire du tout.
+    const arrowHidden = document.getElementById("goto-arrow-field").style.display === "none";
+    const payload = {
       action: "goto",
       unit: parseInt(document.getElementById("goto-unit").value || "1", 10),
       end: parseInt(document.getElementById("goto-end").value || "1", 10),
-      arrow: parseInt(document.getElementById("goto-arrow").value || "0", 10),
+      arrow: arrowHidden ? 0 : parseInt(document.getElementById("goto-arrow").value || "0", 10),
       turn: document.getElementById("goto-turn").value,
-    });
+    };
+    clearTimeout(gotoTimer);
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      gotoResult = {local: "not_connected"};
+      renderGotoFeedback();
+      return;
+    }
+    gotoResult = {local: "pending"};
+    renderGotoFeedback();
+    gotoTimer = setTimeout(() => {
+      gotoResult = {local: "timeout"};
+      renderGotoFeedback();
+    }, 3000);
+    ws.send(JSON.stringify(payload));
   }
 </script>
 </body>

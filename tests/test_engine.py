@@ -539,6 +539,53 @@ class TestMatchEngineStopRestartGoto(unittest.TestCase):
         self.assertEqual(state.phase, Phase.RED)
 
 
+class TestMatchEngineGotoBounds(unittest.TestCase):
+    """goto_bounds() décrit ce que goto() peut réellement atteindre -- sert
+    à dire à l'opérateur ce qui existe quand il demande une cible absente."""
+
+    def test_indoor_deux_series_deux_relais_sans_walkup(self) -> None:
+        cfg = IndoorConfig(series=2, ends_per_series=6, turn_mode="ab_then_cd")
+        bounds = MatchEngine(IndoorMode(cfg)).goto_bounds()
+        self.assertEqual(bounds["units"], [1, 2])
+        self.assertEqual(bounds["max_end"], 6)
+        self.assertEqual(bounds["turns"], ["A-B", "C-D"])
+        self.assertIsNone(bounds["walkup_end"])
+        self.assertEqual(bounds["max_arrow"], 0)
+
+    def test_flint_decrit_le_walkup(self) -> None:
+        cfg = FlintConfig(units=2, standard_ends_per_unit=6, turn_mode="ab_then_cd")
+        bounds = MatchEngine(FlintMode(cfg)).goto_bounds()
+        self.assertEqual(bounds["units"], [1, 2])
+        self.assertEqual(bounds["max_end"], 7)  # 6 volées standards + le walk-up
+        self.assertEqual(bounds["walkup_end"], 7)
+        self.assertEqual(bounds["max_arrow"], cfg.walkup_arrows)
+
+    def test_un_seul_relais_masque_l_autre(self) -> None:
+        cfg = FlintConfig(units=1, turn_mode="ab_only")
+        self.assertEqual(MatchEngine(FlintMode(cfg)).goto_bounds()["turns"], ["A-B"])
+
+    def test_chaque_cible_annoncee_est_atteignable_et_pas_la_suivante(self) -> None:
+        # Cohérence avec goto() lui-même : tout ce que les bornes annoncent
+        # existe, et un cran au-delà est refusé -- sinon le message d'aide
+        # affiché à l'opérateur mentirait.
+        cfg = FlintConfig(units=2, turn_mode="ab_then_cd")
+        engine = MatchEngine(FlintMode(cfg))
+        bounds = engine.goto_bounds()
+        for unit in bounds["units"]:
+            for end in range(1, bounds["max_end"] + 1):
+                for turn in bounds["turns"]:
+                    engine.goto(unit_number=unit, end_number=end, turn=turn)
+        with self.assertRaises(ValueError):
+            engine.goto(unit_number=bounds["units"][-1] + 1, end_number=1)
+        with self.assertRaises(ValueError):
+            engine.goto(unit_number=1, end_number=bounds["max_end"] + 1)
+
+    def test_la_copie_renvoyee_ne_modifie_pas_l_original(self) -> None:
+        engine = simple_indoor_engine()
+        engine.goto_bounds()["units"].append(99)
+        self.assertEqual(engine.goto_bounds()["units"], [1])
+
+
 class TestMatchEngineSnapshotRestore(unittest.TestCase):
     """Couvre la récupération après un plantage/redémarrage du serveur --
     voir fletchtime.server.match_server, qui persiste ce snapshot sur

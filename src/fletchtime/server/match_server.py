@@ -192,6 +192,11 @@ class MatchServer:
             await self._reject_unauthenticated(websocket)
             return
 
+        # Réponse à renvoyer au seul émetteur d'un goto (succès ou refus) --
+        # sans elle, une cible absente était ignorée en silence et le bouton
+        # semblait simplement ne rien faire.
+        goto_reply: dict | None = None
+
         async with self._lock:
             if action == "start_indoor":
                 try:
@@ -247,6 +252,9 @@ class MatchServer:
                     self._language = lang
             elif action == "set_event_title":
                 self._event_title = data.get("value") or None
+            elif action == "goto" and self.engine is None:
+                logger.info("goto ignoré : aucun match en cours")
+                goto_reply = {"type": "goto_result", "ok": False, "reason": "no_match"}
             elif self.engine is not None:
                 try:
                     if action == "next":
@@ -256,12 +264,7 @@ class MatchServer:
                     elif action == "restart":
                         self.engine.restart()
                     elif action == "goto":
-                        self.engine.goto(
-                            unit_number=int(data.get("unit", 1)),
-                            end_number=int(data.get("end", 1)),
-                            arrow_in_end=int(data.get("arrow", 0)),
-                            turn=data.get("turn", ""),
-                        )
+                        goto_reply = self._goto(data)
                     elif action == "emergency":
                         self.engine.emergency()
                     elif action == "resume":
@@ -280,7 +283,69 @@ class MatchServer:
             # d'effacement séparée n'est nécessaire ici.
             self._save_snapshot()
 
+        if goto_reply is not None and websocket is not None:
+            await self._reply(websocket, goto_reply)
+
         await self.broadcast_state()
+
+    def _goto(self, data: dict) -> dict:
+        """Exécute un ``goto`` et renvoie la réponse à adresser à son seul
+        émetteur (message ``goto_result``) : succès avec la position où on
+        a atterri, ou refus avec la raison et ce qui existe réellement
+        dans ce match (``bounds``). Journalise toujours le résultat, avec
+        les valeurs demandées -- le journal ne disait jusqu'ici que
+        « Commande reçue : goto »."""
+        bounds = self.engine.goto_bounds()
+        try:
+            unit = int(data.get("unit", 1))
+            end = int(data.get("end", 1))
+            arrow = int(data.get("arrow", 0))
+        except (TypeError, ValueError):
+            logger.info("goto refusé : valeurs non numériques (%r)", data)
+            return {"type": "goto_result", "ok": False, "reason": "invalid", "bounds": bounds}
+        turn = str(data.get("turn") or "")
+        requested = {"unit": unit, "end": end, "arrow": arrow, "turn": turn}
+        try:
+            state = self.engine.goto(
+                unit_number=unit, end_number=end, arrow_in_end=arrow, turn=turn
+            )
+        except ValueError:
+            logger.info("goto introuvable : %s", requested)
+            return {
+                "type": "goto_result",
+                "ok": False,
+                "reason": "not_found",
+                "requested": requested,
+                "bounds": bounds,
+            }
+        logger.info(
+            "goto effectué : %s -> série %d, volée %d, relais %r, phase %s",
+            requested,
+            state.unit_number,
+            state.end_number,
+            state.current_turn,
+            state.phase.value,
+        )
+        return {
+            "type": "goto_result",
+            "ok": True,
+            "requested": requested,
+            "unit": state.unit_number,
+            "end": state.end_number,
+            "total_ends": state.total_ends,
+            "turn": state.current_turn,
+            "arrow": state.arrow_in_end,
+            "phase": state.phase.value,
+        }
+
+    async def _reply(self, websocket, payload: dict) -> None:
+        """Envoie ``payload`` à un seul client (jamais en diffusion)."""
+        try:
+            await websocket.send(json.dumps(payload))
+        except Exception:
+            self.clients.discard(websocket)
+            self._display_lanes.pop(websocket, None)
+            self._authenticated_connections.discard(websocket)
 
     # -- config get/save (no match-state broadcast involved) -----------------
 
@@ -558,6 +623,10 @@ class MatchServer:
             "countdown_tick_seconds": self._countdown_tick_seconds,
             "phase_colors": self._phase_colors,
             "auth_required": self._auth_required(websocket),
+            # Cibles que « Aller à... » peut atteindre dans ce match (la
+            # page de contrôle s'en sert pour borner les champs et afficher
+            # ce qui existe) -- None tant qu'aucun match n'est lancé.
+            "goto_bounds": self.engine.goto_bounds() if self.engine is not None else None,
         }
 
     async def _broadcast(self, payload: dict) -> None:

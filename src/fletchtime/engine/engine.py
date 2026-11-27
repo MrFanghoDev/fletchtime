@@ -42,6 +42,11 @@ class MatchEngine:
         if not self._steps:
             raise ValueError("A shooting mode must produce at least one step")
 
+        # La séquence ne change jamais après construction : les cibles
+        # atteignables par goto() se calculent une seule fois, pas à chaque
+        # diffusion d'état (5 fois par seconde, vers chaque client).
+        self._goto_bounds = self._compute_goto_bounds()
+
         self._pending_events: list[str] = []
 
         if restore is not None:
@@ -247,6 +252,38 @@ class MatchEngine:
             f"No step found for unit={unit_number} end={end_number} "
             f"arrow={arrow_in_end or '-'} turn={turn or '-'}"
         )
+
+    def _compute_goto_bounds(self) -> dict:
+        tirs = [step for step in self._steps if step.phase != Phase.PAUSE]
+        tours = []
+        for step in tirs:
+            if step.current_turn and step.current_turn not in tours:
+                tours.append(step.current_turn)
+        volees_walkup = {step.end_number for step in tirs if step.arrow_in_end}
+        return {
+            "units": sorted({step.unit_number for step in tirs}),
+            "max_end": max(step.end_number for step in tirs),
+            "turns": tours,
+            "walkup_end": min(volees_walkup) if volees_walkup else None,
+            "max_arrow": max((step.arrow_in_end for step in tirs), default=0),
+        }
+
+    def goto_bounds(self) -> dict:
+        """Cibles que :meth:`goto` peut réellement atteindre dans CE match.
+
+        Sert à dire à l'opérateur ce qui existe quand il demande une cible
+        absente (au lieu de l'ignorer en silence) : ``units`` (numéros
+        d'unité/série), ``max_end`` (plus grand numéro de volée),
+        ``turns`` (relais présents, vide si le mode n'en a pas),
+        ``walkup_end`` (numéro de la volée walk-up, ``None`` s'il n'y en a
+        pas) et ``max_arrow`` (plus grand numéro de flèche, 0 sans walk-up).
+        Une copie est renvoyée : l'appelant peut la modifier sans risque.
+        """
+        return {
+            **self._goto_bounds,
+            "units": list(self._goto_bounds["units"]),
+            "turns": list(self._goto_bounds["turns"]),
+        }
 
     def emergency(self) -> MatchState:
         """Freeze the clock immediately. Position/time-left are remembered

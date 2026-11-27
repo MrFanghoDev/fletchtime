@@ -180,6 +180,43 @@ temps affiché ne redémarre jamais.
 Ce découpage permet d'ajouter un nouveau mode sans toucher aux modes
 existants (voir {doc}`dev-guide/index`).
 
+### « Aller à une volée précise » (`goto`)
+
+`MatchEngine.goto(unit, end, arrow, turn)` repositionne le match sur la
+première étape de tir qui correspond (`turn` vide = n'importe quel relais,
+donc le premier rencontré). Il **atterrit sur la pause qui précède** cette
+étape quand il y en a une -- l'écran annonce alors la volée visée et le
+décompte ne démarre qu'au `next()` suivant. Quand aucune pause ne précède
+l'étape, le décompte démarre directement : la toute première étape du match,
+les flèches 2 à 4 du walk-up Flint, et le **second relais d'une même volée
+Indoor** (pas de pause entre A-B et C-D, voir plus haut). `goto` efface aussi
+les états « terminé » et « urgence ». Une cible absente lève `ValueError`.
+
+Ce qui existe réellement dans le match en cours est décrit par
+`MatchEngine.goto_bounds()` (calculé une fois à la construction, la séquence
+ne change pas) : `units`, `max_end`, `turns`, `walkup_end`, `max_arrow`.
+
+**Retour à l'opérateur.** Un `goto` ignoré en silence donnait un bouton qui
+semblait ne rien faire (cible hors limites, relais absent du mode, aucun
+match lancé). `MatchServer` répond donc à l'**émetteur seul** par un message
+`goto_result` (jamais diffusé aux écrans) :
+
+- `{ok: true, unit, end, total_ends, turn, arrow, phase}` -- `phase` vaut
+  `pause` quand on attend un `next`, autre chose quand le décompte est déjà
+  parti ;
+- `{ok: false, reason: "not_found" | "invalid" | "no_match", requested?,
+  bounds?}` -- `bounds` reprend `goto_bounds()` pour pouvoir dire à
+  l'opérateur ce qui existe.
+
+Le résultat (valeurs demandées comprises) est aussi écrit dans le journal
+(`goto effectué`, `goto introuvable`, `goto refusé`, `goto ignoré`) -- il ne
+contenait jusque-là que « Commande reçue : goto ». Le payload `state`
+diffusé porte `goto_bounds` (`null` sans match) ; la page de contrôle s'en
+sert pour borner les champs, masquer le relais/la flèche qui n'existent pas
+dans ce mode, et reste utilisable match terminé (comme « Recommencer »).
+Côté page, chaque appui affiche un retour : succès, refus expliqué, « pas
+connecté » (socket fermé) ou « pas de réponse » après 3 s.
+
 ## Configuration (TOML)
 
 `src/fletchtime/server/config_store.py` charge/sauvegarde trois fichiers :
