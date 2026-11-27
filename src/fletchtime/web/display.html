@@ -67,6 +67,13 @@
   .phase-green { background:#14532d; }
   .phase-orange { background:#b45309; }
   .phase-pause { background:#374151; }
+  /* Pause : « Récupération des flèches -- prochaine volée : X » passe sur
+     2 lignes et, à taille normale, faisait déborder la colonne : les blocs
+     rétrécissaient en se recouvrant (« Série… — Volée… » écrasée par le
+     texte, constaté en 16:9). On réduit seulement ici -- jamais le chrono
+     pendant le tir, qui doit rester lisible de loin. */
+  #root.phase-pause #time { font-size: 14vw; }
+  #root.phase-pause #turn { font-size: 4.2vw; }
   .phase-emergency { background:#dc2626; animation: blink 0.6s steps(1) infinite; }
   .phase-finished { background:#1e1e1e; }
   @keyframes blink { 50% { background:#000; } }
